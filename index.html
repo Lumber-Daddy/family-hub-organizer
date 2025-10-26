@@ -1431,6 +1431,18 @@ document.addEventListener('submit', function(e) {
         handleAdHocSubmit(e);
     }
 });
+
+// --- Expose functions to the global window object for inline HTML events ---
+window.changeTab = changeTab;
+window.completeChore = completeChore;
+window.toggleAdHocForm = toggleAdHocForm;
+window.handleAIEmoji = handleAIEmoji;
+window.handleAddMember = handleAddMember; 
+window.handleMemberEditSave = handleMemberEditSave;
+window.handleAddChoreDefinition = handleAddChoreDefinition; 
+window.handleAddReward = handleAddReward; 
+window.handleRedeemSubmit = handleRedeemSubmit;
+
 </script>
 
 <style>
