@@ -1,1799 +1,1700 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Family Hub Organizer</title>
-    <!-- Load Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Use Poppins Font (Updated) -->
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap');
-        body {
-            font-family: 'Poppins', sans-serif; /* Poppins applied */
-            background-color: #f8fafc; /* Lighter background for contrast */
-            /* Subtle background pattern to make it pop */
-            background-image: radial-gradient(#dbeafe 0.5px, transparent 0.5px);
-            background-size: 10px 10px;
-        }
-        /* Custom scrollbar for better mobile feel */
-        .scroll-area::-webkit-scrollbar {
-            width: 4px;
-        }
-        .scroll-area::-webkit-scrollbar-thumb {
-            background: #cbd5e1;
-            border-radius: 2px;
-        }
-        .scroll-area {
-            scrollbar-width: thin;
-            scrollbar-color: #cbd5e1 transparent;
-        }
-        .calendar-grid > div:nth-child(7n), 
-        .calendar-grid > div:nth-child(7n-6) {
-            border-left: none;
-            border-right: none;
-        }
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
+<script type="module">
+// Load Firebase modules required for the application
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { 
+    getAuth, 
+    signInAnonymously, 
+    onAuthStateChanged,
+    signInWithCustomToken
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { 
+    getFirestore, 
+    doc, 
+    setDoc, 
+    onSnapshot, 
+    collection, 
+    query, 
+    where, 
+    writeBatch, 
+    serverTimestamp 
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"; // Added getDocs
 
-        /* Bolder Header Style */
-        #main-header {
-            /* Vibrant Indigo Gradient */
-            background: linear-gradient(135deg, #4f46e5 0%, #818cf8 100%); 
-            box-shadow: 0 8px 15px rgba(0, 0, 0, 0.1); 
-        }
+// --- START: USER-EDITABLE FIREBASE CONFIGURATION ---
+// IMPORTANT: You MUST replace the dummy values below with your actual config from the Firebase Console (Step 1).
 
-        /* Tabs Nav Style */
-        #tabs-nav {
-            box-shadow: 0 2px 4px 0 rgba(0,0,0,0.05);
-        }
+// Your Firebase Web App Config Values (from Firebase console -> Project Settings -> Web App)
+const YOUR_API_KEY = "AIzaSyD_piA_kA7WZFN7GgxCDPpNNxyjrVRTj3M"; 
+const YOUR_AUTH_DOMAIN = "family-hub-organizer.firebaseapp.com"; 
+const YOUR_PROJECT_ID = "family-hub-organizer";
+const YOUR_STORAGE_BUCKET = "family-hub-organizer.firebasestorage.app"; 
+const YOUR_MESSAGING_SENDER_ID = "468888595189";
+const YOUR_APP_ID = "1:468888595189:web:eb6f33ee8e62cdc489b3bc";
 
-        /* Chore Item and Card Enhancements (Elevated Look) */
-        .chore-item, .member-card {
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); /* Stronger shadow */
-            transition: transform 0.2s, box-shadow 0.2s;
-        }
-        /* Item hover/tap interaction */
-        .chore-item:hover:not(.drag-hover) {
-            transform: translateY(-3px) scale(1.005); /* Slight lift and scale */
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
-        }
-        /* Button Press Effect */
-        .action-btn:active {
-            transform: scale(0.98);
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
+// This is a custom App ID used for organizing data in Firestore (use your projectId)
+const FIREBASE_APP_ID = YOUR_PROJECT_ID || 'default-app-id'; 
 
-        /* Checkbox enhancement for touch target and visual pop */
-        .completion-btn {
-            border-width: 3px !important;
-            transition: all 0.2s ease-out; /* Add transition for smoothness */
-        }
-        
-        /* Drag and Drop Styles */
-        .drag-target {
-            min-height: 5rem; /* Ensure drop area is visible */
-            transition: all 0.2s;
-        }
-        .drag-hover {
-            outline: 3px dashed #6366f1; /* Indigo */
-            background-color: #e0e7ff; /* Indigo-100 */
-        }
-        .chore-item {
-            cursor: grab;
-        }
-        /* Responsive tweaks for the tab bar on wide screens */
-        #tabs-nav button {
-            padding-left: 0.5rem;
-            padding-right: 0.5rem;
-        }
-        /* Pulse animation for microphone */
-        @keyframes pulse {
-            0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(99, 102, 241, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); }
-        }
-        .mic-pulse {
-            animation: pulse 1.5s infinite;
-        }
-        
-        /* --- NEW ANIMATION STYLES (Entrance & Completion) --- */
-        @keyframes fadeInSlideUp {
-            from {
-                opacity: 0;
-                transform: translateY(20px);
+// --- END: USER-EDITABLE FIREBASE CONFIGURATION ---
+
+const firebaseConfig = {
+    apiKey: YOUR_API_KEY,
+    authDomain: YOUR_AUTH_DOMAIN,
+    projectId: YOUR_PROJECT_ID,
+    storageBucket: YOUR_STORAGE_BUCKET,
+    messagingSenderId: YOUR_MESSAGING_SENDER_ID,
+    appId: YOUR_APP_ID
+};
+
+const GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent";
+const GEMINI_API_KEY = YOUR_API_KEY; // Reusing the same API Key
+
+// Global Variables
+let app, db, auth;
+let currentTab = 'daily';
+let userId = null;
+let familyMembers = []; // Stores member objects
+let choreDefinitions = []; // Stores recurring chore definitions
+let rewardsList = []; // Stores reward definitions
+let dailyChores = []; // Stores the actual list of chores for today's rendering
+let isAuthReady = false;
+let adHocFormVisible = false;
+
+// --- Helper Functions ---
+
+/** Converts the current date to a YYYY-MM-DD string key */
+const getCurrentDateKey = () => {
+    return new Date().toISOString().split('T')[0];
+};
+
+/** Converts YYYY-MM-DD to a more readable format */
+const formatDisplayDate = (dateKey) => {
+    const date = new Date(dateKey + 'T00:00:00'); // Use 'T00:00:00' to avoid timezone issues
+    return date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+}
+
+/** Converts a day index (0=Sun, 1=Mon, etc.) to a short weekday string */
+const dayIndexToName = (index) => {
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][index];
+};
+
+/** Converts a short weekday string to a day index (0=Sun, 1=Mon, etc.) */
+const dayNameToIndex = (name) => {
+    return ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].indexOf(name);
+};
+
+// --- Firebase Paths ---
+const getFamilyMembersPath = () => `artifacts/${FIREBASE_APP_ID}/public/data/members`;
+const getChoreDefinitionsPath = () => `artifacts/${FIREBASE_APP_ID}/public/data/choreDefs`;
+const getRewardsPath = () => `artifacts/${FIREBASE_APP_ID}/public/data/rewards`;
+const getChoreCompletionsPath = () => `artifacts/${FIREBASE_APP_ID}/public/data/completions`;
+
+// --- Core API Calls (Handles exponential backoff) ---
+
+/** Fetches data from Gemini API with exponential backoff for reliability. */
+const fetchWithBackoff = async (url, options, maxRetries = 5) => {
+    let lastError = null;
+    for (let i = 0; i < maxRetries; i++) {
+        const delay = Math.pow(2, i) * 1000 + Math.random() * 1000; // 1s, 2s, 4s, 8s, 16s + jitter
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const errorBody = await response.text();
+                throw new Error(`HTTP error! status: ${response.status}, body: ${errorBody}`);
             }
-            to {
-                opacity: 1;
-                transform: translateY(0);
+            return await response.json();
+        } catch (error) {
+            lastError = error;
+            console.error(`Attempt ${i + 1} failed. Retrying in ${delay / 1000}s...`, error);
+            if (i < maxRetries - 1) {
+                await new Promise(resolve => setTimeout(resolve, delay));
             }
         }
-        .animated-item {
-            animation: fadeInSlideUp 0.5s ease-out backwards;
-        }
+    }
+    throw new Error(`Gemini API call failed after ${maxRetries} attempts: ${lastError.message}`);
+};
 
-        /* Completion Confetti Effect */
-        .confetti-burst {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background: radial-gradient(circle, #ffeb3b, #f44336);
-            transform: translate(-50%, -50%);
-            animation: burst 0.5s ease-out forwards;
-            z-index: 10;
-        }
-        @keyframes burst {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(10); opacity: 0; }
-        }
+/** Calls Gemini to pick an emoji based on text input */
+const getEmojiFromAI = async (text) => {
+    if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR-API-KEY-HERE")) {
+        console.error("Gemini API Key is missing or default. Cannot call AI.");
+        return '❓';
+    }
 
-        /* Styling for the collapsible ad-hoc form container */
-        .collapsible-content {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.4s ease-in-out, padding 0.4s ease-in-out, margin-top 0.4s ease-in-out;
-            padding-top: 0;
-            padding-bottom: 0;
-            margin-top: 0;
-            border-color: transparent !important;
-        }
-        .collapsible-content.open {
-            max-height: 500px; /* Large enough for content */
-            padding-top: 1rem;
-            padding-bottom: 1rem;
-            margin-top: 1rem;
-        }
-        /* Apply shadow directly to the content inside the collapsible wrapper */
-        #adhoc-form-inner {
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08); 
-        }
-    </style>
-</head>
-<body class="min-h-screen">
+    const systemPrompt = "Analyze the user's text which is a chore or reward name. Respond with ONLY the single, most relevant emoji character. Do not use any text, explanations, or quotes. Example: 'take out trash' -> '🗑️'";
+    const userQuery = text;
 
-    <div id="app-container" class="w-full max-w-6xl mx-auto bg-white shadow-xl min-h-screen">
+    const payload = {
+        contents: [{ parts: [{ text: userQuery }] }],
+        systemInstruction: { parts: [{ text: systemPrompt }] },
+    };
 
-        <!-- Header (Bolder Gradient) -->
-        <header id="main-header" class="p-4 sticky top-0 z-10">
-            <h1 class="text-2xl font-extrabold text-center text-white">
-                Family Hub Organizer
-            </h1>
-        </header>
+    const apiUrl = `${GEMINI_API_URL}?key=${GEMINI_API_KEY}`;
 
-        <!-- Tabs -->
-        <nav class="flex bg-gray-50 border-b border-gray-200 sticky top-[65px] z-10" id="tabs-nav">
-            <button data-tab="chores" class="flex-1 p-3 text-center text-sm font-semibold transition-colors">
-                Daily List
-            </button>
-            <button data-tab="weekly" class="flex-1 p-3 text-center text-sm font-semibold transition-colors">
-                Weekly Schedule
-            </button>
-            <button data-tab="rewards" class="flex-1 p-3 text-center text-sm font-semibold transition-colors">
-                Points & Rewards
-            </button>
-            <button data-tab="setup" class="flex-1 p-3 text-center text-sm font-semibold transition-colors">
-                Setup
-            </button>
-            <button data-tab="calendar" class="flex-1 p-3 text-center text-sm font-semibold transition-colors">
-                Calendar
-            </button>
-        </nav>
+    try {
+        const result = await fetchWithBackoff(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const emojiText = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '❓';
+        // Clean the output to ensure it's just a single emoji
+        return emojiText.replace(/['"]/g, '').trim().substring(0, 4); 
+
+    } catch (error) {
+        console.error("AI Emoji failed:", error);
+        return '❓';
+    }
+};
+
+
+// --- Voice Command Handlers (Web Speech API) ---
+
+const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const recognition = SpeechRecognition ? new SpeechRecognition() : null;
+if (recognition) {
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+    recognition.interimResults = false;
+    recognition.maxAlternatives = 1;
+}
+
+const speak = (text) => {
+    if (!('speechSynthesis' in window)) return;
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.voice = speechSynthesis.getVoices().find(v => v.name.includes('Google') || v.default);
+    utterance.rate = 1.1;
+    speechSynthesis.speak(utterance);
+};
+
+const processVoiceCommand = (transcript) => {
+    const lowerTranscript = transcript.toLowerCase();
+    
+    speak(`Processing: ${transcript}.`);
+    
+    // 1. Navigation Commands
+    if (lowerTranscript.includes('daily list') || lowerTranscript.includes('show today')) {
+        speak('Navigating to the Daily List.');
+        changeTab('daily');
+        return;
+    }
+    if (lowerTranscript.includes('go to rewards') || lowerTranscript.includes('show points')) {
+        speak('Opening the Points and Rewards Center.');
+        changeTab('rewards');
+        return;
+    }
+    if (lowerTranscript.includes('open setup') || lowerTranscript.includes('go to setup')) {
+        speak('Opening the Setup panel.');
+        changeTab('setup');
+        return;
+    }
+    if (lowerTranscript.includes('show weekly') || lowerTranscript.includes('weekly schedule')) {
+        speak('Displaying the weekly schedule.');
+        changeTab('weekly');
+        return;
+    }
+    
+    // 2. Chore Completion Commands
+    const choreCompletionMatch = lowerTranscript.match(/(mark|i finished|i completed|i did|done with|done) (.+?)( done| complete| finished)?$/);
+    if (choreCompletionMatch) {
+        const choreNameRaw = choreCompletionMatch[2].trim();
+        const memberName = familyMembers.find(m => lowerTranscript.includes(m.name.toLowerCase()))?.name;
         
-        <!-- Main Content Area -->
-        <main id="content-area" class="p-4"></main>
+        // Find the chore by name (case-insensitive, partial match for flexibility)
+        const choreToComplete = dailyChores.find(chore => 
+            !chore.completed && 
+            chore.name.toLowerCase().includes(choreNameRaw) &&
+            (memberName ? chore.assignedTo === memberName : true)
+        );
 
+        if (choreToComplete) {
+            // Find the chore element in the DOM to trigger the click
+            const choreElement = document.getElementById(`chore-item-${choreToComplete.id}`);
+            if (choreElement) {
+                // Find the completion circle inside the chore item
+                const completionCircle = choreElement.querySelector('[data-action="complete"]');
+                if (completionCircle) {
+                    completionCircle.click(); // Simulate click to trigger completion logic
+                    speak(`Marking ${choreToComplete.name} as complete for ${choreToComplete.assignedTo}.`);
+                    return;
+                }
+            }
+        }
+        speak(`Sorry, I couldn't find an incomplete chore matching ${choreNameRaw}.`);
+        return;
+    }
+
+    // 3. Reward Redemption Commands
+    const redemptionMatch = lowerTranscript.match(/(|i want to |can i |)redeem (.+?) for (.+?)$/);
+    if (redemptionMatch) {
+        const memberNameRaw = redemptionMatch[4]?.trim();
+        const rewardNameRaw = redemptionMatch[2]?.trim();
+        
+        const member = familyMembers.find(m => m.name.toLowerCase() === memberNameRaw.toLowerCase());
+        const reward = rewardsList.find(r => r.name.toLowerCase().includes(rewardNameRaw.toLowerCase()));
+
+        if (!member) {
+            speak(`I couldn't find a family member named ${memberNameRaw}.`);
+            return;
+        }
+        if (!reward) {
+            speak(`I couldn't find a reward called ${rewardNameRaw}.`);
+            return;
+        }
+
+        if (member.points >= reward.cost) {
+            // Simulate redemption by finding the form and submitting it
+            document.getElementById('redeem-member-select').value = member.id;
+            document.getElementById('redeem-reward-select').value = reward.id;
+            document.getElementById('redeem-button').click();
+            // The redemption function will handle the success speaking.
+            return;
+        } else {
+            speak(`${member.name} only has ${member.points} points, but ${reward.name} costs ${reward.cost}.`);
+            return;
+        }
+    }
+    
+    // Fallback
+    speak('Sorry, I did not understand that command. Please try saying the chore name, or asking to redeem a reward.');
+};
+
+const handleVoiceToggle = () => {
+    if (!recognition) {
+        speak("Voice recognition is not supported in this browser.");
+        return;
+    }
+
+    const micButton = document.getElementById('voice-toggle-fab');
+
+    if (micButton.classList.contains('listening')) {
+        recognition.stop();
+        micButton.classList.remove('listening');
+        speak('Voice commands deactivated.');
+        return;
+    }
+
+    micButton.classList.add('listening');
+    speak('Listening for command...');
+
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        console.log('Voice Command:', transcript);
+        processVoiceCommand(transcript);
+        micButton.classList.remove('listening');
+    };
+
+    recognition.onerror = (event) => {
+        micButton.classList.remove('listening');
+        if (event.error !== 'no-speech') {
+             console.error('Recognition error:', event.error);
+             speak(`Voice command error: ${event.error}`);
+        }
+    };
+
+    recognition.onend = () => {
+        micButton.classList.remove('listening');
+    };
+
+    recognition.start();
+};
+
+
+// --- Data Seeding (Initial Data Population) ---
+
+const seedData = async () => {
+    const memberCollection = collection(db, getFamilyMembersPath());
+    const memberDocs = await getDocs(memberCollection);
+
+    if (memberDocs.empty) {
+        console.log("Seeding initial data...");
+        const batch = writeBatch(db);
+
+        // Members (Mom, Dad, Lyra, Cora)
+        const initialMembers = [
+            { id: crypto.randomUUID(), name: 'Mom', emoji: '👑', color: 'indigo', points: 200 },
+            { id: crypto.randomUUID(), name: 'Dad', emoji: '🔨', color: 'blue', points: 150 },
+            { id: crypto.randomUUID(), name: 'Lyra', emoji: '🦄', color: 'pink', points: 50 },
+            { id: crypto.randomUUID(), name: 'Cora', emoji: '🌟', color: 'teal', points: 75 },
+        ];
+        initialMembers.forEach(member => {
+            batch.set(doc(memberCollection, member.id), member);
+        });
+
+        // Recurring Chores (Empty Dishwasher, Load Dishwasher, Feed Dog, Feed Cat, Laundry)
+        const choreDefCollection = collection(db, getChoreDefinitionsPath());
+        const momId = initialMembers.find(m => m.name === 'Mom').name;
+        const dadId = initialMembers.find(m => m.name === 'Dad').name;
+        
+        const initialChoreDefs = [
+            // id is optional here, Firestore will assign one
+            { id: crypto.randomUUID(), name: 'Empty Dishwasher', emoji: '🍽️', days: ['Mon', 'Wed', 'Fri'], points: 15, assignedTo: momId },
+            { id: crypto.randomUUID(), name: 'Load Dishwasher', emoji: '🧺', days: ['Tue', 'Thu', 'Sat'], points: 10, assignedTo: dadId },
+            { id: crypto.randomUUID(), name: 'Feed Dog', emoji: '🐶', days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], points: 20, assignedTo: initialMembers.find(m => m.name === 'Lyra').name },
+            { id: crypto.randomUUID(), name: 'Feed Cat', emoji: '🐈', days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'], points: 20, assignedTo: initialMembers.find(m => m.name === 'Cora').name },
+            { id: crypto.randomUUID(), name: 'Laundry', emoji: '👕', days: ['Sat', 'Sun'], points: 50, assignedTo: momId },
+        ];
+        initialChoreDefs.forEach(choreDef => {
+            batch.set(doc(choreDefCollection, choreDef.id), choreDef);
+        });
+
+        // Rewards (Movie Night, Pizza Dinner)
+        const rewardsCollection = collection(db, getRewardsPath());
+        const initialRewards = [
+            { id: crypto.randomUUID(), name: 'Movie Night', emoji: '🍿', cost: 100 },
+            { id: crypto.randomUUID(), name: 'Pizza Dinner', emoji: '🍕', cost: 150 },
+        ];
+        initialRewards.forEach(reward => {
+            batch.set(doc(rewardsCollection, reward.id), reward);
+        });
+
+        await batch.commit();
+        console.log("Seeding complete.");
+    }
+};
+
+// --- CRUD Operations ---
+
+const saveMember = async (memberData) => {
+    try {
+        await setDoc(doc(db, getFamilyMembersPath(), memberData.id), memberData);
+        speak(`${memberData.name} profile updated.`);
+    } catch (e) {
+        console.error("Error saving member: ", e);
+        speak("Error saving member profile.");
+    }
+};
+
+const saveChoreDefinition = async (choreDefData) => {
+    try {
+        await setDoc(doc(db, getChoreDefinitionsPath(), choreDefData.id), choreDefData);
+        speak(`Chore ${choreDefData.name} saved successfully.`);
+    } catch (e) {
+        console.error("Error saving chore definition: ", e);
+        speak("Error saving chore definition.");
+    }
+};
+
+const saveReward = async (rewardData) => {
+    try {
+        await setDoc(doc(db, getRewardsPath(), rewardData.id), rewardData);
+        speak(`Reward ${rewardData.name} saved successfully.`);
+    } catch (e) {
+        console.error("Error saving reward: ", e);
+        speak("Error saving reward.");
+    }
+};
+
+/**
+ * Handles the completion of a chore, updates points, and records the completion log.
+ * Uses a batch write for atomicity (points update only if completion log succeeds).
+ */
+const completeChore = async (chore) => {
+    if (!db || !userId) return;
+
+    // Check if the chore is already completed for today
+    if (chore.completed) return;
+
+    const batch = writeBatch(db);
+    const memberRef = doc(db, getFamilyMembersPath(), familyMembers.find(m => m.name === chore.assignedTo).id);
+    const completionRef = doc(collection(db, getChoreCompletionsPath()));
+
+    const member = familyMembers.find(m => m.name === chore.assignedTo);
+    if (!member) {
+        console.error("Member not found for chore completion.");
+        return;
+    }
+
+    // 1. Update Member Points
+    const newPoints = (member.points || 0) + (chore.points || 0);
+    batch.update(memberRef, { points: newPoints });
+
+    // 2. Record Completion Log
+    const completionLog = {
+        choreId: chore.defId, // Use the definition ID for recurring chores or the unique ID for ad-hoc
+        name: chore.name,
+        emoji: chore.emoji,
+        assignedTo: chore.assignedTo,
+        points: chore.points,
+        date: getCurrentDateKey(),
+        timestamp: serverTimestamp(),
+        isAdHoc: chore.isAdHoc || false,
+    };
+    batch.set(completionRef, completionLog);
+
+    try {
+        await batch.commit();
+        speak(`Success! ${chore.name} complete. ${chore.assignedTo} earned ${chore.points} points.`);
+        // Brief, satisfying confetti/animation effect on the completed item
+        const choreElement = document.getElementById(`chore-item-${chore.id}`);
+        if(choreElement) {
+            choreElement.classList.add('completed-success');
+            setTimeout(() => choreElement.classList.remove('completed-success'), 1000);
+        }
+    } catch (e) {
+        console.error("Transaction failed: ", e);
+        speak(`Failed to mark ${chore.name} complete.`);
+    }
+};
+
+/**
+ * Handles reward redemption, updating member points and logging the transaction.
+ * Uses a batch write for atomicity.
+ */
+const redeemReward = async (memberId, rewardId) => {
+    if (!db || !userId) return;
+
+    const member = familyMembers.find(m => m.id === memberId);
+    const reward = rewardsList.find(r => r.id === rewardId);
+
+    if (!member || !reward) {
+        speak("Error: Member or Reward not found.");
+        return;
+    }
+
+    if (member.points < reward.cost) {
+        speak(`${member.name} doesn't have enough points. Needs ${reward.cost} points.`);
+        return false;
+    }
+
+    const batch = writeBatch(db);
+    const memberRef = doc(db, getFamilyMembersPath(), member.id);
+
+    // 1. Deduct Points
+    const newPoints = member.points - reward.cost;
+    batch.update(memberRef, { points: newPoints });
+
+    // 2. Log Redemption (re-using completions collection for simple logging, use 'cost' for negative points)
+    const redemptionLog = {
+        choreId: 'REWARD_REDEMPTION',
+        name: `Redeemed: ${reward.name}`,
+        emoji: reward.emoji,
+        assignedTo: member.name,
+        points: -reward.cost, // Log as a negative value
+        date: getCurrentDateKey(),
+        timestamp: serverTimestamp(),
+        isRedemption: true,
+    };
+    batch.set(doc(collection(db, getChoreCompletionsPath())), redemptionLog);
+
+    try {
+        await batch.commit();
+        speak(`${member.name} successfully redeemed ${reward.name} for ${reward.cost} points!`);
+        return true;
+    } catch (e) {
+        console.error("Redemption transaction failed: ", e);
+        speak(`Failed to redeem ${reward.name}.`);
+        return false;
+    }
+};
+
+// --- Renderer & State Update ---
+
+/** Rerenders the entire application UI based on current state */
+const renderApp = () => {
+    const appContainer = document.getElementById('app');
+    if (!appContainer) return;
+
+    // Determine the current view content based on the active tab
+    let viewContent = '';
+    let headerTitle = 'Family Hub Organizer';
+    const today = new Date();
+    const todayDayName = dayIndexToName(today.getDay());
+    const todayDateKey = getCurrentDateKey();
+
+    switch (currentTab) {
+        case 'daily':
+            headerTitle = `Daily Chores (${todayDayName}, ${todayDateKey})`;
+            viewContent = renderDailyListView(todayDayName);
+            break;
+        case 'weekly':
+            headerTitle = 'Weekly Schedule Overview';
+            viewContent = renderWeeklyScheduleView();
+            break;
+        case 'rewards':
+            headerTitle = 'Points & Rewards Center';
+            viewContent = renderRewardsView();
+            break;
+        case 'setup':
+            headerTitle = 'Family & Chore Setup';
+            viewContent = renderSetupView();
+            break;
+        case 'calendar':
+            headerTitle = 'Calendar (Manual Events)';
+            viewContent = renderCalendarView();
+            break;
+    }
+
+    appContainer.innerHTML = `
+        <div class="h-full flex flex-col bg-gray-50 font-sans shadow-2xl">
+            <!-- Header -->
+            <header class="p-4 shadow-xl bg-gradient-to-r from-indigo-600 to-blue-500 text-white sticky top-0 z-10">
+                <h1 class="text-2xl font-bold tracking-tight">${headerTitle}</h1>
+            </header>
+            
+            <!-- Navigation -->
+            <nav class="flex justify-around p-0.5 bg-gray-100 shadow-md sticky top-[64px] z-10">
+                ${renderTabButton('daily', 'Daily List', 'M6 18L18 6M6 6l12 12')}
+                ${renderTabButton('weekly', 'Weekly Schedule', 'M8 7V3m8 4V3m-9 8h.01M13 11h.01M17 11h.01M8 15h.01M12 15h.01M16 15h.01M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z')}
+                ${renderTabButton('rewards', 'Points & Rewards', 'M11 11h2v-2h2.5L12 6.5 6.5 9h2.5v2H5l7 7 7-7h-4z')}
+                ${renderTabButton('setup', 'Setup', 'M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.562.342 1.25.043 1.066-.714z')}
+                ${renderTabButton('calendar', 'Calendar', 'M8 7V3m8 4V3m-9 8h.01M13 11h.01M17 11h.01M8 15h.01M12 15h.01M16 15h.01M7 19h10a2 2 0 002-2V7a2 2 0 00-2-2H7a2 2 0 00-2 2v10a2 2 0 002 2z')}
+            </nav>
+            
+            <!-- Main Content Area -->
+            <main class="flex-grow p-4 overflow-y-auto bg-grid-pattern">
+                ${isAuthReady ? viewContent : renderLoading()}
+            </main>
+
+            <!-- Voice FAB -->
+            <button id="voice-toggle-fab" onclick="handleVoiceToggle()" class="fixed right-6 bottom-6 w-14 h-14 rounded-full bg-red-500 shadow-xl flex items-center justify-center text-white transition duration-300 ease-in-out hover:bg-red-600 active:scale-95 z-50 transform hover:scale-110 pulse-animation" title="Activate Voice Commands">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5v3m-3-3h6m-9-6.75h9a2.25 2.25 0 1 1 0 4.5h-9a2.25 2.25 0 1 1 0-4.5Z" />
+                </svg>
+            </button>
+        </div>
+    `;
+    
+    // Add the slide-up animation effect to new content
+    const mainContent = document.querySelector('main');
+    mainContent.classList.add('animate-slide-up-fade');
+    setTimeout(() => mainContent.classList.remove('animate-slide-up-fade'), 500);
+
+    // After rendering, ensure event listeners are attached for drag and drop
+    if (currentTab === 'daily') {
+        setupDragAndDrop();
+        // Force the ad-hoc form to be visible/hidden based on state
+        const formContainer = document.getElementById('ad-hoc-form-container');
+        if (formContainer) {
+             formContainer.style.maxHeight = adHocFormVisible ? '300px' : '0';
+        }
+    }
+
+    // Update redemption form options if we are on the rewards tab
+    if (currentTab === 'rewards') {
+        populateRedemptionOptions();
+    }
+};
+
+const renderTabButton = (tabName, label, svgPath) => {
+    const isActive = currentTab === tabName;
+    const baseClasses = "flex flex-col items-center p-2 text-sm font-medium transition duration-150 ease-in-out transform hover:scale-105";
+    const activeClasses = `text-${isActive ? 'indigo-600' : 'gray-500'} border-b-2 border-${isActive ? 'indigo-600' : 'transparent'} active:scale-95`;
+
+    return `
+        <button onclick="changeTab('${tabName}')" class="${baseClasses} ${activeClasses}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="${svgPath}" />
+            </svg>
+            <span class="text-xs mt-1 hidden sm:inline">${label}</span>
+        </button>
+    `;
+};
+
+const changeTab = (tabName) => {
+    currentTab = tabName;
+    renderApp();
+};
+
+const renderLoading = () => `
+    <div class="flex flex-col items-center justify-center h-full space-y-4 pt-20">
+        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+        <p class="text-lg text-gray-700 font-medium">Connecting to Family Cloud Data...</p>
+        <p class="text-sm text-gray-500">Ensure your Firebase configuration is correct if this takes too long.</p>
     </div>
-
-    <!-- Voice Command Button (Floating Action Button) -->
-    <button id="voice-btn" onclick="window.toggleVoiceCommand()" 
-        class="action-btn fixed bottom-6 right-6 w-14 h-14 rounded-full bg-indigo-600 text-white flex items-center justify-center shadow-2xl transition-all duration-300 hover:bg-indigo-700 z-50">
-        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M19 11a7 7 0 01-7 7v-7a7 7 0 017-7z" />
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v3m4 0h-8" />
-        </svg>
-    </button>
+`;
 
 
-    <!-- Firebase SDKs -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { 
-            getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, 
-            setPersistence, browserSessionPersistence
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, doc, collection, query, onSnapshot, setDoc, updateDoc, 
-            deleteDoc, serverTimestamp, runTransaction, where, setLogLevel, getDocs
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// --- Daily List View (Tab 'daily') ---
 
-        // Set Firebase log level for debugging
-        setLogLevel('debug');
+const renderChoreCard = (chore, memberColor, isUnassigned = false) => {
+    const isCompleted = chore.completed;
+    const itemClasses = isCompleted 
+        ? "bg-white shadow-md border-l-4 border-green-500 opacity-60 line-through transition duration-300"
+        : `bg-white shadow-lg border-l-4 border-${memberColor}-500 transition duration-300 hover:shadow-xl hover:scale-[1.01] active:scale-[0.99] cursor-grab`;
+        
+    return `
+        <div id="chore-item-${chore.id}" draggable="${!isCompleted}" data-chore-id="${chore.id}" 
+             class="chore-item p-4 rounded-lg flex items-center justify-between mb-3 ${itemClasses}"
+             data-assigned-to="${chore.assignedTo || 'Unassigned'}"
+             data-def-id="${chore.defId || chore.id}"
+             data-is-adhoc="${chore.isAdHoc || false}">
+            
+            <div class="flex-grow flex items-center min-w-0">
+                <!-- Completion/Emoji Circle -->
+                <button 
+                    class="w-8 h-8 rounded-full border-2 border-gray-300 mr-4 flex items-center justify-center flex-shrink-0
+                           ${isCompleted ? 'bg-green-500 border-green-500 text-white' : 'hover:bg-gray-100'}"
+                    onclick="${isCompleted ? 'return false;' : `completeChore(dailyChores.find(c => c.id === '${chore.id}'))`}"
+                    data-action="complete"
+                    ${isCompleted ? 'disabled' : ''}
+                    title="${isCompleted ? 'Completed' : 'Mark Complete'}">
+                    ${isCompleted ? `
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>` 
+                        : `<span class="text-xl">${chore.emoji}</span>`
+                    }
+                </button>
+                
+                <div class="min-w-0">
+                    <p class="text-lg font-semibold truncate ${isCompleted ? 'text-gray-500' : 'text-gray-800'}">${chore.name}</p>
+                    <p class="text-sm text-gray-500">
+                        ${isUnassigned ? 'Unassigned' : `Value: ${chore.points} Points`}
+                        ${chore.isAdHoc ? ' • (One-Time)' : ''}
+                    </p>
+                </div>
+            </div>
 
-        // --- GLOBAL STATE ---
-        let db = null;
-        let auth = null;
-        let userId = null;
-        let isAuthReady = false;
-        let members = [];
-        let choreDefs = [];      
-        let choreAssignments = [];
-        let rewards = [];
-        let currentDate = new Date(); 
-        let activeTab = 'chores';
-        let isListening = false; // New state for voice command
-        let isAdhocFormOpen = false; // NEW STATE for the collapsible form
+        </div>
+    `;
+};
 
-        // --- VOICE API SETUP ---
-        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = SpeechRecognition ? new SpeechRecognition() : null;
-        const synth = window.speechSynthesis;
-        const voiceButton = document.getElementById('voice-btn');
 
-        if (recognition) {
-            recognition.continuous = false;
-            recognition.lang = 'en-US';
-            recognition.interimResults = false;
-            recognition.maxAlternatives = 1;
+const renderMemberChoreList = (member) => {
+    const memberChores = dailyChores.filter(chore => chore.assignedTo === member.name);
+    const completedCount = memberChores.filter(c => c.completed).length;
+    const totalCount = memberChores.length;
+    
+    // Member Points Card
+    const pointsCard = `
+        <div class="flex items-center justify-between p-4 mb-4 rounded-xl shadow-lg bg-white border-t-4 border-${member.color}-600 transform transition duration-300 hover:shadow-2xl">
+            <div class="flex items-center">
+                <span class="text-3xl mr-3">${member.emoji}</span>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">${member.name}</h3>
+                    <p class="text-sm text-gray-500">Tasks: ${completedCount}/${totalCount} done</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-2xl font-extrabold text-${member.color}-600">${member.points || 0}</p>
+                <p class="text-sm text-gray-500">Points</p>
+            </div>
+        </div>
+    `;
 
-            recognition.onstart = () => {
-                isListening = true;
-                voiceButton.classList.add('mic-pulse', 'bg-red-600');
-                voiceButton.classList.remove('bg-indigo-600');
-                showToast("Listening...", false);
-            };
+    const choreList = memberChores.length > 0
+        ? memberChores.map(chore => renderChoreCard(chore, member.color)).join('')
+        : `<p class="text-center text-gray-500 p-6 bg-white rounded-xl shadow-inner">Nothing assigned today! 🎉</p>`;
 
-            recognition.onend = () => {
-                isListening = false;
-                voiceButton.classList.remove('mic-pulse', 'bg-red-600');
-                voiceButton.classList.add('bg-indigo-600');
-            };
+    return `
+        <div class="drop-zone border-2 border-dashed border-transparent p-4 rounded-xl space-y-3" data-member-id="${member.name}">
+            ${pointsCard}
+            <div class="min-h-[100px] space-y-3">
+                ${choreList}
+            </div>
+        </div>
+    `;
+};
 
-            recognition.onresult = (event) => {
-                const transcript = event.results[0][0].transcript;
-                console.log('Voice Command Received:', transcript);
-                handleVoiceCommand(transcript);
-            };
+const renderAdHocForm = () => {
+    return `
+        <div class="p-4 bg-white rounded-b-xl shadow-inner transition-all duration-300 overflow-hidden" id="ad-hoc-form-container" style="max-height:0; padding:0; ${adHocFormVisible ? 'padding: 1rem;' : ''}">
+            <form id="ad-hoc-chore-form" class="space-y-4">
+                <div>
+                    <label for="adhoc-name" class="block text-sm font-medium text-gray-700">Chore Name</label>
+                    <input type="text" id="adhoc-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border" placeholder="e.g., Water the plants">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label for="adhoc-points" class="block text-sm font-medium text-gray-700">Points (Value)</label>
+                        <input type="number" id="adhoc-points" required min="1" value="10" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                    </div>
+                    <div>
+                        <label for="adhoc-emoji" class="block text-sm font-medium text-gray-700">Emoji</label>
+                        <div class="mt-1 flex rounded-md shadow-sm">
+                            <input type="text" id="adhoc-emoji" value="✨" required maxlength="2" class="block w-full rounded-l-md border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                            <button type="button" onclick="handleAIEmoji('adhoc-name', 'adhoc-emoji')" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-600 text-sm hover:bg-gray-200 transition duration-150 active:scale-95">AI</button>
+                        </div>
+                    </div>
+                </div>
+                <div>
+                    <label for="adhoc-assign" class="block text-sm font-medium text-gray-700">Assign To (Optional)</label>
+                    <select id="adhoc-assign" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 p-2 border">
+                        <option value="">Unassigned</option>
+                        ${familyMembers.map(m => `<option value="${m.name}">${m.name} ${m.emoji}</option>`).join('')}
+                    </select>
+                </div>
+                <button type="submit" class="w-full justify-center py-2 px-4 border border-transparent shadow-md text-sm font-medium rounded-md text-white bg-green-500 hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 transition duration-150 active:scale-[0.98]">
+                    Create One-Time Chore
+                </button>
+            </form>
+        </div>
+    `;
+}
 
-            recognition.onerror = (event) => {
-                console.error('Speech recognition error', event.error);
-                if (event.error !== 'no-speech') {
-                    speak("Sorry, I didn't catch that. Please try again.");
+const renderDailyListView = (todayDayName) => {
+    // 1. Filter daily chores into assigned and unassigned
+    const unassignedChores = dailyChores.filter(chore => !chore.assignedTo);
+    const assignedMembers = familyMembers.filter(m => dailyChores.some(c => c.assignedTo === m.name));
+    const allMembers = familyMembers.sort((a, b) => a.points > b.points ? -1 : 1); // Sort by points
+
+    return `
+        <!-- Assigned Chores -->
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+            ${allMembers.map(renderMemberChoreList).join('')}
+        </div>
+        
+        <!-- Unassigned Chores Pool -->
+        <div class="unassigned-pool rounded-xl shadow-2xl overflow-hidden bg-yellow-50 border-t-8 border-yellow-400">
+            <div class="p-4 flex items-center justify-between bg-yellow-100/70 border-b border-yellow-200">
+                <h2 class="text-xl font-bold text-yellow-800">Unassigned Chores Pool</h2>
+                <!-- Ad-Hoc Chore Toggle Button -->
+                <button onclick="toggleAdHocForm(event)" class="w-8 h-8 rounded-full bg-red-500 shadow-lg text-white flex items-center justify-center transform transition duration-300 hover:bg-red-600 active:scale-95" title="Add One-Time Chore">
+                    <svg id="adhoc-toggle-icon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="${adHocFormVisible ? 'M6 18L18 6M6 6l12 12' : 'M12 4v16m-8-8h16'}" />
+                    </svg>
+                </button>
+            </div>
+            
+            ${renderAdHocForm()}
+
+            <!-- Drag and Drop Target for Unassigned Chores -->
+            <div class="drop-zone border-2 border-dashed border-transparent p-4 min-h-[100px] space-y-3" data-member-id="Unassigned">
+                ${unassignedChores.length > 0 
+                    ? unassignedChores.map(chore => renderChoreCard(chore, 'yellow', true)).join('')
+                    : `<p class="text-center text-gray-500 p-6 rounded-xl shadow-inner">Drag chores here to unassign them, or leave them here for anyone to grab!</p>`
                 }
-                isListening = false;
-                voiceButton.classList.remove('mic-pulse', 'bg-red-600');
-                voiceButton.classList.add('bg-indigo-600');
-            };
+            </div>
+        </div>
+    `;
+};
+
+const toggleAdHocForm = (event) => {
+    event.preventDefault();
+    adHocFormVisible = !adHocFormVisible;
+    const formContainer = document.getElementById('ad-hoc-form-container');
+    const toggleIcon = document.getElementById('adhoc-toggle-icon');
+    
+    if (formContainer) {
+        if (adHocFormVisible) {
+            formContainer.style.maxHeight = '300px'; // Expand
+            formContainer.style.padding = '1rem';
+            toggleIcon.setAttribute('d', 'M6 18L18 6M6 6l12 12'); // Change icon to 'X'
+        } else {
+            formContainer.style.maxHeight = '0'; // Collapse
+            formContainer.style.padding = '0';
+            toggleIcon.setAttribute('d', 'M12 4v16m-8-8h16'); // Change icon to '+'
+        }
+    }
+    // Update the state of the local UI elements
+};
+
+
+// --- Weekly Schedule View (Tab 'weekly') ---
+
+const renderWeeklyScheduleView = () => {
+    const daysOfWeek = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const todayIndex = new Date().getDay();
+    const todayDateKey = getCurrentDateKey();
+    
+    // Combine recurring and ad-hoc chores for the week
+    const weeklyChoresMap = daysOfWeek.map(() => []);
+
+    // 1. Add Recurring Chores
+    choreDefinitions.forEach(chore => {
+        chore.days.forEach(dayName => {
+            const index = dayNameToIndex(dayName);
+            const member = familyMembers.find(m => m.name === chore.assignedTo);
+            if (member) {
+                weeklyChoresMap[index].push({ 
+                    name: chore.name, 
+                    emoji: chore.emoji, 
+                    color: member.color, 
+                    assignedTo: member.name 
+                });
+            }
+        });
+    });
+
+    // 2. Add Ad-Hoc Chores (Only for the current day for simplicity, as past ad-hocs are completed/archived)
+    dailyChores.filter(c => c.isAdHoc).forEach(adhoc => {
+        const index = new Date().getDay(); // They only appear on the day they are created
+        const member = familyMembers.find(m => m.name === adhoc.assignedTo);
+        if (member) {
+             weeklyChoresMap[index].push({ 
+                name: `${adhoc.name} (One-Time)`, 
+                emoji: adhoc.emoji, 
+                color: member.color, 
+                assignedTo: member.name
+            });
+        }
+    });
+
+
+    const dayCards = daysOfWeek.map((dayName, index) => {
+        const isToday = index === todayIndex;
+        const chores = weeklyChoresMap[index];
+        const baseClasses = "rounded-xl p-4 shadow-xl transform transition duration-300";
+        const colorClasses = isToday ? "bg-red-50 border-4 border-red-400" : "bg-white border-2 border-gray-200 hover:shadow-2xl";
+
+        return `
+            <div class="${baseClasses} ${colorClasses}">
+                <h3 class="text-lg font-bold mb-3 ${isToday ? 'text-red-700' : 'text-gray-800'}">${dayName} ${isToday ? '(Today)' : ''}</h3>
+                <div class="space-y-2">
+                    ${chores.length > 0 
+                        ? chores.map(chore => `
+                            <div class="flex items-center p-2 rounded-lg bg-${chore.color}-50 border-l-4 border-${chore.color}-400">
+                                <span class="text-xl mr-2 flex-shrink-0">${chore.emoji}</span>
+                                <div class="truncate text-sm">
+                                    <p class="font-medium text-gray-800 truncate">${chore.name}</p>
+                                    <p class="text-xs text-gray-600">Assigned to: ${chore.assignedTo}</p>
+                                </div>
+                            </div>
+                        `).join('')
+                        : `<p class="text-gray-500 text-sm italic">Free day!</p>`
+                    }
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    return `
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            ${dayCards}
+        </div>
+    `;
+};
+
+
+// --- Rewards View (Tab 'rewards') ---
+
+const populateRedemptionOptions = () => {
+    const memberSelect = document.getElementById('redeem-member-select');
+    const rewardSelect = document.getElementById('redeem-reward-select');
+
+    if (memberSelect) {
+        memberSelect.innerHTML = familyMembers.map(m => `<option value="${m.id}">${m.name} (${m.points} pts)</option>`).join('');
+    }
+    
+    if (rewardSelect) {
+        rewardSelect.innerHTML = rewardsList.map(r => `<option value="${r.id}">${r.name} (${r.cost} pts)</option>`).join('');
+    }
+};
+
+const handleRedeemSubmit = async (event) => {
+    event.preventDefault();
+    const memberId = document.getElementById('redeem-member-select').value;
+    const rewardId = document.getElementById('redeem-reward-select').value;
+    
+    if (!memberId || !rewardId) {
+        speak("Please select both a member and a reward.");
+        return;
+    }
+    
+    await redeemReward(memberId, rewardId);
+    // Redraw the app to update points and redemption options
+    renderApp(); 
+};
+
+
+const renderRewardsView = () => {
+    
+    const memberCards = familyMembers.map(member => `
+        <div class="bg-white p-6 rounded-xl shadow-lg border-t-4 border-${member.color}-600 flex items-center justify-between transform transition duration-300 hover:shadow-2xl">
+            <div class="flex items-center">
+                <span class="text-4xl mr-4">${member.emoji}</span>
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">${member.name}</h3>
+                    <p class="text-sm text-gray-500">Current Points</p>
+                </div>
+            </div>
+            <p class="text-4xl font-extrabold text-${member.color}-600">${member.points || 0}</p>
+        </div>
+    `).join('');
+    
+    const rewardCards = rewardsList.map(reward => `
+        <div class="bg-white p-4 rounded-xl shadow-md flex items-center justify-between border-l-4 border-green-500 transition duration-300 hover:shadow-lg">
+            <div class="flex items-center">
+                <span class="text-2xl mr-3">${reward.emoji}</span>
+                <h3 class="text-lg font-medium text-gray-800">${reward.name}</h3>
+            </div>
+            <p class="text-xl font-bold text-green-600">${reward.cost} pts</p>
+        </div>
+    `).join('');
+
+
+    return `
+        <!-- Point Summary -->
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Family Point Totals</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+            ${memberCards}
+        </div>
+
+        <!-- Redemption Form -->
+        <div class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-indigo-500 mb-8">
+            <h2 class="text-2xl font-semibold text-indigo-700 mb-4">Redeem Rewards</h2>
+            <form onsubmit="handleRedeemSubmit(event)" id="redeem-form" class="space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label for="redeem-member-select" class="block text-sm font-medium text-gray-700">Redeem For</label>
+                        <select id="redeem-member-select" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"></select>
+                    </div>
+                    <div>
+                        <label for="redeem-reward-select" class="block text-sm font-medium text-gray-700">Select Reward</label>
+                        <select id="redeem-reward-select" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border"></select>
+                    </div>
+                    <div class="flex items-end">
+                        <button id="redeem-button" type="submit" class="w-full justify-center py-2 px-4 border border-transparent shadow-md text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 active:scale-[0.98]">
+                            REDEEM NOW
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <!-- Available Rewards List -->
+        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Available Rewards</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${rewardCards.length > 0 ? rewardCards : '<p class="text-gray-500 p-4 bg-white rounded-xl shadow-inner">No rewards have been defined yet. Go to Setup!</p>'}
+        </div>
+    `;
+};
+
+
+// --- Setup View (Tab 'setup') ---
+
+const handleAIEmoji = async (nameInputId, emojiInputId) => {
+    const nameInput = document.getElementById(nameInputId);
+    const emojiInput = document.getElementById(emojiInputId);
+    
+    if (nameInput.value.trim() === '') {
+        speak('Please enter a name first.');
+        return;
+    }
+    
+    // Simple visual loading state
+    emojiInput.value = '⏳'; 
+    const emoji = await getEmojiFromAI(nameInput.value);
+    emojiInput.value = emoji;
+};
+
+// Member Management
+const handleAddMember = async (event) => {
+    event.preventDefault();
+    const name = document.getElementById('member-name').value.trim();
+    if (!name) return;
+
+    // Assign a default random color
+    const colors = ['red', 'green', 'blue', 'indigo', 'pink', 'teal', 'purple', 'orange'];
+    const randomColor = colors[Math.floor(Math.random() * colors.length)];
+    
+    const newMember = {
+        id: crypto.randomUUID(),
+        name: name,
+        emoji: '🙂',
+        color: randomColor,
+        points: 0,
+    };
+    await saveMember(newMember);
+    document.getElementById('member-name').value = '';
+    renderApp();
+};
+
+const handleMemberEditSave = async (memberId, event) => {
+    event.preventDefault();
+    const form = document.getElementById(`edit-member-form-${memberId}`);
+    const member = familyMembers.find(m => m.id === memberId);
+    
+    if (member) {
+        const newName = form.querySelector('input[name="name"]').value.trim();
+        const newEmoji = form.querySelector('input[name="emoji"]').value.trim();
+        const newColor = form.querySelector('select[name="color"]').value;
+
+        if (!newName) {
+            speak("Name cannot be empty.");
+            return;
         }
 
-
-        // Mappings for color and days
-        const MEMBER_COLORS = {
-            'blue': {bg: 'bg-blue-100', text: 'text-blue-800', border: 'border-blue-500'},
-            'red': {bg: 'bg-red-100', text: 'text-red-800', border: 'border-red-500'},
-            'green': {bg: 'bg-green-100', text: 'text-green-800', border: 'border-green-500'},
-            'purple': {bg: 'bg-purple-100', text: 'text-purple-800', border: 'border-purple-500'},
-            'pink': {bg: 'bg-pink-100', text: 'text-pink-800', border: 'border-pink-500'},
-            'yellow': {bg: 'bg-yellow-100', text: 'text-yellow-800', border: 'border-yellow-500'},
-            'indigo': {bg: 'bg-indigo-100', text: 'text-indigo-800', border: 'border-indigo-500'},
+        const updatedMember = {
+            ...member,
+            name: newName,
+            emoji: newEmoji,
+            color: newColor
         };
-        const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        await saveMember(updatedMember);
+        renderApp();
+    }
+};
 
-        // Global variables provided by the canvas environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        const firebaseConfig = typeof __firebase_config !== 'undefined' 
-            ? JSON.parse(__firebase_config) 
-            : {};
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' 
-            ? __initial_auth_token 
-            : null;
+const renderMemberEditor = (member) => {
+    const colorOptions = ['red', 'green', 'blue', 'indigo', 'pink', 'teal', 'purple', 'orange'];
+    
+    return `
+        <div class="bg-white p-4 rounded-xl shadow-lg border-t-4 border-${member.color}-600 transform transition duration-300 hover:shadow-xl">
+            <h3 class="text-lg font-bold mb-3 flex items-center">${member.name} <span class="ml-2 text-xl">${member.emoji}</span></h3>
+            <form id="edit-member-form-${member.id}" onsubmit="handleMemberEditSave('${member.id}', event)" class="space-y-3">
+                <div>
+                    <label for="member-edit-name-${member.id}" class="block text-xs font-medium text-gray-700">Name</label>
+                    <input type="text" name="name" id="member-edit-name-${member.id}" value="${member.name}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-sm border">
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label for="member-edit-emoji-${member.id}" class="block text-xs font-medium text-gray-700">Emoji</label>
+                        <input type="text" name="emoji" id="member-edit-emoji-${member.id}" value="${member.emoji}" required maxlength="2" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-sm border">
+                    </div>
+                    <div>
+                        <label for="member-edit-color-${member.id}" class="block text-xs font-medium text-gray-700">Color</label>
+                        <select name="color" id="member-edit-color-${member.id}" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 text-sm border">
+                            ${colorOptions.map(color => `
+                                <option value="${color}" ${member.color === color ? 'selected' : ''} class="capitalize">${color}</option>
+                            `).join('')}
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="w-full justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-500 hover:bg-blue-600 transition duration-150 active:scale-[0.98]">
+                    Save Changes
+                </button>
+            </form>
+        </div>
+    `;
+};
 
-        // --- UTILITY FUNCTIONS ---
+// Chore Definition Management
+const handleAddChoreDefinition = async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const name = form.querySelector('#def-name').value.trim();
+    const emoji = form.querySelector('#def-emoji').value.trim();
+    const points = parseInt(form.querySelector('#def-points').value, 10);
+    const assignedTo = form.querySelector('#def-assign').value;
+    const days = Array.from(form.querySelectorAll('input[name="def-day"]:checked')).map(cb => cb.value);
 
-        /** Formats a Date object to YYYY-MM-DD string */
-        const formatDate = (date) => {
-            const y = date.getFullYear();
-            const m = String(date.getMonth() + 1).padStart(2, '0');
-            const d = String(date.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        };
+    if (!name || isNaN(points) || points <= 0 || days.length === 0) {
+        speak("Please fill in the name, positive points, and select at least one day.");
+        return;
+    }
 
-        const todayDateString = formatDate(new Date());
-        const todayDayOfWeek = WEEKDAYS[new Date().getDay()];
+    const newChoreDef = {
+        id: crypto.randomUUID(),
+        name,
+        emoji,
+        points,
+        assignedTo: assignedTo || null, // Can be unassigned
+        days,
+    };
 
-        // Function to toggle the ad-hoc form state
-        window.toggleAdhocForm = () => {
-            isAdhocFormOpen = !isAdhocFormOpen;
-            renderApp();
-        };
+    await saveChoreDefinition(newChoreDef);
+    form.reset();
+    renderApp();
+};
 
-        /** Provides voice feedback */
-        const speak = (text) => {
-            if (synth && text) {
-                const utterance = new SpeechSynthesisUtterance(text);
-                // Attempt to select a neutral US voice if available
-                utterance.voice = synth.getVoices().find(v => v.lang === 'en-US' && (v.name.includes('Google') || v.name.includes('Zira'))) || synth.getVoices()[0];
-                synth.speak(utterance);
-            }
-        };
+// Reward Definition Management
+const handleAddReward = async (event) => {
+    event.preventDefault();
+    const form = event.target;
+    const name = form.querySelector('#reward-name').value.trim();
+    const emoji = form.querySelector('#reward-emoji').value.trim();
+    const cost = parseInt(form.querySelector('#reward-cost').value, 10);
+    
+    if (!name || isNaN(cost) || cost <= 0) {
+        speak("Please fill in the reward name and a positive point cost.");
+        return;
+    }
 
-        /** Generates a simple success/error message modal/toast */
-        const showToast = (message, isError = false) => {
-            const container = document.getElementById('app-container');
-            let toast = container.querySelector('#app-toast');
+    const newReward = {
+        id: crypto.randomUUID(),
+        name,
+        emoji,
+        cost,
+    };
+    
+    await saveReward(newReward);
+    form.reset();
+    renderApp();
+};
 
-            if (!toast) {
-                toast = document.createElement('div');
-                toast.id = 'app-toast';
-                toast.className = 'fixed bottom-20 left-1/2 transform -translate-x-1/2 z-50 transition-opacity duration-300 pointer-events-none';
-                container.appendChild(toast);
-            }
+
+const renderSetupView = () => {
+    const daysOfWeek = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+    return `
+        <div class="space-y-8">
             
-            const messageElement = document.createElement('div');
-            messageElement.textContent = message;
-            messageElement.className = `p-3 rounded-xl shadow-lg font-semibold text-sm ${isError ? 'bg-red-600 text-white' : 'bg-green-600 text-white'} opacity-0 translate-y-4 transition-all duration-300`;
-            
-            toast.appendChild(messageElement);
-
-            // Animate in
-            setTimeout(() => {
-                messageElement.classList.remove('opacity-0', 'translate-y-4');
-                messageElement.classList.add('opacity-100', 'translate-y-0');
-            }, 10);
-
-            // Animate out and remove
-            setTimeout(() => {
-                messageElement.classList.remove('opacity-100', 'translate-y-0');
-                messageElement.classList.add('opacity-0', 'translate-y-4');
+            <!-- Member Management -->
+            <div class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-purple-500">
+                <h2 class="text-2xl font-bold text-purple-700 mb-4">Family Members</h2>
                 
-                setTimeout(() => {
-                    messageElement.remove();
-                }, 300);
-            }, 3000);
-        };
-
-        /** Gets all days in a month for calendar display. */
-        const getDaysInMonth = (date) => {
-            const startOfMonth = new Date(date.getFullYear(), date.getMonth(), 1);
-            const startDate = new Date(startOfMonth);
-            startDate.setDate(startOfMonth.getDate() - startOfMonth.getDay());
-            
-            const days = [];
-            let currentDate = new Date(startDate);
-            
-            for (let i = 0; i < 42; i++) {
-                days.push(new Date(currentDate));
-                currentDate.setDate(currentDate.getDate() + 1);
-            }
-            return days;
-        };
-
-        // --- FIREBASE INITIALIZATION & AUTH ---
-
-        const initializeFirebase = async () => {
-            if (!Object.keys(firebaseConfig).length) {
-                console.error("Firebase config is missing or invalid.");
-                showToast("Initialization failed: Firebase config missing.", true);
-                return;
-            }
-
-            try {
-                const app = initializeApp(firebaseConfig);
-                auth = getAuth(app);
-                db = getFirestore(app);
-
-                await setPersistence(auth, browserSessionPersistence);
-
-                return new Promise((resolve) => {
-                    onAuthStateChanged(auth, async (user) => {
-                        if (user) {
-                            userId = user.uid;
-                        } else {
-                            try {
-                                if (initialAuthToken) {
-                                    await signInWithCustomToken(auth, initialAuthToken);
-                                } else {
-                                    await signInAnonymously(auth);
-                                }
-                            } catch (error) {
-                                console.error("Firebase Auth Error:", error);
-                                showToast("Authentication failed.", true);
-                            }
-                            userId = auth.currentUser?.uid || crypto.randomUUID();
-                        }
-                        isAuthReady = true;
-                        resolve();
-                    });
-                });
-            } catch (error) {
-                console.error("Failed to initialize Firebase:", error);
-                showToast(`Firebase Init Error: ${error.message}`, true);
-            }
-        };
-
-
-        // --- FIRESTORE LISTENERS ---
-
-        const startDataListeners = () => {
-            if (!db || !isAuthReady) return;
-
-            const publicDataPath = ['artifacts', appId, 'public', 'data'];
-
-            // 1. Members Listener
-            onSnapshot(query(collection(db, ...publicDataPath, 'members')), (snapshot) => {
-                members = snapshot.docs.map(doc => {
-                    const data = doc.data();
-                    const colorKey = data.colorKey || 'indigo';
-                    return {
-                        id: doc.id,
-                        ...data,
-                        points: data.points || 0,
-                        emoji: data.emoji || '👤',
-                        colorKey: colorKey,
-                        color: MEMBER_COLORS[colorKey] || MEMBER_COLORS['indigo']
-                    };
-                });
-                members.sort((a, b) => a.name.localeCompare(b.name));
-                renderApp();
-            }, (error) => { console.error("Error fetching members:", error); showToast("Error loading members.", true); });
-
-            // 2. Chore Definitions Listener (Reusable Chores)
-            onSnapshot(query(collection(db, ...publicDataPath, 'choreDefs')), (snapshot) => {
-                choreDefs = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    pointValue: doc.data().pointValue || 0,
-                    schedule: doc.data().schedule || {},
-                    emoji: doc.data().emoji || '📝',
-                    isAdhoc: doc.data().isAdhoc || false, // Flag for one-time chores
-                    createdAt: doc.data().createdAt // Firebase Timestamp
-                }));
-                choreDefs.sort((a, b) => a.name.localeCompare(b.name));
-                renderApp();
-            }, (error) => { console.error("Error fetching chore definitions:", error); showToast("Error loading chore definitions.", true); });
-
-            // 3. Chore Assignments Listener (Today's Completion Status)
-            // Filter to only get today's status for the daily view
-            const qAssignments = query(collection(db, ...publicDataPath, 'choreAssignments'), where('date', '==', todayDateString));
-
-            onSnapshot(qAssignments, (snapshot) => {
-                choreAssignments = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    ...doc.data(),
-                    isCompleted: !!doc.data().isCompleted,
-                }));
-                renderApp();
-            }, (error) => { console.error("Error fetching assignments:", error); showToast("Error loading assignments.", true); });
-            
-            // 4. Rewards Listener
-            onSnapshot(query(collection(db, ...publicDataPath, 'rewards'), where('claimed', '==', false)), (snapshot) => {
-                rewards = snapshot.docs.map(doc => ({
-                    id: doc.id,
-                    cost: doc.data().cost || 0,
-                    emoji: doc.data().emoji || '🎁',
-                    ...doc.data()
-                }));
-                rewards.sort((a, b) => a.cost - b.cost);
-                renderApp();
-            }, (error) => { console.error("Error fetching rewards:", error); showToast("Error loading rewards.", true); });
-        };
-
-        // --- DATA SEEDING FUNCTION ---
-        const seedData = async () => {
-            if (!db) return;
-
-            const publicDataPath = ['artifacts', appId, 'public', 'data'];
-            const membersRef = collection(db, ...publicDataPath, 'members');
-            const choreDefsRef = collection(db, ...publicDataPath, 'choreDefs');
-            const rewardsRef = collection(db, ...publicDataPath, 'rewards');
-
-            // 1. Check if members collection is empty
-            const memberSnapshot = await getDocs(membersRef);
-            if (!memberSnapshot.empty) {
-                console.log("Database already contains members. Skipping seed data.");
-                return;
-            }
-
-            console.log("Seeding initial data...");
-
-            const memberData = [
-                { id: 'member_mom', name: 'Mom', emoji: '👩‍🦱', colorKey: 'purple', points: 50 },
-                { id: 'member_dad', name: 'Dad', emoji: '👨‍🦱', colorKey: 'blue', points: 50 },
-                { id: 'member_lyra', name: 'Lyra', emoji: '👧', colorKey: 'pink', points: 0 },
-                { id: 'member_cora', name: 'Cora', emoji: '👧🏻', colorKey: 'red', points: 0 },
-            ];
-
-            // Add Members
-            for (const m of memberData) {
-                await setDoc(doc(membersRef, m.id), {
-                    id: m.id,
-                    name: m.name,
-                    points: m.points,
-                    emoji: m.emoji,
-                    colorKey: m.colorKey,
-                    initials: m.name.charAt(0).toUpperCase(),
-                    createdAt: serverTimestamp()
-                });
-            }
-
-            // Add Chore Definitions
-            const choreDefsData = [
-                { 
-                    id: 'chore_empty_dish', name: 'Empty Dishwasher', emoji: '🍽️', pointValue: 20, assignedToId: 'member_mom', assignedToName: 'Mom', 
-                    schedule: { 'Mon': true, 'Wed': true, 'Fri': true }, isAdhoc: false
-                },
-                { 
-                    id: 'chore_load_dish', name: 'Load Dishwasher', emoji: '🥄', pointValue: 20, assignedToId: 'member_dad', assignedToName: 'Dad', 
-                    schedule: { 'Tue': true, 'Thu': true, 'Sat': true }, isAdhoc: false
-                },
-                { 
-                    id: 'chore_feed_dog', name: 'Feed Dog', emoji: '🐕', pointValue: 20, assignedToId: 'member_lyra', assignedToName: 'Lyra', 
-                    schedule: { 'Sun': true, 'Mon': true, 'Tue': true, 'Wed': true, 'Thu': true, 'Fri': true, 'Sat': true }, isAdhoc: false
-                },
-                { 
-                    id: 'chore_feed_cat', name: 'Feed Cat', emoji: '🐈', pointValue: 20, assignedToId: 'member_cora', assignedToName: 'Cora', 
-                    schedule: { 'Sun': true, 'Mon': true, 'Tue': true, 'Wed': true, 'Thu': true, 'Fri': true, 'Sat': true }, isAdhoc: false
-                },
-                { 
-                    id: 'chore_laundry', name: 'Laundry', emoji: '🧺', pointValue: 50, assignedToId: 'member_mom', assignedToName: 'Mom', 
-                    schedule: { 'Sun': true, 'Wed': true }, isAdhoc: false
-                },
-            ];
-
-            for (const c of choreDefsData) {
-                await setDoc(doc(choreDefsRef, c.id), { ...c, createdAt: serverTimestamp() });
-            }
-
-            // Add Rewards
-            const rewardData = [
-                { id: 'reward_movie', name: 'Movie Night', emoji: '🎬', cost: 150, claimed: false },
-                { id: 'reward_pizza', name: 'Pizza Dinner', emoji: '🍕', cost: 100, claimed: false },
-            ];
-
-            for (const r of rewardData) {
-                 await setDoc(doc(rewardsRef, r.id), { ...r, createdAt: serverTimestamp() });
-            }
-
-            showToast("Initial family data loaded successfully!");
-        };
-
-
-        // --- CHORE & MEMBER ACTIONS ---
-
-        window.addFamilyMember = async () => {
-            if (!db) return;
-            const input = document.getElementById('new-member-name');
-            const memberName = input.value.trim();
-
-            if (!memberName) { showToast("Please enter a name.", true); return; }
-
-            const newId = crypto.randomUUID();
-            const membersCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'members');
-            
-            const memberColorKey = Object.keys(MEMBER_COLORS)[members.length % Object.keys(MEMBER_COLORS).length];
-
-            try {
-                await setDoc(doc(membersRef, newId), { 
-                    id: newId, 
-                    name: memberName,
-                    points: 0,
-                    emoji: '👤', 
-                    colorKey: memberColorKey,
-                    initials: memberName.charAt(0).toUpperCase(),
-                    createdAt: serverTimestamp()
-                });
-                input.value = '';
-                showToast(`Added ${memberName} to the family!`);
-            } catch (error) {
-                console.error("Error adding family member:", error);
-                showToast("Failed to add member.", true);
-            }
-        };
-
-        window.updateFamilyMember = async (memberId) => {
-            if (!db) return;
-
-            const member = members.find(m => m.id === memberId);
-            if (!member) return;
-
-            const nameInput = document.getElementById(`edit-member-name-${memberId}`);
-            const emojiInput = document.getElementById(`edit-member-emoji-${memberId}`);
-            const colorSelect = document.getElementById(`edit-member-color-${memberId}`);
-
-            const newName = nameInput.value.trim();
-            const newEmoji = emojiInput.value.trim().substring(0, 2) || '👤';
-            const newColorKey = colorSelect.value;
-            
-            if (!newName) { showToast("Name cannot be empty.", true); return; }
-
-            const memberRef = doc(db, 'artifacts', appId, 'public', 'data', 'members', memberId);
-
-            try {
-                await updateDoc(memberRef, { 
-                    name: newName,
-                    emoji: newEmoji,
-                    colorKey: newColorKey,
-                    initials: newName.charAt(0).toUpperCase(),
-                });
-                showToast(`Updated ${newName}'s details!`);
-            } catch (error) {
-                console.error("Error updating member:", error);
-                showToast("Failed to update member.", true);
-            }
-        };
-
-        window.addChoreDefinition = async (isAdhoc = false) => {
-            if (!db) return;
-            const prefix = isAdhoc ? 'adhoc' : 'new-chore-def';
-
-            const nameInput = document.getElementById(`${prefix}-name`);
-            const memberSelect = document.getElementById(`${prefix}-member`);
-            const pointValueInput = document.getElementById(`${prefix}-points`);
-            const emojiInput = document.getElementById(`${prefix}-emoji`);
-            
-            const choreName = nameInput.value.trim();
-            const assignedToId = memberSelect.value || null; // Optional Assignment
-            const pointValue = parseInt(pointValueInput.value, 10);
-            const emoji = emojiInput.value.trim().substring(0, 2) || '📝';
-
-            let schedule = {};
-            if (!isAdhoc) {
-                schedule = WEEKDAYS.reduce((acc, day) => {
-                    const checkbox = document.getElementById(`schedule-day-${day}`);
-                    if (checkbox && checkbox.checked) {
-                        acc[day] = true;
-                    }
-                    return acc;
-                }, {});
-
-                if (Object.keys(schedule).length === 0) {
-                    showToast("Please schedule at least one day for a recurring chore.", true);
-                    return;
-                }
-            }
-
-
-            if (!choreName || !assignedToId || isNaN(pointValue) || pointValue < 1) {
-                showToast(`Please complete all fields for the ${isAdhoc ? 'one-time' : 'recurring'} chore: name, assigned member, and points (> 0).`, true);
-                return;
-            }
-
-            const assignedMember = assignedToId ? members.find(m => m.id === assignedToId) : null;
-            const newId = crypto.randomUUID();
-            const defsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'choreDefs');
-
-            try {
-                await setDoc(doc(defsCollectionRef, newId), {
-                    id: newId,
-                    name: choreName,
-                    assignedToId: assignedToId,
-                    assignedToName: assignedMember ? assignedMember.name : null,
-                    pointValue: pointValue,
-                    emoji: emoji,
-                    schedule: schedule,
-                    isAdhoc: isAdhoc, // Flag ad-hoc chores
-                    createdAt: serverTimestamp() // Required for adhoc filtering in weekly view
-                });
-                nameInput.value = '';
-                memberSelect.value = '';
-                pointValueInput.value = '10';
-                emojiInput.value = '';
-                if (!isAdhoc) {
-                    WEEKDAYS.forEach(day => {
-                        const checkbox = document.getElementById(`schedule-day-${day}`);
-                        if (checkbox) checkbox.checked = false;
-                    });
-                } else {
-                    // Close the form after adding an ad-hoc chore
-                    isAdhocFormOpen = false;
-                }
-                showToast(`${isAdhoc ? 'One-time' : 'Recurring'} chore '${choreName}' created!`);
-            } catch (error) {
-                console.error("Error adding chore definition:", error);
-                showToast("Failed to create chore.", true);
-            }
-        };
-
-        window.assignChore = async (choreDefId, newMemberId) => {
-            if (!db) return;
-
-            const choreRef = doc(db, 'artifacts', appId, 'public', 'data', 'choreDefs', choreDefId);
-            
-            let newMember = null;
-            if (newMemberId) {
-                newMember = members.find(m => m.id === newMemberId);
-                if (!newMember) {
-                    showToast("New member not found.", true);
-                    return;
-                }
-            }
-
-            try {
-                await updateDoc(choreRef, {
-                    assignedToId: newMemberId || null,
-                    assignedToName: newMember ? newMember.name : null,
-                });
-                showToast(`Chore reassigned to ${newMember ? newMember.name : 'the Unassigned Pool'}!`);
-            } catch (error) {
-                console.error("Error assigning chore:", error);
-                showToast("Failed to assign chore.", true);
-            }
-        };
-        
-        // --- GEMINI AI EMOJI PICKER ---
-        window.pickEmoji = async (inputId, name) => {
-            if (!name) {
-                showToast("Please enter a name first.", true);
-                return;
-            }
-            
-            const emojiInput = document.getElementById(inputId);
-            if (!emojiInput) return;
-            
-            emojiInput.placeholder = '...Thinking...';
-            emojiInput.disabled = true;
-
-            const systemPrompt = "You are an emoji suggestion AI. Based on the user's name, provide only a single, highly relevant emoji character. Do not provide any text, explanation, or punctuation, just the emoji.";
-            const userQuery = `Name: ${name}`;
-            const apiKey = "" 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=`;
-
-            const payload = {
-                contents: [{ parts: [{ text: userQuery }] }],
-                systemInstruction: { parts: [{ text: systemPrompt }] },
-            };
-
-            const maxRetries = 3;
-            let currentDelay = 1000;
-            let resultText = '📝'; // Default fallback
-
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(apiUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
-
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-
-                    const result = await response.json();
-                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-                    
-                    if (text && text.length > 0) {
-                        resultText = text.substring(0, 2); // Take first character(s)
-                    }
-                    break; // Success, exit loop
-
-                } catch (error) {
-                    console.error(`AI Emoji Fetch attempt ${i + 1} failed:`, error);
-                    if (i < maxRetries - 1) {
-                        await new Promise(resolve => setTimeout(resolve, currentDelay));
-                        currentDelay *= 2; // Exponential backoff
-                    }
-                }
-            }
-
-            emojiInput.value = resultText;
-            emojiInput.placeholder = 'Emoji';
-            emojiInput.disabled = false;
-        };
-
-
-        // --- DRAG-AND-DROP HANDLERS (Unchanged) ---
-        window.dragStart = (event) => {
-            event.dataTransfer.setData("text/plain", event.target.dataset.choreid);
-            event.dataTransfer.effectAllowed = "move";
-        };
-
-        window.dragOver = (event) => {
-            event.preventDefault(); // Allows drop
-            event.dataTransfer.dropEffect = "move";
-            const targetList = event.currentTarget.querySelector('.chore-list-container');
-            if (targetList) targetList.classList.add('drag-hover');
-        };
-
-        window.dragLeave = (event) => {
-            const targetList = event.currentTarget.querySelector('.chore-list-container');
-            if (targetList) targetList.classList.remove('drag-hover');
-        };
-
-        window.dropHandler = (event) => {
-            event.preventDefault();
-            
-            const choreDefId = event.dataTransfer.getData("text/plain");
-            const targetMemberId = event.currentTarget.dataset.memberid || null; // Null for Unassigned Pool
-            
-            const targetList = event.currentTarget.querySelector('.chore-list-container');
-            if (targetList) targetList.classList.remove('drag-hover');
-
-            if (choreDefId) {
-                window.assignChore(choreDefId, targetMemberId);
-            }
-        };
-
-        // --- VOICE COMMAND HANDLER ---
-        
-        window.toggleVoiceCommand = () => {
-            if (!recognition) {
-                showToast("Voice commands are not supported by your browser.", true);
-                return;
-            }
-            if (isListening) {
-                recognition.stop();
-            } else {
-                try {
-                    recognition.start();
-                    speak("Ready. What can I help you with?");
-                } catch (e) {
-                    console.error("Recognition start error:", e);
-                    showToast("Error starting microphone. Check permissions.", true);
-                }
-            }
-        };
-
-        const findItemByPartialMatch = (items, speech, keyName) => {
-            const normalizedSpeech = speech.toLowerCase();
-            return items.find(item => {
-                const normalizedItemName = item[keyName].toLowerCase();
-                // Match if the spoken text contains the item name, or if the item name contains the spoken text
-                return normalizedItemName.includes(normalizedSpeech) || normalizedSpeech.includes(normalizedItemName);
-            });
-        };
-
-
-        const handleVoiceCommand = async (transcript) => {
-            const normalizedTranscript = transcript.toLowerCase();
-            let commandExecuted = false;
-
-            // --- 1. Navigation Commands ---
-            const tabCommands = {
-                'daily list': 'chores', 'daily chores': 'chores', 'show today': 'chores',
-                'weekly schedule': 'weekly', 'show week': 'weekly',
-                'points and rewards': 'rewards', 'go to rewards': 'rewards', 'show points': 'rewards',
-                'setup': 'setup', 'open settings': 'setup',
-                'calendar': 'calendar', 'show calendar': 'calendar'
-            };
-            
-            for (const key in tabCommands) {
-                if (normalizedTranscript.includes(key)) {
-                    activeTab = tabCommands[key];
-                    renderApp();
-                    speak(`Going to ${key}.`);
-                    commandExecuted = true;
-                    break;
-                }
-            }
-            if (commandExecuted) return;
-
-            // --- 2. Chore Completion Commands (Mark X done, finish X) ---
-            const choreCompleteMatch = normalizedTranscript.match(/(mark|finish|complete|i did|i finished|done with|done) (.+)/);
-            if (choreCompleteMatch) {
-                const choreName = choreCompleteMatch[2].trim();
-                const chore = findItemByPartialMatch(choreDefs, choreName, 'name');
-                
-                if (chore) {
-                    const assignment = choreAssignments.find(a => a.choreDefId === chore.id);
-                    if (!assignment || !assignment.isCompleted) {
-                        // Note: toggleChoreCompletion handles the transaction and points
-                        await toggleChoreCompletion(chore.id); 
-                        // Speak feedback is inside toggleChoreCompletion
-                    } else {
-                        speak(`${chore.name} is already done for today.`);
-                    }
-                } else {
-                    speak(`Sorry, I couldn't find a chore named ${choreName}.`);
-                }
-                commandExecuted = true;
-            }
-            if (commandExecuted) return;
-
-
-            // --- 3. Reward Redemption Commands (Mom redeem movie night, Lyra wants pizza) ---
-            const redeemMatch = normalizedTranscript.match(/(.+) (redeem|want|buy|claims) (.+)/);
-            if (redeemMatch) {
-                const memberSpeech = redeemMatch[1].trim();
-                const rewardSpeech = redeemMatch[3].trim();
-                
-                const member = findItemByPartialMatch(members, memberSpeech, 'name');
-                const reward = findItemByPartialMatch(rewards, rewardSpeech, 'name');
-
-                if (member && reward) {
-                    await redeemReward(reward.id, member.id);
-                    // Speak feedback is inside redeemReward
-                } else {
-                    speak(`I need both a family member and a reward. I heard member: ${memberSpeech} and reward: ${rewardSpeech}.`);
-                    showToast(`Failed: Heard "${memberSpeech}" and "${rewardSpeech}"`, true);
-                }
-                commandExecuted = true;
-            }
-            if (commandExecuted) return;
-
-
-            // --- 4. Default Failure ---
-            if (!commandExecuted) {
-                speak("I didn't understand that command. Please try a simple action like 'I finished empty dishwasher' or 'Lyra redeem movie night'.");
-                showToast("Command not recognized.", true);
-            }
-        };
-
-
-        // --- REUSED ACTIONS (Points, Rewards, Calendar) ---
-
-        window.toggleChoreCompletion = async (choreDefId) => {
-            if (!db) return;
-
-            const choreDef = choreDefs.find(def => def.id === choreDefId);
-            if (!choreDef) { showToast("Chore not found.", true); speak("Chore not found."); return; }
-            if (!choreDef.assignedToId) { showToast("Chore must be assigned before completion can be tracked.", true); speak("Chore must be assigned before completion can be tracked."); return; }
-
-            const assignmentRef = doc(db, 'artifacts', appId, 'public', 'data', 'choreAssignments', `${choreDefId}-${todayDateString}`);
-            const memberRef = doc(db, 'artifacts', appId, 'public', 'data', 'members', choreDef.assignedToId);
-            const choreItemElement = document.querySelector(`[data-choreid="${choreDefId}"]`);
-
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const assignmentDoc = await transaction.get(assignmentRef);
-                    const memberDoc = await transaction.get(memberRef);
-                    
-                    const isCompleted = assignmentDoc.exists ? assignmentDoc.data().isCompleted : false;
-                    const pointValue = choreDef.pointValue || 0;
-                    const currentPoints = memberDoc.exists ? (memberDoc.data().points || 0) : 0;
-                    
-                    if (!isCompleted) {
-                        // Completing the chore: ADD points
-                        const newPoints = currentPoints + pointValue;
-                        
-                        transaction.set(assignmentRef, {
-                            choreDefId: choreDefId,
-                            date: todayDateString,
-                            assignedToId: choreDef.assignedToId,
-                            isCompleted: true,
-                            completedAt: serverTimestamp()
-                        }, { merge: true });
-
-                        transaction.update(memberRef, { points: newPoints });
-
-                        // --- NEW: Confetti burst animation ---
-                        if (choreItemElement) {
-                            const confetti = document.createElement('div');
-                            confetti.className = 'confetti-burst';
-                            choreItemElement.appendChild(confetti);
-                            // Clean up the confetti element after the animation
-                            setTimeout(() => confetti.remove(), 600);
-                        }
-                        // --- END Confetti ---
-
-                        const msg = `+${pointValue} points awarded to ${memberDoc.data().name}!`;
-                        showToast(msg);
-                        speak(`${choreDef.name} done. ${msg}`);
-                    } else {
-                        // Uncompleting the chore: SUBTRACT points
-                        const newPoints = Math.max(0, currentPoints - pointValue);
-
-                        // Delete the assignment to reset state
-                        transaction.delete(assignmentRef);
-
-                        transaction.update(memberRef, { points: newPoints });
-                        const msg = `-${pointValue} points removed from ${memberDoc.data().name}.`;
-                        showToast(msg);
-                        speak(`${choreDef.name} completion undone.`);
-                    }
-                });
-            } catch (error) {
-                console.error("Transaction failed:", error.message);
-                showToast(`Update Failed: ${error.message}`, true);
-                speak(`Chore update failed due to a system error.`);
-            }
-        };
-
-        window.deleteChoreDefinition = async (defId, defName) => {
-            if (!db) return;
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'choreDefs', defId));
-                showToast(`Chore definition '${defName}' deleted.`);
-            } catch (error) {
-                console.error("Error deleting chore definition:", error);
-                showToast("Failed to delete chore definition.", true);
-            }
-        };
-
-        window.addReward = async () => {
-            if (!db) return;
-            const nameInput = document.getElementById('new-reward-name');
-            const costInput = document.getElementById('new-reward-cost');
-            const emojiInput = document.getElementById('new-reward-emoji');
-            
-            const rewardName = nameInput.value.trim();
-            const cost = parseInt(costInput.value, 10);
-            const emoji = emojiInput.value.trim().substring(0, 2) || '🎁';
-
-            if (!rewardName || isNaN(cost) || cost <= 0) {
-                showToast("Please enter a name and a positive point cost.", true);
-                return;
-            }
-
-            const newId = crypto.randomUUID();
-            const rewardsCollectionRef = collection(db, 'artifacts', appId, 'public', 'data', 'rewards');
-
-            try {
-                await setDoc(doc(rewardsCollectionRef, newId), {
-                    id: newId,
-                    name: rewardName,
-                    cost: cost,
-                    emoji: emoji,
-                    claimed: false,
-                    createdAt: serverTimestamp()
-                });
-                nameInput.value = '';
-                costInput.value = '';
-                emojiInput.value = '';
-                showToast(`Reward '${rewardName}' created!`);
-            } catch (error) {
-                console.error("Error adding reward:", error);
-                showToast("Failed to create reward.", true);
-            }
-        };
-
-        window.redeemReward = async (rewardId, memberId) => {
-            if (!db || !memberId) { showToast("Please select a family member to redeem for.", true); speak("Please select a family member."); return; }
-
-            const rewardRef = doc(db, 'artifacts', appId, 'public', 'data', 'rewards', rewardId);
-            const memberRef = doc(db, 'artifacts', appId, 'public', 'data', 'members', memberId);
-            const rewardName = rewards.find(r => r.id === rewardId)?.name || 'the reward';
-            const memberName = members.find(m => m.id === memberId)?.name || 'a member';
-            
-            try {
-                await runTransaction(db, async (transaction) => {
-                    const rewardDoc = await transaction.get(rewardRef);
-                    const memberDoc = await transaction.get(memberRef);
-
-                    if (!rewardDoc.exists()) { throw new Error("Reward not found."); }
-                    if (!memberDoc.exists()) { throw new Error("Member not found."); }
-                    
-                    const rewardCost = rewardDoc.data().cost || 0;
-                    const memberPoints = memberDoc.data().points || 0;
-
-                    if (rewardDoc.data().claimed) { throw new Error("Reward already claimed."); }
-                    if (memberPoints < rewardCost) { 
-                        const needed = rewardCost - memberPoints;
-                        const errorMsg = `${memberName} needs ${needed} more points to redeem ${rewardName}.`;
-                        showToast(errorMsg, true);
-                        speak(errorMsg);
-                        throw new Error("Insufficient points.");
-                    }
-
-                    // 1. Deduct points from member
-                    transaction.update(memberRef, { points: memberPoints - rewardCost });
-                    
-                    // 2. Mark reward as claimed
-                    transaction.update(rewardRef, {
-                        claimed: true,
-                        claimedBy: memberName,
-                        claimedById: memberId,
-                        claimedAt: serverTimestamp()
-                    });
-                    
-                    const successMsg = `Success! ${rewardName} redeemed by ${memberName} for ${rewardCost} points!`;
-                    showToast(successMsg);
-                    speak(successMsg);
-                });
-                return true;
-            } catch (error) {
-                console.error("Redemption failed:", error.message);
-                // If it's a custom error message (Insufficient points), it's already spoken.
-                if (!error.message.includes('points')) {
-                    showToast(`Redemption Failed: ${error.message}`, true);
-                    speak(`Redemption failed due to a system error.`);
-                }
-                return false;
-            }
-        };
-
-        window.deleteReward = async (rewardId, rewardName) => {
-            if (!db) return;
-            try {
-                await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rewards', rewardId));
-                showToast(`Reward '${rewardName}' deleted.`);
-            } catch (error) {
-                console.error("Error deleting reward:", error);
-                showToast("Failed to delete reward.", true);
-            }
-        };
-
-        window.changeMonth = (direction) => {
-            currentDate.setMonth(currentDate.getMonth() + direction);
-            renderApp();
-        };
-
-        // --- UI RENDERING ---
-
-        const getActiveChoresForToday = () => {
-            const choresByMember = { 'unassigned': [] }; 
-
-            choreDefs.forEach(def => {
-                // Check if it's scheduled for today OR is an ad-hoc chore created today
-                const isScheduledToday = def.schedule && def.schedule[todayDayOfWeek];
-                const isOneTimeChoreToday = def.isAdhoc && def.createdAt && def.createdAt.toDate && formatDate(def.createdAt.toDate()) === todayDateString;
-
-                if (isScheduledToday || isOneTimeChoreToday) {
-                    const id = def.assignedToId || 'unassigned';
-                    
-                    const assignment = choreAssignments.find(a => a.choreDefId === def.id);
-                    const isCompleted = assignment ? assignment.isCompleted : false;
-                    
-                    const member = members.find(m => m.id === def.assignedToId);
-                    
-                    if (!choresByMember[id]) { choresByMember[id] = []; }
-                    
-                    choresByMember[id].push({
-                        ...def,
-                        isCompleted: isCompleted,
-                        member: member || { name: 'Unassigned', color: MEMBER_COLORS['indigo'], initials: '?' }
-                    });
-                }
-            });
-            return choresByMember;
-        };
-
-        // Added index for staggering animations
-        const renderChoreItem = (chore, isCompleted, isUnassigned = false, index = 0) => {
-            const memberColor = isUnassigned ? MEMBER_COLORS['gray'] : chore.member.color;
-
-            let completionButton = '';
-            let dragClasses = '';
-            
-            if (!isUnassigned && chore.assignedToId) {
-                completionButton = `
-                    <button 
-                        onclick="toggleChoreCompletion('${chore.id}')"
-                        class="completion-btn w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 transition-all duration-300 transform hover:scale-105 
-                        ${isCompleted ? 'bg-green-500 border-green-700 shadow-md' : 'bg-white border-gray-300 hover:bg-green-100 shadow-inner'}"
-                    >
-                        ${isCompleted ? '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>' : chore.emoji}
+                <form onsubmit="handleAddMember(event)" class="mb-6 flex space-x-2">
+                    <input type="text" id="member-name" placeholder="New Member Name" required class="flex-grow rounded-md border-gray-300 shadow-sm p-2 border">
+                    <button type="submit" class="py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-purple-500 hover:bg-purple-600 transition duration-150 active:scale-95">
+                        Add Member
                     </button>
-                `;
-                dragClasses = 'chore-item';
-            } else {
-                completionButton = `<span class="w-8 h-8 rounded-full flex items-center justify-center mr-3 flex-shrink-0 text-2xl">${chore.emoji}</span>`;
-                dragClasses = 'chore-item';
-            }
+                </form>
 
-            return `
-                <li 
-                    class="animated-item flex justify-between items-center bg-white p-3 rounded-xl shadow-sm border border-gray-100 mb-2 transition-all duration-200 ${dragClasses} ${isCompleted ? 'opacity-70 border-l-4 border-green-300' : ''} relative"
-                    draggable="true"
-                    data-choreid="${chore.id}"
-                    ondragstart="dragStart(event)"
-                    style="animation-delay: ${index * 0.05}s;"
-                >
-                    <div class="flex items-center flex-grow">
-                        ${completionButton}
-                        
-                        <div class="flex flex-col text-left">
-                            <span class="text-base font-semibold ${isCompleted ? 'line-through text-gray-500' : 'text-gray-800'}">
-                                ${chore.name}
-                                ${chore.isAdhoc ? '<span class="text-xs ml-1 text-red-500">(One-Time)</span>' : ''}
-                            </span>
-                        </div>
-                    </div>
-
-                    <div class="flex items-center space-x-2 flex-shrink-0">
-                        <span class="text-sm font-bold text-indigo-600 flex-shrink-0 bg-indigo-50 px-2 py-1 rounded-full">
-                            +${chore.pointValue || 0}
-                        </span>
-                    </div>
-                </li>
-            `;
-        };
-        
-        // Renamed and modified to only return form structure (no outer div)
-        const getAdhocChoreFormHTML = () => {
-             const memberOptions = members.map(m => 
-                `<option value="${m.id}">${m.name}</option>`
-            ).join('');
-
-            return `
-                <div id="adhoc-form-inner" class="bg-indigo-50 p-4 rounded-xl shadow-inner border border-indigo-200">
-                    <h3 class="text-xl font-bold text-indigo-800 mb-3 border-b border-indigo-200 pb-2">One-Time Chore Details</h3>
-                    <div class="space-y-3">
-                        <div class="flex space-x-2">
-                            <input id="adhoc-emoji" type="text" placeholder="📝" maxlength="2" class="w-1/6 p-3 border border-gray-300 rounded-xl text-center shadow-inner" />
-                            <input id="adhoc-name" type="text" placeholder="Chore Name (e.g., Water the plants)" class="flex-grow p-3 border border-gray-300 rounded-xl shadow-inner" />
-                             <button onclick="pickEmoji('adhoc-emoji', document.getElementById('adhoc-name').value)" class="p-3 bg-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-300 transition-colors shadow-sm action-btn">AI</button>
-                        </div>
-                         <div class="flex space-x-2">
-                            <select id="adhoc-member" class="w-full p-3 border border-gray-300 rounded-xl bg-white focus:ring-indigo-500 focus:border-indigo-500 shadow-sm" ${members.length === 0 ? 'disabled' : ''}>
-                                <option value="" selected disabled>Assign To Member...</option>
-                                ${memberOptions}
-                            </select>
-                            <input id="adhoc-points" type="number" min="1" value="10" placeholder="Points" class="w-24 p-3 border border-gray-300 rounded-xl text-center shadow-sm" />
-                        </div>
-                        <button onclick="window.addChoreDefinition(true)" class="w-full bg-red-600 text-white p-3 rounded-xl font-extrabold hover:bg-red-700 transition-colors shadow-lg active:shadow-sm transform hover:scale-[1.01] action-btn">
-                            Add Today's Chore (No Repeat)
-                        </button>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    ${familyMembers.map(renderMemberEditor).join('')}
                 </div>
-            `;
-        }
+            </div>
 
-        const renderChoreChartView = () => {
-            const choresByMember = getActiveChoresForToday();
-            const unassignedChores = choresByMember['unassigned'] || [];
-            
-            
-            // --- Member Lists ---
-            let itemIndex = 0;
-            const memberListsHtml = members.map(member => {
-                const memberChores = choresByMember[member.id] || [];
-                const totalPoints = member.points || 0;
-                
-                const choreListHtml = memberChores.length > 0 ? memberChores.map(chore => {
-                    const html = renderChoreItem(chore, chore.isCompleted, false, itemIndex);
-                    itemIndex++;
-                    return html;
-                }).join('')
-                : `<p class="text-gray-500 italic p-4 text-center text-sm">Drag a chore here for ${member.name}!</p>`;
-
-                const memberColorClasses = member.color;
-
-                return `
-                    <div 
-                        class="${memberColorClasses.bg} p-4 rounded-xl shadow-xl border-t-8 ${memberColorClasses.border} drag-target member-card"
-                        ondragover="dragOver(event)"
-                        ondragleave="dragLeave(event)"
-                        ondrop="dropHandler(event)"
-                        data-memberid="${member.id}"
-                    >
-                        <div class="flex justify-between items-center mb-3 pb-2 border-b border-gray-300">
-                            <h4 class="text-xl font-extrabold ${memberColorClasses.text} flex items-center">
-                                <span class="text-2xl mr-2">${member.emoji}</span> ${member.name}'s List
-                            </h4>
-                            <div class="flex items-center bg-yellow-300 text-yellow-900 px-3 py-1 rounded-full font-extrabold text-lg shadow-inner">
-                                ${totalPoints} Pts
+            <!-- Chore Definitions -->
+            <div class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-green-500">
+                <h2 class="text-2xl font-bold text-green-700 mb-4">Recurring Chore Definitions</h2>
+                <form onsubmit="handleAddChoreDefinition(event)" class="space-y-4">
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="def-name" class="block text-sm font-medium text-gray-700">Chore Name</label>
+                            <input type="text" id="def-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="e.g., Take out trash">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label for="def-points" class="block text-sm font-medium text-gray-700">Points</label>
+                                <input type="number" id="def-points" required min="1" value="20" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            </div>
+                            <div class="col-span-2">
+                                <label for="def-emoji" class="block text-sm font-medium text-gray-700">Emoji</label>
+                                <div class="mt-1 flex rounded-md shadow-sm">
+                                    <input type="text" id="def-emoji" value="✅" required maxlength="2" class="block w-full rounded-l-md border-gray-300 p-2 border">
+                                    <button type="button" onclick="handleAIEmoji('def-name', 'def-emoji')" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-600 text-sm hover:bg-gray-200 transition duration-150 active:scale-95">AI</button>
+                                </div>
                             </div>
                         </div>
-                        <ul class="space-y-2 chore-list-container">
-                            ${choreListHtml}
-                        </ul>
-                    </div>
-                `;
-            }).join('');
-            
-            // --- Unassigned Pool (with embedded button and form) ---
-            const unassignedListHtml = unassignedChores.length > 0 ? unassignedChores.map((chore, index) => 
-                renderChoreItem(chore, false, true, index)
-            ).join('')
-            : '<p class="text-gray-500 italic p-4 text-center text-sm">Pool is empty! Drag an assigned chore back here to unassign it.</p>';
-            
-            const unassignedPoolHtml = `
-                <div 
-                    class="bg-yellow-50 p-4 rounded-xl shadow-xl border-2 border-dashed border-yellow-400 drag-target md:col-span-full"
-                    ondragover="dragOver(event)"
-                    ondragleave="dragLeave(event)"
-                    ondrop="dropHandler(event)"
-                    data-memberid="" 
-                >
-                    <div class="flex justify-between items-center mb-3 border-b border-yellow-300 pb-2">
-                        <h3 class="text-xl font-extrabold text-yellow-800 flex items-center">
-                            <span class="text-2xl mr-2">📥</span> Unassigned Chores Pool (${unassignedChores.length} today)
-                        </h3>
-                        <!-- NEW: Toggle Button within the header area -->
-                        <button onclick="window.toggleAdhocForm()" 
-                            class="action-btn w-10 h-10 rounded-full bg-red-600 text-white flex items-center justify-center shadow-lg hover:bg-red-700 transition-colors transform hover:scale-105"
-                            title="${isAdhocFormOpen ? 'Hide form' : 'Add one-time chore'}"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 transform transition-transform duration-300 ${isAdhocFormOpen ? 'rotate-45' : 'rotate-0'}" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
-                        </button>
-                    </div>
-
-                    <!-- Collapsible Form Content embedded inside the pool -->
-                    <div id="adhoc-form-content" class="collapsible-content ${isAdhocFormOpen ? 'open' : ''}">
-                        ${getAdhocChoreFormHTML()}
                     </div>
                     
-                    <h4 class="text-sm font-bold text-yellow-800 mt-4 mb-2">Drag from here to assign:</h4>
-                    <ul class="space-y-2 chore-list-container">
-                        ${unassignedListHtml}
-                    </ul>
-                </div>
-            `;
-            
-            // --- Final render output ---
-            return `
-                <div class="space-y-6 pb-20">
-                    <div class="bg-indigo-50 p-4 rounded-xl shadow-lg border border-indigo-200">
-                        <h3 class="text-xl font-bold text-indigo-800 mb-1">📅 Today is ${todayDayOfWeek}, ${todayDateString}</h3>
-                        <p class="text-sm text-indigo-700">Drag chores between the pool and member lists to assign them.</p>
-                    </div>
-                    
-                    <!-- Concurrent Chore Lists: Responsive Grid -->
-                    <h3 class="text-2xl font-extrabold text-gray-800 mt-6 mb-3 border-b pb-2">Active Assignments</h3>
-                    <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                        ${members.length > 0 ? memberListsHtml : '<p class="text-gray-500 italic p-4 text-center md:col-span-2 lg:col-span-3">Go to the "Setup" tab to add family members and define chores!</p>'}
-                    </div>
-
-                    <!-- Unassigned Pool (Now at the bottom) -->
-                    ${unassignedPoolHtml}
-
-                    <!-- User ID Display (footer) -->
-                    <div class="mt-4 p-3 text-xs text-gray-600 bg-gray-100 rounded-xl shadow-inner">
-                        <p class="font-bold text-sm text-gray-800 mb-1">Collaboration Info:</p>
-                        <p class="break-all font-mono">User ID: ${userId || "Authenticating..."}</p>
-                    </div>
-                </div>
-            `;
-        };
-
-        const renderWeeklyView = () => {
-            // Helper to get the YYYY-MM-DD date string for a specific day of the current week
-            const getDayDateString = (dayIndex) => {
-                const today = new Date();
-                const dayOfWeek = today.getDay(); // 0 for Sun, 1 for Mon...
-                const diff = dayIndex - dayOfWeek;
-                
-                const targetDate = new Date(today);
-                targetDate.setDate(today.getDate() + diff);
-                
-                return formatDate(targetDate);
-            };
-
-            const scheduleHtml = WEEKDAYS.map((day, dayIndex) => {
-                const dayDateString = getDayDateString(dayIndex);
-                const isToday = dayDateString === todayDateString;
-
-                // Filter for both recurring and ad-hoc chores for this specific day
-                const dayChores = choreDefs.filter(def => {
-                    const isRecurringMatch = !def.isAdhoc && def.schedule[day];
-                    
-                    // Ad-hoc chores are filtered by matching their creation date (due date) to the day in the loop
-                    let isAdhocMatch = false;
-                    if (def.isAdhoc && def.createdAt && def.createdAt.toDate) {
-                         isAdhocMatch = formatDate(def.createdAt.toDate()) === dayDateString;
-                    }
-                    
-                    return isRecurringMatch || isAdhocMatch;
-                });
-                
-                const choreBlocks = dayChores.map(chore => {
-                    const member = members.find(m => m.id === chore.assignedToId);
-                    // Default to gray for unassigned/unknown members
-                    const memberColor = member ? member.color : MEMBER_COLORS.indigo; 
-                    const memberEmoji = member ? member.emoji : '❓';
-                    const memberName = member ? member.name : 'Unassigned';
-
-                    return `
-                        <div class="flex items-center p-2 rounded-lg ${memberColor.bg} text-${memberColor.text.split('-')[1]}-800 shadow-sm mb-1 text-sm font-medium">
-                            <span class="text-lg mr-2">${chore.emoji}</span>
-                            <div class="flex flex-col flex-grow">
-                                <span class="font-bold">${chore.name}</span>
-                                <span class="text-xs ${memberColor.text}">
-                                    ${memberEmoji} ${memberName} (+${chore.pointValue} Pts)
-                                    ${chore.isAdhoc ? '<span class="text-red-600 font-bold ml-1">(One-Time)</span>' : ''}
-                                </span>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-
-                return `
-                    <div class="p-3 bg-white rounded-xl shadow-xl border-t-4 ${isToday ? 'border-red-500' : 'border-indigo-400'}">
-                        <h3 class="text-xl font-extrabold ${isToday ? 'text-red-800' : 'text-indigo-800'} mb-1">${day}</h3>
-                        <p class="text-xs text-gray-500 mb-3">${dayDateString}</p>
-                        <div class="min-h-[50px]">
-                            ${dayChores.length > 0 ? choreBlocks : '<p class="text-gray-400 italic text-sm">No scheduled chores.</p>'}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Schedule (Days of the Week)</label>
+                        <div class="flex flex-wrap gap-2">
+                            ${daysOfWeek.map(day => `
+                                <div class="flex items-center">
+                                    <input type="checkbox" id="day-${day}" name="def-day" value="${day}" class="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                                    <label for="day-${day}" class="ml-2 text-sm text-gray-700">${day}</label>
+                                </div>
+                            `).join('')}
                         </div>
                     </div>
-                `;
-            }).join('');
-
-
-            return `
-                <div class="space-y-6 pb-20">
-                    <div class="bg-indigo-50 p-4 rounded-xl shadow-lg border border-indigo-200">
-                        <h3 class="text-xl font-bold text-indigo-800 mb-1">Weekly Chore Schedule</h3>
-                        <p class="text-sm text-indigo-700">This view shows all recurring and one-time chores for the week, color-coded by the assigned member.</p>
-                    </div>
-
-                    <!-- Responsive Grid for Weekly Schedule -->
-                    <div class="grid gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
-                        ${scheduleHtml}
-                    </div>
-                </div>
-            `;
-        };
-        
-        const renderRewardsView = () => {
-            const selectedRedeemMemberId = document.getElementById('redeem-member-select')?.value || members[0]?.id || '';
-            const selectedMember = members.find(m => m.id === selectedRedeemMemberId);
-
-            const rewardsListHtml = rewards.map(reward => {
-                const memberPoints = selectedMember?.points || 0;
-                const canRedeem = memberPoints >= reward.cost;
-                const redeemText = canRedeem ? 'Redeem' : 'Need ' + (reward.cost - memberPoints) + ' Pts';
-
-                return `
-                    <li class="flex justify-between items-center bg-white p-3 rounded-xl shadow-md border border-gray-100 mb-3 hover:shadow-lg transform hover:scale-[1.005] transition-all">
-                        <div class="flex items-center flex-grow">
-                            <span class="text-3xl mr-3">${reward.emoji}</span>
-                            <div class="flex flex-col text-left">
-                                <span class="text-lg font-bold text-gray-800">${reward.name}</span>
-                                <span class="text-sm font-extrabold text-red-600">Cost: ${reward.cost} Pts</span>
-                            </div>
-                        </div>
-                        <div class="flex space-x-2 items-center flex-shrink-0">
-                            <button 
-                                onclick="redeemReward('${reward.id}', document.getElementById('redeem-member-select').value)"
-                                class="action-btn bg-red-500 text-white p-3 text-sm rounded-xl font-extrabold hover:bg-red-600 transition-colors shadow-lg active:shadow-sm transform hover:scale-105 ${!canRedeem || !selectedRedeemMemberId ? 'opacity-50 cursor-not-allowed shadow-none' : ''}"
-                                ${!canRedeem || !selectedRedeemMemberId ? 'disabled' : ''}
-                            >
-                                ${redeemText}
-                            </button>
-                            <button 
-                                onclick="deleteReward('${reward.id}', '${reward.name.replace(/'/g, "\\'")}')"
-                                class="action-btn p-2 text-gray-400 hover:text-red-600 rounded-full transition-colors ml-2 flex-shrink-0"
-                                title="Delete Reward"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                            </button>
-                        </div>
-                    </li>
-                `;
-            }).join('');
-            
-            return `
-                <div class="space-y-6 pb-20">
-                    <h3 class="text-2xl font-extrabold text-gray-800 mb-3 border-b pb-2">🌟 Point Summary</h3>
                     
-                    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-                        ${members.map(member => `
-                            <div class="${member.color.bg} p-4 rounded-xl shadow-xl flex flex-col items-center member-card">
-                                <span class="text-4xl font-extrabold ${member.color.text}">${member.emoji}</span>
-                                <span class="text-sm ${member.color.text} font-bold mt-1">${member.name}</span>
-                                <span class="text-2xl font-extrabold text-yellow-700 mt-2 bg-yellow-100 px-3 py-1 rounded-full shadow-inner">${member.points} Pts</span>
+                    <div>
+                        <label for="def-assign" class="block text-sm font-medium text-gray-700">Set Default Assignment (Optional)</label>
+                        <select id="def-assign" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            <option value="">Unassigned Pool</option>
+                            ${familyMembers.map(m => `<option value="${m.name}">${m.name} ${m.emoji}</option>`).join('')}
+                        </select>
+                    </div>
+
+                    <button type="submit" class="w-full justify-center py-2 px-4 border border-transparent shadow-md text-sm font-medium rounded-md text-white bg-green-500 hover:bg-green-600 transition duration-150 active:scale-[0.98]">
+                        Save Chore Definition
+                    </button>
+                </form>
+
+                <div class="mt-8 pt-4 border-t border-gray-200">
+                    <h3 class="text-lg font-bold mb-3 text-gray-700">Defined Chores (${choreDefinitions.length})</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${choreDefinitions.map(def => `
+                            <div class="bg-gray-50 p-3 rounded-lg shadow-sm border-l-4 border-green-400">
+                                <p class="text-sm font-semibold flex items-center">${def.emoji} ${def.name} <span class="ml-auto text-xs font-normal text-gray-500">${def.points} pts</span></p>
+                                <p class="text-xs text-gray-600">Days: ${def.days.join(', ')}</p>
+                                <p class="text-xs text-gray-600">Default: ${def.assignedTo || 'Unassigned'}</p>
                             </div>
                         `).join('')}
                     </div>
-
-                    <h3 class="text-2xl font-extrabold text-gray-800 mb-3 border-b pb-2">🎁 Available Rewards</h3>
-                    
-                    <!-- Redemption Section -->
-                    <div class="bg-indigo-50 p-4 rounded-xl shadow-lg border border-indigo-200">
-                        <div class="flex items-center space-x-3 mb-4">
-                            <label class="font-bold text-gray-700 whitespace-nowrap text-lg">Redeem for:</label>
-                            <select id="redeem-member-select" onchange="renderApp()" class="flex-grow p-3 border border-gray-300 rounded-xl bg-white text-md shadow-sm">
-                                <option value="" selected disabled>Select Member...</option>
-                                ${members.map(m => `<option value="${m.id}" ${m.id === selectedRedeemMemberId ? 'selected' : ''}>${m.name} (${m.points || 0} Pts)</option>`).join('')}
-                            </select>
-                        </div>
-                        <ul class="space-y-2 max-h-60 overflow-y-auto scroll-area">
-                            ${rewards.length > 0 ? rewardsListHtml : '<p class="text-gray-500 italic text-center p-4 text-md">No rewards set yet! Go to Setup to add some.</p>'}
-                        </ul>
-                    </div>
                 </div>
-            `;
-        };
-        
-        const renderSetupView = () => {
-            const memberOptions = members.map(m => 
-                `<option value="${m.id}">${m.name}</option>`
-            ).join('');
-
-            const memberEditListHtml = members.map(member => `
-                <div class="bg-white p-4 rounded-xl shadow-md border-l-4 ${member.color.border} mb-3 member-card">
-                    <h4 class="text-lg font-bold text-gray-800 flex items-center mb-2">
-                        <span class="text-xl mr-2">${member.emoji}</span> ${member.name}
-                    </h4>
-                    <div class="space-y-2">
-                        <input id="edit-member-name-${member.id}" type="text" value="${member.name}" placeholder="Name" class="w-full p-2 border border-gray-300 rounded-lg text-sm shadow-inner" />
-                        <div class="flex space-x-2">
-                            <input id="edit-member-emoji-${member.id}" type="text" value="${member.emoji}" placeholder="Emoji" maxlength="2" class="w-1/3 p-2 border border-gray-300 rounded-lg text-sm text-center shadow-inner" />
-                            <select id="edit-member-color-${member.id}" class="flex-grow p-2 border border-gray-300 rounded-lg bg-white text-sm shadow-inner">
-                                ${Object.keys(MEMBER_COLORS).map(key => 
-                                    `<option value="${key}" ${member.colorKey === key ? 'selected' : ''}>${key.charAt(0).toUpperCase() + key.slice(1)}</option>`
-                                ).join('')}
-                            </select>
+            </div>
+            
+            <!-- Reward Definitions -->
+            <div class="bg-white p-6 rounded-xl shadow-2xl border-t-8 border-red-500">
+                <h2 class="text-2xl font-bold text-red-700 mb-4">Reward Definitions</h2>
+                <form onsubmit="handleAddReward(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label for="reward-name" class="block text-sm font-medium text-gray-700">Reward Name</label>
+                            <input type="text" id="reward-name" required class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border" placeholder="e.g., Pizza Night">
                         </div>
-                        <button onclick="updateFamilyMember('${member.id}')" class="action-btn w-full bg-indigo-500 text-white p-2 rounded-xl font-semibold hover:bg-indigo-600 transition-colors shadow-lg active:shadow-sm">
-                            Save Changes
-                        </button>
-                    </div>
-                </div>
-            `).join('');
-
-
-            const choreDefListHtml = choreDefs.filter(def => !def.isAdhoc).map(def => {
-                const member = def.assignedToId ? (members.find(m => m.id === def.assignedToId) || { name: 'Unknown' }) : { name: 'Unassigned' };
-                const scheduleDays = WEEKDAYS.filter(day => def.schedule[day]).join(', ');
-                
-                return `
-                    <li class="flex justify-between items-center bg-white p-3 rounded-xl shadow-md border border-gray-100 mb-2 hover:shadow-lg transform hover:scale-[1.005] transition-all">
-                        <div class="flex flex-col text-left flex-grow">
-                            <div class="text-lg font-bold text-gray-800">${def.emoji} ${def.name}</div>
-                            <div class="text-sm text-indigo-600 font-medium">Default Assign: ${member.name} | Points: ${def.pointValue}</div>
-                            <div class="text-xs text-gray-500 mt-1">Schedule: ${scheduleDays}</div>
-                        </div>
-                        <button 
-                            onclick="deleteChoreDefinition('${def.id}', '${def.name.replace(/'/g, "\\'")}')"
-                            class="action-btn p-2 text-gray-400 hover:text-red-600 rounded-full transition-colors ml-4 flex-shrink-0"
-                            title="Delete Chore Definition"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
-                        </button>
-                    </li>
-                `;
-            }).join('');
-
-
-            const rewardAddForm = `
-                <div class="bg-white p-4 rounded-xl shadow-xl border border-gray-100">
-                    <h3 class="text-xl font-bold text-gray-800 mb-3 border-b pb-2">Add New Reward</h3>
-                    <div class="space-y-3">
-                        <div class="flex space-x-2">
-                            <!-- UPDATED: AI Emoji Integration -->
-                            <input id="new-reward-emoji" type="text" placeholder="🍦" maxlength="2" class="w-1/6 p-3 border border-gray-300 rounded-xl text-center shadow-sm" />
-                            <input id="new-reward-name" type="text" placeholder="Reward name (e.g., Pizza Night)" class="flex-grow p-3 border border-gray-300 rounded-xl shadow-sm" />
-                            <button onclick="pickEmoji('new-reward-emoji', document.getElementById('new-reward-name').value)" class="action-btn p-3 bg-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-300 transition-colors shadow-sm">AI</button>
-                            <input id="new-reward-cost" type="number" min="1" value="50" placeholder="Cost" class="w-20 p-3 border border-gray-300 rounded-xl text-center shadow-sm" />
-                        </div>
-                        <button onclick="window.addReward()" class="action-btn w-full bg-indigo-600 text-white p-3 rounded-xl font-extrabold hover:bg-indigo-700 transition-colors shadow-lg active:shadow-sm transform hover:scale-[1.01]">
-                            Create Reward
-                        </button>
-                    </div>
-                </div>
-            `;
-
-            return `
-                <div class="space-y-6 pb-20">
-                    
-                    <!-- Member Management Section: Responsive Grid -->
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <div class="bg-indigo-50 p-4 rounded-xl shadow-lg border border-indigo-200">
-                            <h3 class="text-xl font-bold text-indigo-800 mb-3 border-b border-indigo-200 pb-2">Add New Member</h3>
-                            <div class="flex space-x-2">
-                                <input
-                                    id="new-member-name"
-                                    type="text"
-                                    placeholder="New member name (e.g., Dad)"
-                                    class="flex-grow p-3 border border-gray-300 rounded-xl focus:ring-indigo-500 focus:border-indigo-500 transition-shadow shadow-inner"
-                                    onkeydown="if(event.key === 'Enter') { window.addFamilyMember(); }"
-                                />
-                                <button
-                                    onclick="window.addFamilyMember()"
-                                    class="action-btn bg-indigo-600 text-white p-3 rounded-xl font-semibold hover:bg-indigo-700 disabled:opacity-50 transition-colors shadow-lg active:shadow-sm transform hover:scale-[1.01]"
-                                >
-                                    Add
-                                </button>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label for="reward-cost" class="block text-sm font-medium text-gray-700">Point Cost</label>
+                                <input type="number" id="reward-cost" required min="1" value="100" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm p-2 border">
+                            </div>
+                            <div class="col-span-2">
+                                <label for="reward-emoji" class="block text-sm font-medium text-gray-700">Emoji</label>
+                                <div class="mt-1 flex rounded-md shadow-sm">
+                                    <input type="text" id="reward-emoji" value="🎁" required maxlength="2" class="block w-full rounded-l-md border-gray-300 p-2 border">
+                                    <button type="button" onclick="handleAIEmoji('reward-name', 'reward-emoji')" class="inline-flex items-center px-3 rounded-r-md border border-l-0 border-gray-300 bg-gray-50 text-gray-600 text-sm hover:bg-gray-200 transition duration-150 active:scale-95">AI</button>
+                                </div>
                             </div>
                         </div>
-
-                        ${rewardAddForm}
                     </div>
-                    
-                    <!-- Existing Member Customization -->
-                    <div class="bg-white p-4 rounded-xl shadow-xl border border-gray-100">
-                        <h3 class="text-xl font-bold text-gray-800 mb-3 border-b pb-2">Edit Members & Customization (${members.length})</h3>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            ${members.length > 0 ? memberEditListHtml : '<p class="text-gray-500 italic p-4 text-center">No members added yet.</p>'}
-                        </div>
-                    </div>
+                    <button type="submit" class="w-full justify-center py-2 px-4 border border-transparent shadow-md text-sm font-medium rounded-md text-white bg-red-500 hover:bg-red-600 transition duration-150 active:scale-[0.98]">
+                        Save Reward Definition
+                    </button>
+                </form>
+            </div>
+        </div>
+    `;
+};
 
-                    <!-- Chore Definitions Section: Responsive Grid -->
-                    <div class="grid gap-6 md:grid-cols-2">
-                        <div class="bg-white p-4 rounded-xl shadow-xl border border-gray-100">
-                            <h3 class="text-xl font-bold text-gray-800 mb-3 border-b pb-2">Create New Recurring Chore</h3>
-                            <div class="space-y-3">
-                                <!-- Name, Emoji, Points -->
-                                <div class="flex space-x-2">
-                                    <input id="new-chore-def-emoji" type="text" placeholder="🧺" maxlength="2" class="w-1/6 p-3 border border-gray-300 rounded-xl text-center shadow-inner" />
-                                    <input id="new-chore-def-name" type="text" placeholder="Chore Name" class="flex-grow p-3 border border-gray-300 rounded-xl shadow-inner" />
-                                     <button onclick="pickEmoji('new-chore-def-emoji', document.getElementById('new-chore-def-name').value)" class="action-btn p-3 bg-gray-200 rounded-xl text-sm font-semibold hover:bg-gray-300 transition-colors shadow-sm">AI</button>
-                                </div>
-                                <div class="flex space-x-2">
-                                    <select id="new-chore-def-member" class="flex-grow p-3 border border-gray-300 rounded-xl bg-white focus:ring-indigo-500 focus:border-indigo-500 shadow-inner" ${members.length === 0 ? 'disabled' : ''}>
-                                        <option value="" selected>Set Default Assignment (Optional)</option>
-                                        ${memberOptions}
-                                    </select>
-                                    <input id="new-chore-def-points" type="number" min="1" value="10" placeholder="Pts" class="w-20 p-3 border border-gray-300 rounded-xl text-center shadow-inner" />
-                                </div>
 
-                                <!-- Schedule -->
-                                <div class="border border-gray-200 p-3 rounded-xl bg-gray-50 shadow-inner">
-                                    <label class="block text-sm font-semibold mb-2 text-gray-700">Schedule Repeating Days:</label>
-                                    <div class="grid grid-cols-4 sm:grid-cols-7 gap-2">
-                                        ${WEEKDAYS.map(day => `
-                                            <div class="flex items-center">
-                                                <input type="checkbox" id="schedule-day-${day}" class="rounded text-indigo-600 focus:ring-indigo-500">
-                                                <label for="schedule-day-${day}" class="ml-1.5 text-xs font-medium text-gray-700">${day}</label>
-                                            </div>
-                                        `).join('')}
-                                    </div>
-                                </div>
+// --- Calendar View (Tab 'calendar') ---
+const renderCalendarView = () => {
+    // NOTE: This remains a functional mock-up. Full Google Calendar integration 
+    // requires a backend server for OAuth 2.0 and API key management, which is 
+    // not possible in this single-file, client-side application.
 
-                                <button onclick="window.addChoreDefinition()" class="action-btn w-full bg-green-600 text-white p-3 rounded-xl font-extrabold hover:bg-green-700 transition-colors shadow-lg active:shadow-sm transform hover:scale-[1.01]">
-                                    Save Chore Definition
-                                </button>
-                            </div>
+    const date = new Date();
+    const year = date.getFullYear();
+    const month = date.getMonth(); 
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayIndex = new Date(year, month, 1).getDay(); // 0 (Sun) - 6 (Sat)
+    
+    const monthName = date.toLocaleDateString('en-US', { month: 'long' });
+    const today = new Date().getDate();
+
+    let daysHtml = '';
+    // Empty cells for padding
+    for (let i = 0; i < firstDayIndex; i++) {
+        daysHtml += '<div class="day-cell p-2"></div>';
+    }
+
+    // Mock Events for visual purposes
+    const mockEvents = {
+        5: [{ text: 'Lyra B-day!', color: 'pink' }],
+        12: [{ text: 'Soccer Game', color: 'indigo' }],
+        21: [{ text: 'Mom & Dad Date', color: 'purple' }],
+        28: [{ text: 'Dr. Appt', color: 'blue' }],
+    };
+
+    for (let day = 1; day <= daysInMonth; day++) {
+        const isToday = day === today && month === new Date().getMonth();
+        const events = mockEvents[day] || [];
+
+        daysHtml += `
+            <div class="day-cell p-2 rounded-lg transition duration-150 ${isToday ? 'bg-indigo-100 border-2 border-indigo-500 shadow-md' : 'bg-white hover:bg-gray-50'}">
+                <div class="font-bold ${isToday ? 'text-indigo-700' : 'text-gray-800'}">${day}</div>
+                <div class="mt-1 space-y-0.5">
+                    ${events.map(event => `
+                        <div class="text-xs p-1 rounded-md bg-${event.color}-50 text-${event.color}-700 truncate" title="${event.text}">
+                            ${event.text}
                         </div>
-                        
-                        <!-- Existing Chore Definitions List -->
-                        <div class="bg-white p-4 rounded-xl shadow-xl border border-gray-100">
-                            <h3 class="text-xl font-bold text-gray-800 mb-3 border-b pb-2">All Recurring Chores (${choreDefs.filter(def => !def.isAdhoc).length})</h3>
-                            <ul class="space-y-3 max-h-96 overflow-y-auto scroll-area">
-                                ${choreDefs.filter(def => !def.isAdhoc).length > 0 ? choreDefListHtml : '<p class="text-gray-500 italic p-4 text-center">No recurring chores defined yet.</p>'}
-                            </ul>
-                        </div>
-                    </div>
+                    `).join('')}
                 </div>
-            `;
-        };
+            </div>
+        `;
+    }
+
+
+    return `
+        <div class="max-w-4xl mx-auto bg-white p-6 rounded-xl shadow-2xl border-t-8 border-indigo-500">
+            <h2 class="text-3xl font-bold text-gray-800 mb-6">${monthName} ${year}</h2>
+            <p class="text-sm text-red-500 mb-4 font-medium">NOTE: This is a static view. For live Google Calendar sync, you need a server-side OAuth implementation.</p>
+
+            <div class="grid grid-cols-7 gap-1 text-center font-semibold text-sm text-gray-500 mb-2">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+            </div>
+            <div class="grid grid-cols-7 gap-1">
+                ${daysHtml}
+            </div>
+        </div>
+    `;
+};
+
+
+// --- Drag and Drop Logic ---
+
+let draggedChore = null;
+
+const setupDragAndDrop = () => {
+    // Remove existing listeners to prevent duplication
+    document.querySelectorAll('.chore-item').forEach(item => {
+        item.removeEventListener('dragstart', handleDragStart);
+        item.removeEventListener('dragend', handleDragEnd);
+    });
+    document.querySelectorAll('.drop-zone').forEach(zone => {
+        zone.removeEventListener('dragover', handleDragOver);
+        zone.removeEventListener('dragleave', handleDragLeave);
+        zone.removeEventListener('drop', handleDrop);
+    });
+
+    // Add listeners to chore items (draggables)
+    document.querySelectorAll('.chore-item').forEach(item => {
+        item.addEventListener('dragstart', handleDragStart);
+        item.addEventListener('dragend', handleDragEnd);
+    });
+
+    // Add listeners to member lists (drop targets)
+    document.querySelectorAll('.drop-zone').forEach(zone => {
+        zone.addEventListener('dragover', handleDragOver);
+        zone.addEventListener('dragleave', handleDragLeave);
+        zone.addEventListener('drop', handleDrop);
+    });
+};
+
+function handleDragStart(e) {
+    draggedChore = dailyChores.find(c => c.id === e.target.dataset.choreId);
+    e.dataTransfer.setData('text/plain', draggedChore.id);
+    e.target.classList.add('opacity-40');
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('opacity-40');
+    draggedChore = null;
+    document.querySelectorAll('.drop-zone').forEach(zone => zone.classList.remove('border-indigo-500'));
+}
+
+function handleDragOver(e) {
+    e.preventDefault(); // Necessary to allow drop
+    if (draggedChore) {
+        e.currentTarget.classList.add('border-indigo-500');
+    }
+}
+
+function handleDragLeave(e) {
+    e.currentTarget.classList.remove('border-indigo-500');
+}
+
+async function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('border-indigo-500');
+
+    if (!draggedChore) return;
+
+    const targetMemberName = e.currentTarget.dataset.memberId; // "Mom", "Dad", or "Unassigned"
+
+    // If target member is the same as current assignment, do nothing
+    if ((draggedChore.assignedTo || 'Unassigned') === targetMemberName) return;
+
+    // Determine the new assignment name
+    const newAssignment = targetMemberName === 'Unassigned' ? null : targetMemberName;
+    
+    // The chore to update might be a recurring definition or an ad-hoc chore.
+    let docRef;
+
+    if (draggedChore.isAdHoc) {
+        // Update the ad-hoc chore in the completions collection (as a log entry)
+        docRef = doc(db, getChoreCompletionsPath(), draggedChore.logId);
         
-        const renderCalendarView = () => {
-            const daysInMonth = getDaysInMonth(currentDate);
-            const today = new Date().toDateString();
+        // Note: Ad-hoc chores are logs, but for D&D, we track them live in the dailyChores array
+        // The persistence model here is a bit stretched, but for simplicity, we update the log's 'assignedTo' field
+    } else {
+        // Update the recurring chore definition
+        docRef = doc(db, getChoreDefinitionsPath(), draggedChore.defId);
+    }
+    
+    try {
+        // Update the assignedTo field
+        await setDoc(docRef, { assignedTo: newAssignment }, { merge: true });
+        speak(`${draggedChore.name} assigned to ${newAssignment || 'Unassigned Pool'}.`);
+    } catch (error) {
+        console.error("Error updating chore assignment: ", error);
+        speak("Failed to update chore assignment.");
+    }
+}
 
-            // Mock Events 
-            const calendarEvents = [
-                { date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 15).toDateString(), title: "Family Movie Night" },
-                { date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 22).toDateString(), title: "School Play" },
-                { date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 5).toDateString(), title: "Dentist" },
-            ];
 
-            const weekDayNames = WEEKDAYS.map(day => 
-                `<div class="p-2 border-b border-gray-200">${day}</div>`
-            ).join('');
+// --- Data Listeners (Real-time Sync) ---
 
-            const dayCells = daysInMonth.map(date => {
-                const day = date.getDate();
-                const isToday = date.toDateString() === today;
-                const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-                const cellEvents = calendarEvents.filter(e => e.date === date.toDateString());
+const startDataListeners = () => {
+    if (!db) return;
 
-                const dayClasses = isCurrentMonth ? 'text-gray-900 bg-white' : 'text-gray-400 bg-gray-50';
-                const todayClasses = isToday ? 'ring-2 ring-indigo-500 ring-offset-2 rounded-lg' : '';
+    // Listener 1: Family Members
+    onSnapshot(collection(db, getFamilyMembersPath()), (snapshot) => {
+        familyMembers = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        // Ensure points are numbers
+        familyMembers.forEach(m => m.points = m.points || 0);
+        renderApp();
+    });
 
-                const eventHtml = cellEvents.map((event, index) => 
-                    `<div class="truncate bg-red-100 text-red-700 font-medium px-1 rounded-sm my-0.5 text-[10px] sm:text-xs">
-                        ${event.title}
-                    </div>`
-                ).join('');
+    // Listener 2: Chore Definitions
+    onSnapshot(collection(db, getChoreDefinitionsPath()), (snapshot) => {
+        choreDefinitions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        updateDailyChores();
+    });
 
-                return `
-                    <div class="h-24 p-1 text-xs border border-gray-100 transition duration-150 ease-in-out hover:bg-blue-50 relative overflow-hidden ${dayClasses} ${todayClasses}">
-                        <span class="absolute top-1 right-1 font-semibold ${isToday ? 'text-indigo-600' : 'text-gray-800'}">
-                            ${day}
-                        </span>
-                        <div class="mt-5 space-y-0.5 max-h-16 overflow-y-auto scroll-area">
-                            ${eventHtml}
-                        </div>
-                    </div>
-                `;
-            }).join('');
+    // Listener 3: Reward Definitions
+    onSnapshot(collection(db, getRewardsPath()), (snapshot) => {
+        rewardsList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        renderApp(); // Only need to re-render rewards/setup views
+    });
 
-            return `
-                <div class="pb-20">
-                    <div class="bg-white shadow-xl rounded-xl border border-gray-100">
-                        <!-- Calendar Header -->
-                        <div class="flex justify-between items-center p-4 bg-indigo-50 rounded-t-xl border-b border-gray-200">
-                            <button 
-                                onclick="window.changeMonth(-1)" 
-                                class="action-btn p-2 rounded-full hover:bg-indigo-100 transition text-indigo-700"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" /></svg>
-                            </button>
-                            <h2 class="text-xl font-extrabold text-indigo-800">
-                                ${currentDate.toLocaleString('default', { month: 'long', year: 'numeric' })}
-                            </h2>
-                            <button 
-                                onclick="window.changeMonth(1)" 
-                                class="action-btn p-2 rounded-full hover:bg-indigo-100 transition text-indigo-700"
-                            >
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" /></svg>
-                            </button>
-                        </div>
-                        
-                        <!-- Weekday Names -->
-                        <div class="grid grid-cols-7 text-center font-bold text-sm text-gray-600 border-t border-gray-200">
-                            ${weekDayNames}
-                        </div>
-                        
-                        <!-- Day Cells -->
-                        <div class="grid grid-cols-7 auto-rows-fr calendar-grid rounded-b-xl overflow-hidden">
-                            ${dayCells}
-                        </div>
-                    </div>
+    // Listener 4: Chore Completions (Crucial for determining TODAY's list status)
+    const todayKey = getCurrentDateKey();
+    const completionsQuery = query(collection(db, getChoreCompletionsPath()), where('date', '==', todayKey));
+    
+    onSnapshot(completionsQuery, (snapshot) => {
+        const completedToday = snapshot.docs.map(doc => ({ logId: doc.id, ...doc.data() }));
+        updateDailyChores(completedToday);
+    });
+};
 
-                    <div class="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-xl text-sm text-yellow-800 shadow-md">
-                        <h3 class="font-bold mb-1">Integration Notice:</h3>
-                        <p>
-                            Direct, secure Google Calendar syncing requires complex server authentication (OAuth 2.0) which is not possible in this single-file structure. 
-                            This calendar displays **mock events** to show the layout. In a real Android app, this view would be replaced with your official Google Calendar API implementation.
-                        </p>
-                    </div>
+/** * Combines recurring definitions, ad-hoc logs, and completion logs 
+ * to generate the final list of chores for TODAY.
+ */
+const updateDailyChores = (completedToday = null) => {
+    // If we only have completions data, ensure defs are loaded first
+    if (!completedToday) {
+        completedToday = dailyChores.filter(c => c.completed).map(c => ({ choreId: c.defId || c.id })); // Use existing completion data
+    }
+    
+    const today = new Date();
+    const todayDayName = dayIndexToName(today.getDay());
+    const newDailyChores = [];
+    
+    // 1. Recurring Chores scheduled for today
+    choreDefinitions.forEach(def => {
+        if (def.days.includes(todayDayName)) {
+            const isCompleted = completedToday.some(log => log.choreId === def.id && !log.isRedemption);
+            
+            // If the chore has an updated assignment from D&D, use the updated value.
+            const currentAssignment = def.assignedTo;
+            
+            newDailyChores.push({
+                id: def.id,         // Unique ID for rendering/D&D target
+                defId: def.id,      // Links to the definition
+                name: def.name,
+                emoji: def.emoji,
+                points: def.points,
+                assignedTo: currentAssignment, 
+                completed: isCompleted,
+                isAdHoc: false,
+            });
+        }
+    });
+
+    // 2. Ad-Hoc Chores created today (these are stored as completion *logs* but represent uncompleted tasks until they are finished)
+    completedToday.filter(log => log.isAdHoc && !log.isRedemption).forEach(adhocLog => {
+        // Treat ad-hoc logs as uncompleted tasks IF they don't have a final completion log for today.
+        // For simplicity and D&D functionality, we track them as "live" daily chores
+        const isCompleted = adhocLog.completed || false; 
+        
+        newDailyChores.push({
+            id: adhocLog.logId, // Use the log ID as the unique ID for D&D/completion
+            logId: adhocLog.logId, // Link to the original log entry
+            defId: adhocLog.logId, // Use log ID as defId for ad-hoc logic
+            name: adhocLog.name,
+            emoji: adhocLog.emoji,
+            points: adhocLog.points,
+            assignedTo: adhocLog.assignedTo,
+            completed: isCompleted,
+            isAdHoc: true,
+        });
+    });
+
+    // Update the global state and re-render
+    dailyChores = newDailyChores.sort((a, b) => {
+        if (a.completed !== b.completed) return a.completed ? 1 : -1; // Incomplete first
+        return (a.assignedTo || 'Unassigned') < (b.assignedTo || 'Unassigned') ? -1 : 1;
+    });
+
+    renderApp();
+};
+
+
+// --- Initialization ---
+
+window.onload = async () => {
+    try {
+        // --- IMPORTANT: Ensure the config values are NOT the default placeholders ---
+        // The error check has been updated to use the new placeholder string.
+        if (YOUR_API_KEY.includes("YOUR-API-KEY-HERE")) {
+            document.getElementById('app').innerHTML = `
+                <div class="p-8 bg-red-100 border-4 border-red-500 rounded-xl max-w-xl mx-auto mt-10">
+                    <h2 class="text-2xl font-bold text-red-700 mb-4">Initialization Failed: Firebase Config missing</h2>
+                    <p class="text-gray-700">You must replace the placeholder text in the <code>&lt;script&gt;</code> block 
+                    with your actual keys from the Firebase Console before this app can run.</p>
+                    <p class="mt-4 text-sm font-medium">Please review the configuration guide and update the 
+                    <code>index.html</code> file on GitHub. The required keys are:</p>
+                    <ul class="list-disc list-inside mt-2 text-sm text-red-600 font-semibold">
+                        <li>YOUR_API_KEY</li>
+                        <li>YOUR_AUTH_DOMAIN</li>
+                        <li>YOUR_PROJECT_ID</li>
+                        <li>YOUR_STORAGE_BUCKET</li>
+                        <li>YOUR_MESSAGING_SENDER_ID</li>
+                        <li>YOUR_APP_ID</li>
+                    </ul>
                 </div>
             `;
-        };
+            console.error("Firebase config is using default placeholders.");
+            return;
+        }
 
+        // Initialize Firebase
+        app = initializeApp(firebaseConfig);
+        db = getFirestore(app);
+        auth = getAuth(app);
+        
+        // Log in
+        if (typeof __initial_auth_token !== 'undefined') {
+             // Use custom token if available (from development environment)
+             await signInWithCustomToken(auth, __initial_auth_token);
+        } else {
+             // Otherwise, sign in anonymously (required for deployment on GitHub Pages)
+             await signInAnonymously(auth);
+        }
 
-        const renderApp = () => {
-            const contentArea = document.getElementById('content-area');
-            const tabsNav = document.getElementById('tabs-nav');
-
-            // Render content based on active tab
-            if (activeTab === 'chores') {
-                contentArea.innerHTML = renderChoreChartView();
-            } else if (activeTab === 'weekly') {
-                contentArea.innerHTML = renderWeeklyView();
-            } else if (activeTab === 'rewards') {
-                contentArea.innerHTML = renderRewardsView();
-            } else if (activeTab === 'setup') {
-                contentArea.innerHTML = renderSetupView();
-            } else if (activeTab === 'calendar') {
-                contentArea.innerHTML = renderCalendarView();
+        // Set up Auth State Listener
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                userId = user.uid;
+                isAuthReady = true;
+                seedData(); // Populate data if database is empty
+                startDataListeners(); // Start real-time syncing
+            } else {
+                userId = null;
+                isAuthReady = false;
+                renderApp(); // Show loading/login screen
             }
-            
-            // Update tab styles
-            tabsNav.querySelectorAll('button').forEach(button => {
-                const tab = button.getAttribute('data-tab');
-                if (tab === activeTab) {
-                    // Active style: Indigo text, white background, thick bottom border
-                    button.className = 'flex-1 p-3 text-center text-sm font-extrabold transition-colors text-indigo-700 bg-white border-b-4 border-indigo-600 shadow-inner';
-                } else {
-                    // Inactive style
-                    button.className = 'flex-1 p-3 text-center text-sm font-semibold transition-colors text-gray-500 hover:text-indigo-600 hover:bg-gray-100';
-                }
-            });
+        });
 
-            // Show loading overlay if not ready
-            const loadingOverlay = document.getElementById('loading-overlay');
-            if (loadingOverlay) {
-                loadingOverlay.style.display = isAuthReady ? 'none' : 'flex';
-            }
-        };
+    } catch (e) {
+        console.error("Firebase Initialization Error:", e);
+        document.getElementById('app').innerHTML = `
+            <div class="p-8 bg-red-100 border-4 border-red-500 rounded-xl max-w-xl mx-auto mt-10">
+                <h2 class="text-2xl font-bold text-red-700 mb-4">FATAL ERROR</h2>
+                <p class="text-gray-700">Could not connect to Firebase. Check your network or your API key configuration in the code.</p>
+                <p class="mt-4 text-sm font-medium">Error details: ${e.message}</p>
+            </div>
+        `;
+    }
+};
+
+const handleAdHocSubmit = async (event) => {
+    event.preventDefault();
+    const name = document.getElementById('adhoc-name').value.trim();
+    const emoji = document.getElementById('adhoc-emoji').value.trim();
+    const points = parseInt(document.getElementById('adhoc-points').value, 10);
+    const assignedTo = document.getElementById('adhoc-assign').value;
+
+    if (!name || isNaN(points) || points <= 0 || !db) {
+        speak("Please enter a valid chore name and point value.");
+        return;
+    }
+
+    const adhocData = {
+        name,
+        emoji,
+        points,
+        assignedTo: assignedTo || null,
+        date: getCurrentDateKey(),
+        timestamp: serverTimestamp(),
+        isAdHoc: true,
+        completed: false, // Initial state is false
+    };
+
+    try {
+        // Ad-hoc chores are created directly as an uncompleted log entry
+        await setDoc(doc(collection(db, getChoreCompletionsPath())), adhocData);
+        speak(`${name} added as a one-time chore.`);
+        document.getElementById('ad-hoc-chore-form').reset();
+        toggleAdHocForm(event); // Collapse the form
+    } catch (e) {
+        console.error("Error adding ad-hoc chore: ", e);
+        speak("Failed to add one-time chore.");
+    }
+}
+document.addEventListener('submit', function(e) {
+    if (e.target.id === 'ad-hoc-chore-form') {
+        handleAdHocSubmit(e);
+    }
+});
+</script>
+
+<style>
+/* Load Poppins Font */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700;800&display=swap');
+
+body, html, #app {
+    height: 100%;
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Background Pattern for 'Pop' */
+.bg-grid-pattern {
+    background-color: #f3f4f6;
+    background-image: radial-gradient(#d1d5db 0.5px, transparent 0.5px);
+    background-size: 10px 10px;
+}
+
+/* Custom Loader */
+.loader {
+    border-top-color: #3b82f6; /* Tailwind blue-500 */
+    -webkit-animation: spinner 1.5s linear infinite;
+    animation: spinner 1.5s linear infinite;
+}
+
+@-webkit-keyframes spinner {
+    0% { -webkit-transform: rotate(0deg); }
+    100% { -webkit-transform: rotate(360deg); }
+}
+
+@keyframes spinner {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Pulse Animation for Voice FAB */
+.pulse-animation {
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); /* Tailwind red-500 */
+    animation: pulse-fab 2s infinite;
+}
+
+.pulse-animation.listening {
+    animation: pulse-fab-active 1.5s infinite;
+}
+
+@keyframes pulse-fab {
+    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+}
+
+@keyframes pulse-fab-active {
+    0% { transform: scale(1.0); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1.0); }
+}
+
+/* UI Animations */
+.animate-slide-up-fade {
+    animation: slideUpFade 0.5s ease-out;
+}
+@keyframes slideUpFade {
+    0% { opacity: 0; transform: translateY(20px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+/* Chore Item Interactions */
+.chore-item:not(.opacity-60):hover {
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    transform: scale(1.01);
+}
+.chore-item:not(.opacity-60):active {
+    transform: scale(0.99);
+}
+
+.chore-item.completed-success {
+    animation: successFlash 1s ease-out;
+}
+@keyframes successFlash {
+    0% { background-color: #d1fae5; } /* green-100 */
+    50% { background-color: #f0fdf4; } /* green-50 */
+    100% { background-color: #ffffff; } /* white */
+}
 
 
-        // --- MAIN INITIALIZATION ---
+/* Drag and Drop Zone Highlighting */
+.drop-zone {
+    min-height: 50px;
+}
+.drop-zone.border-indigo-500 {
+    border-color: #6366f1; /* Indigo-500 */
+    background-color: #e0f2fe; /* Light blue tint for visual cue */
+    transition: all 0.2s ease-in-out;
+}
 
-        const main = async () => {
-            // Add a simple loading overlay
-            const container = document.getElementById('app-container');
-            const loadingHtml = `
-                <div id="loading-overlay" class="fixed inset-0 flex items-center justify-center bg-gray-50 z-50">
-                    <div class="flex flex-col items-center text-indigo-600 font-semibold text-lg p-8 rounded-xl shadow-2xl bg-white">
-                        <svg class="animate-spin -ml-1 mr-3 h-8 w-8 text-indigo-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                        Loading Family Organizer...
-                    </div>
-                </div>
-            `;
-            container.insertAdjacentHTML('afterbegin', loadingHtml);
+/* Form Container for Add Ad-Hoc Chore */
+#ad-hoc-form-container {
+    transition: max-height 0.3s ease-in-out, padding 0.3s ease-in-out;
+}
+</style>
 
-
-            await initializeFirebase();
-            // --- Call the seeding function after initialization
-            await seedData();
-            
-            startDataListeners();
-
-            // Setup tab switching listener
-            document.getElementById('tabs-nav').addEventListener('click', (e) => {
-                const target = e.target.closest('button');
-                if (target) {
-                    activeTab = target.getAttribute('data-tab');
-                    renderApp();
-                }
-            });
-            
-            // Initial render (will be updated immediately by listeners)
-            renderApp();
-        };
-
-        window.addEventListener('load', main);
-
-    </script>
-</body>
-</html>
+<div id="app" class="h-full">
+    <!-- Content rendered by JavaScript -->
+</div>
