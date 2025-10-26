@@ -805,13 +805,19 @@
             endOfWeek.setHours(23, 59, 59, 999);
 
             // Fetch adhoc completions for the whole week
+            // This query was modified to avoid needing a composite index.
+            // It now fetches all adhoc chores and filters by date in the client.
             const q = query(paths.completions(), 
-                where("isAdhoc", "==", true),
-                where("date", ">=", startOfWeek.toISOString().split('T')[0]),
-                where("date", "<=", endOfWeek.toISOString().split('T')[0])
+                where("isAdhoc", "==", true)
             );
             const adhocSnapshot = await getDocs(q);
-            const adhocCompletions = adhocSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            const startOfWeekStr = startOfWeek.toISOString().split('T')[0];
+            const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
+
+            const adhocCompletions = adhocSnapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(c => c.date >= startOfWeekStr && c.date <= endOfWeekStr);
 
             for (let i = 0; i < 7; i++) {
                 const dayIndexStr = i.toString();
@@ -1526,5 +1532,4 @@
     </script>
 </body>
 </html>
-
 
