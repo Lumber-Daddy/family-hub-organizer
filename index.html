@@ -1399,28 +1399,42 @@
             ghostElement.style.left = `${touch.pageX - ghostElement.offsetWidth / 2}px`;
             ghostElement.style.top = `${touch.pageY - ghostElement.offsetHeight / 2}px`;
 
-            // Highlight drop target
-            ghostElement.style.display = 'none'; // Hide ghost to check element underneath
-            const dropTarget = document.elementFromPoint(touch.clientX, touch.clientY);
-            ghostElement.style.display = 'block';
-
-            document.querySelectorAll('.drop-zone').forEach(zone => zone.classList.remove('drop-target-active'));
-            
-            const validDropZone = dropTarget ? dropTarget.closest('.drop-zone') : null;
-            if (validDropZone) {
-                validDropZone.classList.add('drop-target-active');
-            }
+            // Highlight drop target (Manual check for robustness)
+            let foundZone = null;
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                const rect = zone.getBoundingClientRect();
+                if (
+                    touch.clientX >= rect.left &&
+                    touch.clientX <= rect.right &&
+                    touch.clientY >= rect.top &&
+                    touch.clientY <= rect.bottom
+                ) {
+                    zone.classList.add('drop-target-active');
+                    foundZone = zone;
+                } else {
+                    zone.classList.remove('drop-target-active');
+                }
+            });
         }
 
         function handleTouchEnd(e) {
             if (!ghostElement) return;
 
-            // Find drop target
-            ghostElement.style.display = 'none';
-            const dropTargetEl = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
-            ghostElement.style.display = 'block';
-
-            const validDropZone = dropTargetEl ? dropTargetEl.closest('.drop-zone') : null;
+            // Find drop target (Manual check for robustness)
+            const touch = e.changedTouches[0];
+            let validDropZone = null;
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                const rect = zone.getBoundingClientRect();
+                if (
+                    touch.clientX >= rect.left &&
+                    touch.clientX <= rect.right &&
+                    touch.clientY >= rect.top &&
+                    touch.clientY <= rect.bottom
+                ) {
+                    validDropZone = zone;
+                }
+                zone.classList.remove('drop-target-active'); // Always remove highlight on drop
+            });
 
             if (validDropZone) {
                 let newAssigneeId = validDropZone.dataset.memberId;
@@ -1437,7 +1451,7 @@
             ghostElement = null;
             dragElement.style.opacity = '1';
             dragElement = null;
-            document.querySelectorAll('.drop-zone').forEach(zone => zone.classList.remove('drop-target-active'));
+            // Drop target active class already removed
         }
         
         async function handleChoreAssignment(choreItem, newAssigneeId) {
@@ -1512,4 +1526,5 @@
     </script>
 </body>
 </html>
+
 
