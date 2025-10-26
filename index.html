@@ -150,156 +150,8 @@ const getEmojiFromAI = async (text) => {
 };
 
 
-// --- Voice Command Handlers (Web Speech API) ---
-
-const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-const recognition = SpeechRecognition ? new SpeechRecognition() : null;
-if (recognition) {
-    recognition.continuous = false;
-    recognition.lang = 'en-US';
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-}
-
-const speak = (text) => {
-    if (!('speechSynthesis' in window)) return;
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.voice = speechSynthesis.getVoices().find(v => v.name.includes('Google') || v.default);
-    utterance.rate = 1.1;
-    speechSynthesis.speak(utterance);
-};
-
-const processVoiceCommand = (transcript) => {
-    const lowerTranscript = transcript.toLowerCase();
-    
-    speak(`Processing: ${transcript}.`);
-    
-    // 1. Navigation Commands
-    if (lowerTranscript.includes('daily list') || lowerTranscript.includes('show today')) {
-        speak('Navigating to the Daily List.');
-        changeTab('daily');
-        return;
-    }
-    if (lowerTranscript.includes('go to rewards') || lowerTranscript.includes('show points')) {
-        speak('Opening the Points and Rewards Center.');
-        changeTab('rewards');
-        return;
-    }
-    if (lowerTranscript.includes('open setup') || lowerTranscript.includes('go to setup')) {
-        speak('Opening the Setup panel.');
-        changeTab('setup');
-        return;
-    }
-    if (lowerTranscript.includes('show weekly') || lowerTranscript.includes('weekly schedule')) {
-        speak('Displaying the weekly schedule.');
-        changeTab('weekly');
-        return;
-    }
-    
-    // 2. Chore Completion Commands
-    const choreCompletionMatch = lowerTranscript.match(/(mark|i finished|i completed|i did|done with|done) (.+?)( done| complete| finished)?$/);
-    if (choreCompletionMatch) {
-        const choreNameRaw = choreCompletionMatch[2].trim();
-        const memberName = familyMembers.find(m => lowerTranscript.includes(m.name.toLowerCase()))?.name;
-        
-        // Find the chore by name (case-insensitive, partial match for flexibility)
-        const choreToComplete = dailyChores.find(chore => 
-            !chore.completed && 
-            chore.name.toLowerCase().includes(choreNameRaw) &&
-            (memberName ? chore.assignedTo === memberName : true)
-        );
-
-        if (choreToComplete) {
-            // Find the chore element in the DOM to trigger the click
-            const choreElement = document.getElementById(`chore-item-${choreToComplete.id}`);
-            if (choreElement) {
-                // Find the completion circle inside the chore item
-                const completionCircle = choreElement.querySelector('[data-action="complete"]');
-                if (completionCircle) {
-                    completionCircle.click(); // Simulate click to trigger completion logic
-                    speak(`Marking ${choreToComplete.name} as complete for ${choreToComplete.assignedTo}.`);
-                    return;
-                }
-            }
-        }
-        speak(`Sorry, I couldn't find an incomplete chore matching ${choreNameRaw}.`);
-        return;
-    }
-
-    // 3. Reward Redemption Commands
-    const redemptionMatch = lowerTranscript.match(/(|i want to |can i |)redeem (.+?) for (.+?)$/);
-    if (redemptionMatch) {
-        const memberNameRaw = redemptionMatch[4]?.trim();
-        const rewardNameRaw = redemptionMatch[2]?.trim();
-        
-        const member = familyMembers.find(m => m.name.toLowerCase() === memberNameRaw.toLowerCase());
-        const reward = rewardsList.find(r => r.name.toLowerCase().includes(rewardNameRaw.toLowerCase()));
-
-        if (!member) {
-            speak(`I couldn't find a family member named ${memberNameRaw}.`);
-            return;
-        }
-        if (!reward) {
-            speak(`I couldn't find a reward called ${rewardNameRaw}.`);
-            return;
-        }
-
-        if (member.points >= reward.cost) {
-            // Simulate redemption by finding the form and submitting it
-            document.getElementById('redeem-member-select').value = member.id;
-            document.getElementById('redeem-reward-select').value = reward.id;
-            document.getElementById('redeem-button').click();
-            // The redemption function will handle the success speaking.
-            return;
-        } else {
-            speak(`${member.name} only has ${member.points} points, but ${reward.name} costs ${reward.cost}.`);
-            return;
-        }
-    }
-    
-    // Fallback
-    speak('Sorry, I did not understand that command. Please try saying the chore name, or asking to redeem a reward.');
-};
-
-const handleVoiceToggle = () => {
-    if (!recognition) {
-        speak("Voice recognition is not supported in this browser.");
-        return;
-    }
-
-    const micButton = document.getElementById('voice-toggle-fab');
-
-    if (micButton.classList.contains('listening')) {
-        recognition.stop();
-        micButton.classList.remove('listening');
-        speak('Voice commands deactivated.');
-        return;
-    }
-
-    micButton.classList.add('listening');
-    speak('Listening for command...');
-
-    recognition.onresult = (event) => {
-        const transcript = event.results[0][0].transcript;
-        console.log('Voice Command:', transcript);
-        processVoiceCommand(transcript);
-        micButton.classList.remove('listening');
-    };
-
-    recognition.onerror = (event) => {
-        micButton.classList.remove('listening');
-        if (event.error !== 'no-speech') {
-             console.error('Recognition error:', event.error);
-             speak(`Voice command error: ${event.error}`);
-        }
-    };
-
-    recognition.onend = () => {
-        micButton.classList.remove('listening');
-    };
-
-    recognition.start();
-};
+// --- Voice Command Handlers (REMOVED) ---
+// All voice setup, speaking functions, and command processing have been removed.
 
 
 // --- Data Seeding (Initial Data Population) ---
@@ -360,30 +212,27 @@ const seedData = async () => {
 const saveMember = async (memberData) => {
     try {
         await setDoc(doc(db, getFamilyMembersPath(), memberData.id), memberData);
-        speak(`${memberData.name} profile updated.`);
+        console.log(`${memberData.name} profile updated.`);
     } catch (e) {
         console.error("Error saving member: ", e);
-        speak("Error saving member profile.");
     }
 };
 
 const saveChoreDefinition = async (choreDefData) => {
     try {
         await setDoc(doc(db, getChoreDefinitionsPath(), choreDefData.id), choreDefData);
-        speak(`Chore ${choreDefData.name} saved successfully.`);
+        console.log(`Chore ${choreDefData.name} saved successfully.`);
     } catch (e) {
         console.error("Error saving chore definition: ", e);
-        speak("Error saving chore definition.");
     }
 };
 
 const saveReward = async (rewardData) => {
     try {
         await setDoc(doc(db, getRewardsPath(), rewardData.id), rewardData);
-        speak(`Reward ${rewardData.name} saved successfully.`);
+        console.log(`Reward ${rewardData.name} saved successfully.`);
     } catch (e) {
         console.error("Error saving reward: ", e);
-        speak("Error saving reward.");
     }
 };
 
@@ -426,7 +275,7 @@ const completeChore = async (chore) => {
 
     try {
         await batch.commit();
-        speak(`Success! ${chore.name} complete. ${chore.assignedTo} earned ${chore.points} points.`);
+        console.log(`Success! ${chore.name} complete. ${chore.assignedTo} earned ${chore.points} points.`);
         // Brief, satisfying confetti/animation effect on the completed item
         const choreElement = document.getElementById(`chore-item-${chore.id}`);
         if(choreElement) {
@@ -435,7 +284,6 @@ const completeChore = async (chore) => {
         }
     } catch (e) {
         console.error("Transaction failed: ", e);
-        speak(`Failed to mark ${chore.name} complete.`);
     }
 };
 
@@ -450,12 +298,12 @@ const redeemReward = async (memberId, rewardId) => {
     const reward = rewardsList.find(r => r.id === rewardId);
 
     if (!member || !reward) {
-        speak("Error: Member or Reward not found.");
-        return;
+        console.error("Error: Member or Reward not found.");
+        return false;
     }
 
     if (member.points < reward.cost) {
-        speak(`${member.name} doesn't have enough points. Needs ${reward.cost} points.`);
+        console.warn(`${member.name} doesn't have enough points.`);
         return false;
     }
 
@@ -481,11 +329,10 @@ const redeemReward = async (memberId, rewardId) => {
 
     try {
         await batch.commit();
-        speak(`${member.name} successfully redeemed ${reward.name} for ${reward.cost} points!`);
+        console.log(`${member.name} successfully redeemed ${reward.name} for ${reward.cost} points!`);
         return true;
     } catch (e) {
         console.error("Redemption transaction failed: ", e);
-        speak(`Failed to redeem ${reward.name}.`);
         return false;
     }
 };
@@ -547,13 +394,6 @@ const renderApp = () => {
             <main class="flex-grow p-4 overflow-y-auto bg-grid-pattern">
                 ${isAuthReady ? viewContent : renderLoading()}
             </main>
-
-            <!-- Voice FAB -->
-            <button id="voice-toggle-fab" onclick="handleVoiceToggle()" class="fixed right-6 bottom-6 w-14 h-14 rounded-full bg-red-500 shadow-xl flex items-center justify-center text-white transition duration-300 ease-in-out hover:bg-red-600 active:scale-95 z-50 transform hover:scale-110 pulse-animation" title="Activate Voice Commands">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 18.75a6 6 0 0 0 6-6v-1.5m-6 7.5v3m-3-3h6m-9-6.75h9a2.25 2.25 0 1 1 0 4.5h-9a2.25 2.25 0 1 1 0-4.5Z" />
-                </svg>
-            </button>
         </div>
     `;
     
@@ -880,7 +720,7 @@ const handleRedeemSubmit = async (event) => {
     const rewardId = document.getElementById('redeem-reward-select').value;
     
     if (!memberId || !rewardId) {
-        speak("Please select both a member and a reward.");
+        console.warn("Please select both a member and a reward.");
         return;
     }
     
@@ -961,7 +801,7 @@ const handleAIEmoji = async (nameInputId, emojiInputId) => {
     const emojiInput = document.getElementById(emojiInputId);
     
     if (nameInput.value.trim() === '') {
-        speak('Please enter a name first.');
+        console.warn('Please enter a name first.');
         return;
     }
     
@@ -1004,7 +844,7 @@ const handleMemberEditSave = async (memberId, event) => {
         const newColor = form.querySelector('select[name="color"]').value;
 
         if (!newName) {
-            speak("Name cannot be empty.");
+            console.warn("Name cannot be empty.");
             return;
         }
 
@@ -1063,7 +903,7 @@ const handleAddChoreDefinition = async (event) => {
     const days = Array.from(form.querySelectorAll('input[name="def-day"]:checked')).map(cb => cb.value);
 
     if (!name || isNaN(points) || points <= 0 || days.length === 0) {
-        speak("Please fill in the name, positive points, and select at least one day.");
+        console.warn("Please fill in the name, positive points, and select at least one day.");
         return;
     }
 
@@ -1090,7 +930,7 @@ const handleAddReward = async (event) => {
     const cost = parseInt(form.querySelector('#reward-cost').value, 10);
     
     if (!name || isNaN(cost) || cost <= 0) {
-        speak("Please fill in the reward name and a positive point cost.");
+        console.warn("Please fill in the reward name and a positive point cost.");
         return;
     }
 
@@ -1380,10 +1220,9 @@ async function handleDrop(e) {
     try {
         // Update the assignedTo field
         await setDoc(docRef, { assignedTo: newAssignment }, { merge: true });
-        speak(`${draggedChore.name} assigned to ${newAssignment || 'Unassigned Pool'}.`);
+        console.log(`${draggedChore.name} assigned to ${newAssignment || 'Unassigned Pool'}.`);
     } catch (error) {
         console.error("Error updating chore assignment: ", error);
-        speak("Failed to update chore assignment.");
     }
 }
 
@@ -1562,7 +1401,7 @@ const handleAdHocSubmit = async (event) => {
     const assignedTo = document.getElementById('adhoc-assign').value;
 
     if (!name || isNaN(points) || points <= 0 || !db) {
-        speak("Please enter a valid chore name and point value.");
+        console.warn("Please enter a valid chore name and point value.");
         return;
     }
 
@@ -1580,12 +1419,11 @@ const handleAdHocSubmit = async (event) => {
     try {
         // Ad-hoc chores are created directly as an uncompleted log entry
         await setDoc(doc(collection(db, getChoreCompletionsPath())), adhocData);
-        speak(`${name} added as a one-time chore.`);
+        console.log(`${name} added as a one-time chore.`);
         document.getElementById('ad-hoc-chore-form').reset();
         toggleAdHocForm(event); // Collapse the form
     } catch (e) {
         console.error("Error adding ad-hoc chore: ", e);
-        speak("Failed to add one-time chore.");
     }
 }
 document.addEventListener('submit', function(e) {
@@ -1627,28 +1465,6 @@ body, html, #app {
 @keyframes spinner {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
-}
-
-/* Pulse Animation for Voice FAB */
-.pulse-animation {
-    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); /* Tailwind red-500 */
-    animation: pulse-fab 2s infinite;
-}
-
-.pulse-animation.listening {
-    animation: pulse-fab-active 1.5s infinite;
-}
-
-@keyframes pulse-fab {
-    0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
-    70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
-}
-
-@keyframes pulse-fab-active {
-    0% { transform: scale(1.0); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1.0); }
 }
 
 /* UI Animations */
