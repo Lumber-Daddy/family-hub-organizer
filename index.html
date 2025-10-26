@@ -35,13 +35,9 @@
         .chore-item-completed {
             @apply opacity-50 line-through;
         }
+        /* Drag-and-drop styles */
         .drag-ghost {
-            position: absolute;
-            pointer-events: none;
-            opacity: 0.8;
-            transform: scale(1.05);
-            z-index: 1000;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            @apply opacity-50;
         }
         .drop-target-active {
             @apply ring-4 ring-indigo-400 ring-dashed;
@@ -393,6 +389,20 @@
         </div>
     </div>
 
+    <!-- Move Chore Modal -->
+    <div id="move-chore-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
+        <div class="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full animate-fade-in-up">
+            <h3 class="text-xl font-semibold text-gray-800 mb-4">Move Chore</h3>
+            <p class="text-gray-600 mb-4">Move <strong id="move-chore-name" class="text-indigo-600">...</strong> to:</p>
+            <div id="move-chore-options" class="space-y-2 max-h-60 overflow-y-auto">
+                <!-- Member buttons will be injected here -->
+            </div>
+            <button id="move-chore-cancel" class="mt-6 w-full py-2 px-4 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 font-medium">
+                Cancel
+            </button>
+        </div>
+    </div>
+
 
     <!-- Firebase and App Logic -->
     <script type="module">
@@ -458,10 +468,13 @@
             completions: []
         };
         let calendarDate = new Date();
+        let dragElement = null; // For HTML5 D&D
+        let choreToMoveData = null; // For "Move" modal
 
         // --- DOM Elements ---
         const loadingIndicator = document.getElementById('loading-indicator');
         const snackbar = document.getElementById('snackbar');
+        const moveChoreModal = document.getElementById('move-chore-modal');
 
         // --- Utility Functions ---
         
@@ -783,7 +796,7 @@
                         name: completion.name,
                         emoji: completion.emoji,
                         points: completion.points,
-                        assigneeId: completion.assignaId,
+                        assigneeId: completion.assigneeId,
                         isComplete: completion.isComplete,
                         isAdhoc: true,
                         completionDocId: completion.id
@@ -811,6 +824,8 @@
                 `;
                 grid.appendChild(memberCard);
             });
+            // Make unassigned pool a drop zone too
+            document.getElementById('unassigned-pool').dataset.memberId = 'unassigned';
 
             // Populate chores
             allTasksForToday.forEach(task => {
@@ -830,11 +845,12 @@
             });
 
             // Add drag/drop listeners after rendering
-            addTouchDragListeners();
+            addDragAndDropListeners();
         }
 
         function createChoreItemHTML(task) {
             const completedClass = task.isComplete ? 'chore-item-completed' : '';
+            // Data attributes are used by both D&D and the "Move" modal
             return `
                 <div class="chore-item ${completedClass} cursor-grab animate-fade-in-up" 
                      draggable="true" 
@@ -859,6 +875,10 @@
                         <span class="font-medium">${task.name}</span>
                         <span class="block text-sm text-gray-500">${task.points} points</span>
                     </div>
+                    <!-- NEW "Move" Button -->
+                    <button class="chore-move-btn p-2 text-gray-400 hover:text-indigo-600 rounded-full hover:bg-gray-100">
+                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM18 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
+                    </button>
                 </div>
             `;
         }
@@ -879,19 +899,20 @@
             endOfWeek.setHours(23, 59, 59, 999);
 
             // Fetch adhoc completions for the whole week
-            // This query was modified to avoid needing a composite index.
-            // It now fetches all adhoc chores and filters by date in the client.
             const q = query(paths.completions(), 
-                where("isAdhoc", "==", true)
+                where("isAdhoc", "==", true),
+                where("date", ">=", startOfWeek.toISOString().split('T')[0]),
+                where("date", "<=", endOfWeek.toISOString().split('T')[0])
             );
-            const adhocSnapshot = await getDocs(q);
             
-            const startOfWeekStr = startOfWeek.toISOString().split('T')[0];
-            const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
-
-            const adhocCompletions = adhocSnapshot.docs
-                .map(doc => ({ id: doc.id, ...doc.data() }))
-                .filter(c => c.date >= startOfWeekStr && c.date <= endOfWeekStr);
+            let adhocCompletions = [];
+            try {
+                const adhocSnapshot = await getDocs(q);
+                adhocCompletions = adhocSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (error) {
+                console.error("Failed to get weekly adhoc chores, index might still be building.", error);
+                // Don't block render if index fails, just show recurring
+            }
 
             for (let i = 0; i < 7; i++) {
                 const dayIndexStr = i.toString();
@@ -1357,17 +1378,31 @@
         });
 
 
-        // Complete Chore
+        // Complete Chore & "Move" Button Click Handler
         document.getElementById('daily-assignments-grid').addEventListener('click', (e) => {
-            const button = e.target.closest('.chore-complete-btn');
-            if (button) {
-                handleChoreCompletion(button, e);
+            const completeButton = e.target.closest('.chore-complete-btn');
+            if (completeButton) {
+                handleChoreCompletion(completeButton, e);
+                return; // Prevent move button logic from firing too
+            }
+            
+            const moveButton = e.target.closest('.chore-move-btn');
+            if (moveButton) {
+                const choreItem = moveButton.closest('.chore-item');
+                openMoveModal(choreItem);
             }
         });
         document.getElementById('unassigned-chores-list').addEventListener('click', (e) => {
-             const button = e.target.closest('.chore-complete-btn');
-            if (button) {
-                handleChoreCompletion(button, e);
+             const completeButton = e.target.closest('.chore-complete-btn');
+            if (completeButton) {
+                handleChoreCompletion(completeButton, e);
+                return;
+            }
+            
+            const moveButton = e.target.closest('.chore-move-btn');
+            if (moveButton) {
+                const choreItem = moveButton.closest('.chore-item');
+                openMoveModal(choreItem);
             }
         });
 
@@ -1443,111 +1478,148 @@
             hideLoading();
         }
 
-        // --- Touch Drag and Drop Logic ---
-        let dragElement = null;
-        let ghostElement = null;
+        // --- "Move Chore" Modal Logic ---
+        function openMoveModal(choreItem) {
+            choreToMoveData = { ...choreItem.dataset }; // Store all data attributes
+            
+            document.getElementById('move-chore-name').textContent = choreToMoveData.name;
+            const optionsContainer = document.getElementById('move-chore-options');
+            optionsContainer.innerHTML = ''; // Clear old options
 
-        function addTouchDragListeners() {
+            // Add member buttons
+            appData.members.forEach(member => {
+                if (member.id === choreToMoveData.currentAssignee) return; // Don't show current assignee
+                optionsContainer.innerHTML += `
+                    <button class="move-chore-select-btn w-full text-left py-3 px-4 rounded-md font-medium text-gray-700 bg-gray-100 hover:bg-indigo-100"
+                            data-member-id="${member.id}">
+                        ${member.emoji || '👤'} ${member.name}
+                    </button>
+                `;
+            });
+
+            // Add Unassigned button
+            if (choreToMoveData.currentAssignee !== 'unassigned') {
+                optionsContainer.innerHTML += `
+                    <button class="move-chore-select-btn w-full text-left py-3 px-4 rounded-md font-medium text-yellow-800 bg-yellow-100 hover:bg-yellow-200"
+                            data-member-id="unassigned">
+                        ➔ Unassigned Pool
+                    </button>
+                `;
+            }
+
+            moveChoreModal.classList.remove('hidden');
+        }
+
+        function closeMoveModal() {
+            moveChoreModal.classList.add('hidden');
+            choreToMoveData = null;
+        }
+
+        // Add listeners for modal
+        document.getElementById('move-chore-cancel').addEventListener('click', closeMoveModal);
+        document.getElementById('move-chore-options').addEventListener('click', (e) => {
+            const button = e.target.closest('.move-chore-select-btn');
+            if (button) {
+                const newAssigneeId = button.dataset.memberId;
+                if (choreToMoveData) {
+                    handleChoreAssignment(choreToMoveData, newAssigneeId);
+                }
+                closeMoveModal();
+            }
+        });
+
+
+        // --- HTML5 Drag and Drop Logic (Reverted) ---
+        function addDragAndDropListeners() {
             const items = document.querySelectorAll('.chore-item');
             items.forEach(item => {
-                item.addEventListener('touchstart', handleTouchStart, { passive: false });
-                // Prevent native drag on touch devices
-                item.addEventListener('dragstart', (e) => e.preventDefault());
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
             });
 
-            document.body.addEventListener('touchmove', handleTouchMove, { passive: false });
-            document.body.addEventListener('touchend', handleTouchEnd);
+            const zones = document.querySelectorAll('.drop-zone');
+            zones.forEach(zone => {
+                zone.addEventListener('dragover', handleDragOver);
+                zone.addEventListener('dragenter', handleDragEnter);
+                zone.addEventListener('dragleave', handleDragLeave);
+                zone.addEventListener('drop', handleDrop);
+            });
         }
 
-        function handleTouchStart(e) {
-            // e.preventDefault(); // This is handled by passive: false
-            dragElement = e.target.closest('.chore-item');
-            if (!dragElement) return;
-
-            // Create ghost
-            ghostElement = dragElement.cloneNode(true);
-            ghostElement.classList.add('drag-ghost');
-            document.body.appendChild(ghostElement);
+        function handleDragStart(e) {
+            dragElement = this;
+            e.dataTransfer.effectAllowed = 'move';
+            // Set data (though we just use the dragElement global)
+            e.dataTransfer.setData('text/plain', this.dataset.taskId); 
             
-            // Position ghost
-            const touch = e.touches[0];
-            ghostElement.style.width = `${dragElement.offsetWidth}px`;
-            ghostElement.style.left = `${touch.pageX - dragElement.offsetWidth / 2}px`;
-            ghostElement.style.top = `${touch.pageY - dragElement.offsetHeight / 2}px`;
-
-            dragElement.style.opacity = '0.4';
+            // Use setTimeout to allow browser to render drag image before changing opacity
+            setTimeout(() => {
+                this.classList.add('drag-ghost');
+            }, 0);
+        }
+        
+        function handleDragEnd(e) {
+            this.classList.remove('drag-ghost');
+            document.querySelectorAll('.drop-target-active').forEach(zone => {
+                zone.classList.remove('drop-target-active');
+            });
+            dragElement = null;
         }
 
-        function handleTouchMove(e) {
-            if (!ghostElement) return;
-            e.preventDefault(); // Prevent scrolling while dragging
-
-            const touch = e.touches[0];
-            ghostElement.style.left = `${touch.pageX - ghostElement.offsetWidth / 2}px`;
-            ghostElement.style.top = `${touch.pageY - ghostElement.offsetHeight / 2}px`;
-
-            // Highlight drop target (Manual check for robustness)
-            let foundZone = null;
-            document.querySelectorAll('.drop-zone').forEach(zone => {
-                const rect = zone.getBoundingClientRect();
-                if (
-                    touch.clientX >= rect.left &&
-                    touch.clientX <= rect.right &&
-                    touch.clientY >= rect.top &&
-                    touch.clientY <= rect.bottom
-                ) {
-                    zone.classList.add('drop-target-active');
-                    foundZone = zone;
-                } else {
-                    zone.classList.remove('drop-target-active');
-                }
-            });
+        function handleDragOver(e) {
+            e.preventDefault(); // Necessary to allow dropping
+            e.dataTransfer.dropEffect = 'move';
+            return false;
         }
 
-        function handleTouchEnd(e) {
-            if (!ghostElement) return;
+        function handleDragEnter(e) {
+            const dropZone = e.target.closest('.drop-zone');
+            if (dropZone) {
+                dropZone.classList.add('drop-target-active');
+            }
+        }
 
-            // Find drop target (Manual check for robustness)
-            const touch = e.changedTouches[0];
-            let validDropZone = null;
-            document.querySelectorAll('.drop-zone').forEach(zone => {
-                const rect = zone.getBoundingClientRect();
-                if (
-                    touch.clientX >= rect.left &&
-                    touch.clientX <= rect.right &&
-                    touch.clientY >= rect.top &&
-                    touch.clientY <= rect.bottom
-                ) {
-                    validDropZone = zone;
+        function handleDragLeave(e) {
+            const dropZone = e.target.closest('.drop-zone');
+            if (dropZone) {
+                // Check if we are leaving to a child element
+                const rect = dropZone.getBoundingClientRect();
+                if (e.clientX < rect.left || e.clientX >= rect.right || e.clientY < rect.top || e.clientY >= rect.bottom) {
+                    dropZone.classList.remove('drop-target-active');
                 }
-                zone.classList.remove('drop-target-active'); // Always remove highlight on drop
-            });
+            }
+        }
+        
+        function handleDrop(e) {
+            e.preventDefault();
+            e.stopPropagation(); // Stop it from bubbling up
 
-            if (validDropZone) {
-                let newAssigneeId = validDropZone.dataset.memberId;
+            const dropZone = e.target.closest('.drop-zone');
+            if (dropZone && dragElement) {
+                dropZone.classList.remove('drop-target-active');
+                
+                let newAssigneeId = dropZone.dataset.memberId;
                 if (!newAssigneeId) {
                     newAssigneeId = 'unassigned'; // It's the unassigned pool
                 }
                 
-                // Update Firestore
-                handleChoreAssignment(dragElement, newAssigneeId);
+                // Update Firestore using the dataset from the dragged element
+                handleChoreAssignment(dragElement.dataset, newAssigneeId);
             }
-
-            // Cleanup
-            document.body.removeChild(ghostElement);
-            ghostElement = null;
-            dragElement.style.opacity = '1';
-            dragElement = null;
-            // Drop target active class already removed
         }
         
-        async function handleChoreAssignment(choreItem, newAssigneeId) {
-            const completionDocId = choreItem.dataset.completionDocId;
-            const choreDefId = choreItem.dataset.choreDefId;
-            const currentAssigneeId = choreItem.dataset.currentAssignee;
-            const isAdhoc = choreItem.dataset.isAdhoc === 'true';
+        async function handleChoreAssignment(choreData, newAssigneeId) {
+            const {
+                completionDocId,
+                choreDefId,
+                currentAssignee,
+                isAdhoc,
+                name,
+                emoji,
+                points
+            } = choreData;
 
-            if (newAssigneeId === currentAssigneeId) return; // No change
+            if (newAssigneeId === currentAssignee) return; // No change
 
             showLoading('Reassigning...');
             try {
@@ -1558,12 +1630,12 @@
                     });
                 
                 // This is a recurring chore that hasn't been touched today
-                } else if (!isAdhoc && choreDefId !== 'null') {
+                } else if (isAdhoc === 'false' && choreDefId !== 'null') {
                     // We must create a new completion doc for it
                     await addDoc(paths.completions(), {
-                        name: choreItem.dataset.name,
-                        emoji: choreItem.dataset.emoji,
-                        points: parseInt(choreItem.dataset.points),
+                        name: name,
+                        emoji: emoji,
+                        points: parseInt(points),
                         assigneeId: newAssigneeId,
                         date: getTodayString(),
                         isComplete: false,
@@ -1571,6 +1643,10 @@
                         choreDefId: choreDefId
                     });
                 } else {
+                    // This case might be an ad-hoc chore in the unassigned pool
+                    // But our ad-hoc creation logic assigns a completion doc immediately.
+                    // This logic should cover all cases, but if one slips through:
+                    console.error("Cannot reassign this item, data is inconsistent.", choreData);
                     throw new Error("Cannot reassign this item.");
                 }
                 showSnackbar("Chore reassigned!");
@@ -1613,4 +1689,5 @@
     </script>
 </body>
 </html>
+
 
