@@ -11,33 +11,45 @@
     <style>
         body {
             font-family: 'Poppins', sans-serif;
-            overscroll-behavior: none; /* Prevents pull-to-refresh */
+            overscroll-behavior: none;
         }
         .app-bg {
-            background-color: #f0f2f5;
-            background-image:
-                radial-gradient(at 0% 0%, hsla(213, 20%, 25%, 0.03) 0px, transparent 50%),
-                radial-gradient(at 98% 1%, hsla(213, 20%, 25%, 0.03) 0px, transparent 50%);
+            background-color: #f4f4f5; /* Light zinc background */
         }
-        .header-gradient {
-            background: linear-gradient(90deg, rgba(63,81,181,1) 0%, rgba(86,103,203,1) 100%);
+        
+        /* Sidebar Navigation */
+        .nav-btn {
+            @apply flex items-center p-3 md:p-4 w-full text-sm md:text-base font-medium text-slate-300 rounded-lg;
+            @apply hover:bg-slate-700 hover:text-white transition-colors duration-150;
         }
-        .tab {
-            @apply px-3 py-4 text-sm font-medium text-center text-indigo-200 border-b-4 border-transparent;
-            @apply md:px-6 md:text-base;
+        .nav-btn svg {
+            @apply w-6 h-6 text-slate-400 transition-colors duration-150;
         }
-        .tab-active {
-            @apply border-white text-white;
+        .nav-btn:hover svg, .nav-btn-active svg {
+            @apply text-white;
         }
+        .nav-btn-active {
+            @apply bg-indigo-600 text-white shadow-inner;
+        }
+        .nav-btn span {
+            @apply ml-4 hidden md:inline;
+        }
+
+        /* Chore/Card Items */
         .chore-item, .reward-item {
-            @apply bg-white rounded-xl shadow-lg p-4 flex items-center space-x-4 transition-all duration-150;
+            @apply bg-white rounded-lg shadow-sm p-4 flex items-center space-x-4 transition-all duration-150;
+            @apply hover:shadow-md hover:scale-[1.02];
         }
         .chore-item-completed {
             @apply opacity-50 line-through;
         }
-        /* Drag-and-drop styles */
         .drag-ghost {
-            @apply opacity-50;
+            position: absolute;
+            pointer-events: none;
+            opacity: 0.8;
+            transform: scale(1.05);
+            z-index: 1000;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
         }
         .drop-target-active {
             @apply ring-4 ring-indigo-400 ring-dashed;
@@ -85,38 +97,57 @@
         }
     </style>
 </head>
-<body class="h-full w-full overflow-hidden flex flex-col app-bg">
+<body class="h-full w-full overflow-hidden flex app-bg">
 
-    <!-- Main Header -->
-    <header class="header-gradient text-white shadow-md z-10">
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="flex justify-between items-center h-20">
-                <h1 class="text-2xl md:text-3xl font-bold">Family Hub Organizer</h1>
-                <div id="loading-indicator" class="hidden items-center space-x-2">
-                    <svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    <span class="text-sm font-medium">Syncing...</span>
-                </div>
-            </div>
+    <!-- Sidebar Navigation -->
+    <nav id="sidebar" class="w-20 md:w-60 bg-slate-800 flex flex-col p-4 space-y-2 overflow-y-auto shadow-lg z-20">
+        <!-- Logo/Title -->
+        <div class="flex items-center justify-center md:justify-start p-2 md:p-4 mb-4">
+            <span class="text-white text-3xl md:text-2xl font-bold">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 md:w-6 md:h-6 md:mr-2">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
+                </svg>              
+            </span>
+            <span class="hidden md:inline text-white text-xl font-bold">Family Hub</span>
         </div>
-    </header>
 
-    <!-- Navigation Tabs -->
-    <nav class="bg-indigo-700 shadow-sm sticky top-0 z-10">
-        <div class="max-w-7xl mx-auto flex justify-around -mb-px">
-            <button id="tab-daily-list" class="tab tab-active" onclick="changeTab('daily-list')">Daily List</button>
-            <button id="tab-weekly-schedule" class="tab" onclick="changeTab('weekly-schedule')">Weekly Schedule</button>
-            <button id="tab-points" class="tab" onclick="changeTab('points')">Points & Rewards</button>
-            <button id="tab-setup" class="tab" onclick="changeTab('setup')">Setup</button>
-            <button id="tab-calendar" class="tab" onclick="changeTab('calendar')">Calendar</button>
+        <!-- Nav Buttons -->
+        <button id="nav-daily-list" class="nav-btn nav-btn-active" onclick="changeTab('daily-list', 'Daily List & Assignments')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.31h5.375c.495 0 .742.656.375 1.007l-4.34 3.16a.563.563 0 0 0-.182.658l1.625 5.111a.563.563 0 0 1-.812.622l-4.34-3.16a.563.563 0 0 0-.658 0l-4.34 3.16a.563.563 0 0 1-.812-.622l1.625-5.111a.563.563 0 0 0-.182-.658l-4.34-3.16a.563.563 0 0 1 .375-1.007h5.375a.563.563 0 0 0 .475-.31l2.125-5.11Z" /></svg>
+            <span>Daily List</span>
+        </button>
+        <button id="nav-weekly-schedule" class="nav-btn" onclick="changeTab('weekly-schedule', 'Weekly Schedule')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
+            <span>Weekly Schedule</span>
+        </button>
+        <button id="nav-points" class="nav-btn" onclick="changeTab('points', 'Points & Rewards')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9a2.25 2.25 0 0 1-2.25-2.25v-9A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 12.75h-7.5a.75.75 0 0 1 0-1.5h7.5a.75.75 0 0 1 0 1.5Z" /></svg>
+            <span>Points & Rewards</span>
+        </button>
+        <button id="nav-setup" class="nav-btn" onclick="changeTab('setup', 'App Setup & Management')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
+            <span>Setup</span>
+        </button>
+        <button id="nav-calendar" class="nav-btn" onclick="changeTab('calendar', 'Family Calendar')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-3.75h.008v.008H12v-.008Z" /></svg>
+            <span>Calendar</span>
+        </button>
+
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="hidden items-center space-x-2 mt-auto p-4">
+            <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span class="text-sm font-medium text-slate-300">Syncing...</span>
         </div>
     </nav>
 
     <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto p-4 md:p-8">
-        <div class="max-w-7xl mx-auto">
+    <main class="flex-1 overflow-y-auto">
+        <div class="p-6 md:p-10">
+            <!-- Content Header -->
+            <h1 id="content-title" class="text-3xl font-bold text-slate-800 mb-8">Daily List & Assignments</h1>
 
             <!-- Daily List Tab -->
             <div id="content-daily-list" class="tab-content space-y-8">
@@ -126,16 +157,16 @@
                 </div>
 
                 <!-- Unassigned Chores Pool -->
-                <div id="unassigned-pool" class="bg-yellow-100 border-2 border-yellow-300 rounded-xl p-4 drop-zone">
+                <div id="unassigned-pool" class="bg-white rounded-lg shadow-sm border-t-4 border-yellow-400 p-4 drop-zone">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="text-xl font-semibold text-yellow-800">Unassigned Chores Pool</h3>
-                        <button id="toggle-adhoc-form" class="bg-red-500 hover:bg-red-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition-transform transform hover:scale-110">
+                        <button id="toggle-adhoc-form" class="bg-indigo-500 hover:bg-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition-transform transform hover:scale-110">
                             <span class="text-2xl font-light">＋</span>
                         </button>
                     </div>
 
                     <!-- Adhoc Form (collapsible) -->
-                    <form id="adhoc-chore-form" class="space-y-4 bg-white rounded-lg shadow-inner">
+                    <form id="adhoc-chore-form" class="space-y-4 bg-slate-50 rounded-lg shadow-inner">
                         <h4 class="text-lg font-medium text-gray-700">Add One-Time Chore</h4>
                         <div>
                             <label for="adhoc-chore-name" class="block text-sm font-medium text-gray-700">Chore Name</label>
@@ -177,7 +208,6 @@
             <!-- Weekly Schedule Tab -->
             <div id="content-weekly-schedule" class="tab-content hidden">
                 <div class="bg-white rounded-xl shadow-lg p-4 md:p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Weekly Schedule</h2>
                     <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4" id="weekly-schedule-grid">
                         <!-- Weekly schedule cards will be injected here -->
                     </div>
@@ -188,7 +218,7 @@
             <div id="content-points" class="tab-content hidden space-y-8">
                 <!-- Member Point Totals -->
                 <div>
-                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Point Totals</h2>
+                    <h2 class="text-2xl font-bold text-slate-700 mb-4">Point Totals</h2>
                     <div id="point-totals-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                         <!-- Member point cards will be injected here -->
                     </div>
@@ -196,7 +226,7 @@
 
                 <!-- Redeem Rewards -->
                 <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h2 class="text-2xl font-bold text-gray-800 mb-6">Redeem Rewards</h2>
+                    <h2 class="text-2xl font-bold text-slate-700 mb-6">Redeem Rewards</h2>
                     <form id="redeem-reward-form" class="space-y-4 max-w-lg mx-auto">
                         <div>
                             <label for="redeem-member" class="block text-sm font-medium text-gray-700">Redeem For</label>
@@ -225,7 +255,7 @@
                     <!-- Family Members Management -->
                     <div class="space-y-6">
                         <div class="bg-white rounded-xl shadow-lg p-6">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Add Family Member</h2>
+                            <h2 class="text-2xl font-bold text-slate-700 mb-6">Add Family Member</h2>
                             <form id="add-member-form" class="space-y-4">
                                 <div>
                                     <label for="member-name" class="block text-sm font-medium text-gray-700">Name</label>
@@ -238,7 +268,7 @@
                         </div>
 
                         <div class="bg-white rounded-xl shadow-lg p-6">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Edit Members</h2>
+                            <h2 class="text-2xl font-bold text-slate-700 mb-6">Edit Members</h2>
                             <div id="edit-members-list" class="space-y-4">
                                 <!-- Edit member cards injected here -->
                             </div>
@@ -248,7 +278,7 @@
                     <!-- Chores & Rewards Management -->
                     <div class="space-y-6">
                         <div class="bg-white rounded-xl shadow-lg p-6">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Create Reusable Chore</h2>
+                            <h2 class="text-2xl font-bold text-slate-700 mb-6">Create Reusable Chore</h2>
                             <form id="add-chore-form" class="space-y-4">
                                 <!-- Chore Name & AI Emoji -->
                                 <div>
@@ -298,7 +328,7 @@
                         </div>
                         
                         <div class="bg-white rounded-xl shadow-lg p-6">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Create Reward</h2>
+                            <h2 class="text-2xl font-bold text-slate-700 mb-6">Create Reward</h2>
                             <form id="add-reward-form" class="space-y-4">
                                 <!-- Reward Name & AI Emoji -->
                                 <div>
@@ -326,7 +356,7 @@
                         </div>
 
                         <div class="bg-white rounded-xl shadow-lg p-6">
-                            <h2 class="text-2xl font-bold text-gray-800 mb-6">Manage Data</h2>
+                            <h2 class="text-2xl font-bold text-slate-700 mb-6">Manage Data</h2>
                             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <div id="manage-chores-list" class="space-y-2">
                                     <h3 class="text-lg font-medium text-gray-700">Reusable Chores</h3>
@@ -372,7 +402,7 @@
     </main>
 
     <!-- Global Feedback Snackbar -->
-    <div id="snackbar" class="hidden fixed bottom-10 left-1/2 -translate-x-1/2 bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg text-sm font-medium z-50">
+    <div id="snackbar" class="hidden fixed bottom-10 right-10 bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg text-sm font-medium z-50">
         Feedback message
     </div>
 
@@ -386,20 +416,6 @@
                 <p class="text-sm font-semibold text-gray-800">Error details:</p>
                 <pre id="fatal-error-details" class="text-xs text-red-700 whitespace-pre-wrap font-mono mt-2"></pre>
             </div>
-        </div>
-    </div>
-
-    <!-- Move Chore Modal -->
-    <div id="move-chore-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg shadow-2xl p-6 max-w-sm w-full animate-fade-in-up">
-            <h3 class="text-xl font-semibold text-gray-800 mb-4">Move Chore</h3>
-            <p class="text-gray-600 mb-4">Move <strong id="move-chore-name" class="text-indigo-600">...</strong> to:</p>
-            <div id="move-chore-options" class="space-y-2 max-h-60 overflow-y-auto">
-                <!-- Member buttons will be injected here -->
-            </div>
-            <button id="move-chore-cancel" class="mt-6 w-full py-2 px-4 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300 font-medium">
-                Cancel
-            </button>
         </div>
     </div>
 
@@ -468,13 +484,11 @@
             completions: []
         };
         let calendarDate = new Date();
-        let dragElement = null; // For HTML5 D&D
-        let choreToMoveData = null; // For "Move" modal
 
         // --- DOM Elements ---
         const loadingIndicator = document.getElementById('loading-indicator');
         const snackbar = document.getElementById('snackbar');
-        const moveChoreModal = document.getElementById('move-chore-modal');
+        const contentTitle = document.getElementById('content-title');
 
         // --- Utility Functions ---
         
@@ -796,7 +810,7 @@
                         name: completion.name,
                         emoji: completion.emoji,
                         points: completion.points,
-                        assigneeId: completion.assigneeId,
+                        assigneeId: completion.assigneeId, // Corrected from assignaId
                         isComplete: completion.isComplete,
                         isAdhoc: true,
                         completionDocId: completion.id
@@ -807,13 +821,14 @@
             // Create member cards
             appData.members.forEach(member => {
                 const memberCard = document.createElement('div');
-                memberCard.className = 'bg-white rounded-xl shadow-lg p-4 drop-zone transition-all duration-150 animate-fade-in-up';
+                // NEW UI: border-t-4 instead of full border
+                memberCard.className = 'bg-white rounded-lg shadow-sm border-t-4 p-4 drop-zone transition-all duration-150 animate-fade-in-up';
                 memberCard.dataset.memberId = member.id;
                 memberCard.style.borderColor = member.color || '#ccc';
-                memberCard.style.borderWidth = '3px';
+                
                 memberCard.innerHTML = `
                     <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold" style="color: ${member.color || '#111'}">
+                        <h3 class="text-xl font-semibold text-slate-700">
                             ${member.emoji || ''} ${member.name}
                         </h3>
                         <span class="font-bold text-lg" style="color: ${member.color || '#111'}">
@@ -824,8 +839,6 @@
                 `;
                 grid.appendChild(memberCard);
             });
-            // Make unassigned pool a drop zone too
-            document.getElementById('unassigned-pool').dataset.memberId = 'unassigned';
 
             // Populate chores
             allTasksForToday.forEach(task => {
@@ -845,12 +858,11 @@
             });
 
             // Add drag/drop listeners after rendering
-            addDragAndDropListeners();
+            addTouchDragListeners();
         }
 
         function createChoreItemHTML(task) {
             const completedClass = task.isComplete ? 'chore-item-completed' : '';
-            // Data attributes are used by both D&D and the "Move" modal
             return `
                 <div class="chore-item ${completedClass} cursor-grab animate-fade-in-up" 
                      draggable="true" 
@@ -875,10 +887,6 @@
                         <span class="font-medium">${task.name}</span>
                         <span class="block text-sm text-gray-500">${task.points} points</span>
                     </div>
-                    <!-- NEW "Move" Button -->
-                    <button class="chore-move-btn p-2 text-gray-400 hover:text-indigo-600 rounded-full hover:bg-gray-100">
-                        <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M6 10a2 2 0 11-4 0 2 2 0 014 0zM12 10a2 2 0 11-4 0 2 2 0 014 0zM18 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg>
-                    </button>
                 </div>
             `;
         }
@@ -904,21 +912,15 @@
                 where("date", ">=", startOfWeek.toISOString().split('T')[0]),
                 where("date", "<=", endOfWeek.toISOString().split('T')[0])
             );
+            const adhocSnapshot = await getDocs(q);
             
-            let adhocCompletions = [];
-            try {
-                const adhocSnapshot = await getDocs(q);
-                adhocCompletions = adhocSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            } catch (error) {
-                console.error("Failed to get weekly adhoc chores, index might still be building.", error);
-                // Don't block render if index fails, just show recurring
-            }
+            const adhocCompletions = adhocSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
             for (let i = 0; i < 7; i++) {
                 const dayIndexStr = i.toString();
                 const dayCard = document.createElement('div');
                 const isToday = i === today;
-                dayCard.className = `rounded-lg p-3 animate-fade-in-up ${isToday ? 'bg-indigo-100 border-2 border-indigo-400' : 'bg-gray-50 border'}`;
+                dayCard.className = `rounded-lg p-3 animate-fade-in-up ${isToday ? 'bg-indigo-100 border-2 border-indigo-400' : 'bg-slate-50 border'}`;
                 
                 let choresHTML = '';
                 
@@ -969,12 +971,13 @@
             grid.innerHTML = '';
             
             [...appData.members].sort((a,b) => b.points - a.points).forEach(member => {
+                // NEW UI: border-t-4
                 grid.innerHTML += `
-                    <div class="rounded-xl p-4 shadow-lg text-center animate-fade-in-up" style="background-color: ${member.color}20; border: 2px solid ${member.color};">
-                        <div class="text-2xl mb-1">${member.emoji || '👤'}</div>
-                        <div class="font-semibold text-lg" style="color: ${member.color};">${member.name}</div>
-                        <div class="font-bold text-3xl text-gray-800">${member.points}</div>
-                        <div class="text-sm text-gray-600">points</div>
+                    <div class="rounded-lg p-4 shadow-sm text-center animate-fade-in-up bg-white border-t-4" style="border-color: ${member.color};">
+                        <div class="text-3xl mb-2">${member.emoji || '👤'}</div>
+                        <div class="font-semibold text-lg text-slate-700">${member.name}</div>
+                        <div class="font-bold text-3xl" style="color: ${member.color};">${member.points}</div>
+                        <div class="text-sm text-gray-500">points</div>
                     </div>
                 `;
             });
@@ -994,7 +997,7 @@
             const manageRewardsList = document.getElementById('manage-rewards-list');
 
             editList.innerHTML = appData.members.map(member => `
-                <div class="bg-gray-50 p-4 rounded-lg border animate-fade-in-up">
+                <div class="bg-slate-50 p-4 rounded-lg border animate-fade-in-up">
                     <div class="flex items-center space-x-3 mb-4">
                         <input type="text" value="${member.emoji || '👤'}" class="member-edit-emoji w-12 text-center text-2xl p-1 border rounded" data-member-id="${member.id}">
                         <input type="text" value="${member.name}" class="member-edit-name flex-1 p-1 border rounded" data-member-id="${member.id}">
@@ -1012,7 +1015,7 @@
 
             manageChoresList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Reusable Chores</h3>' + 
                 appData.chores.map(chore => `
-                <div class="flex justify-between items-center bg-gray-50 p-2 rounded animate-fade-in-up">
+                <div class="flex justify-between items-center bg-slate-50 p-2 rounded animate-fade-in-up">
                     <span>${chore.emoji} ${chore.name}</span>
                     <button class="chore-delete-btn text-red-500 hover:text-red-700 font-bold" data-id="${chore.id}">&times;</button>
                 </div>
@@ -1020,7 +1023,7 @@
             
             manageRewardsList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Available Rewards</h3>' + 
                 appData.rewards.filter(r => !r.claimed).map(reward => `
-                <div class="flex justify-between items-center bg-gray-50 p-2 rounded animate-fade-in-up">
+                <div class="flex justify-between items-center bg-slate-50 p-2 rounded animate-fade-in-up">
                     <span>${reward.emoji} ${reward.name}</span>
                     <button class="reward-delete-btn text-red-500 hover:text-red-700 font-bold" data-id="${reward.id}">&times;</button>
                 </div>
@@ -1074,13 +1077,18 @@
         // --- Event Handlers ---
 
         // Tab Navigation
-        function changeTab(tabId) {
+        function changeTab(tabId, title) {
             currentTab = tabId;
+            // Content
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab').forEach(el => el.classList.remove('tab-active'));
-            
             document.getElementById(`content-${tabId}`).classList.remove('hidden');
-            document.getElementById(`tab-${tabId}`).classList.add('tab-active');
+            
+            // Sidebar Buttons
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('nav-btn-active'));
+            document.getElementById(`nav-${tabId}`).classList.add('nav-btn-active');
+
+            // Title
+            contentTitle.textContent = title;
             
             // Re-render specific content if needed
             if(tabId === 'daily-list') renderDailyList();
@@ -1378,31 +1386,17 @@
         });
 
 
-        // Complete Chore & "Move" Button Click Handler
+        // Complete Chore
         document.getElementById('daily-assignments-grid').addEventListener('click', (e) => {
-            const completeButton = e.target.closest('.chore-complete-btn');
-            if (completeButton) {
-                handleChoreCompletion(completeButton, e);
-                return; // Prevent move button logic from firing too
-            }
-            
-            const moveButton = e.target.closest('.chore-move-btn');
-            if (moveButton) {
-                const choreItem = moveButton.closest('.chore-item');
-                openMoveModal(choreItem);
+            const button = e.target.closest('.chore-complete-btn');
+            if (button) {
+                handleChoreCompletion(button, e);
             }
         });
         document.getElementById('unassigned-chores-list').addEventListener('click', (e) => {
-             const completeButton = e.target.closest('.chore-complete-btn');
-            if (completeButton) {
-                handleChoreCompletion(completeButton, e);
-                return;
-            }
-            
-            const moveButton = e.target.closest('.chore-move-btn');
-            if (moveButton) {
-                const choreItem = moveButton.closest('.chore-item');
-                openMoveModal(choreItem);
+             const button = e.target.closest('.chore-complete-btn');
+            if (button) {
+                handleChoreCompletion(button, e);
             }
         });
 
@@ -1478,148 +1472,111 @@
             hideLoading();
         }
 
-        // --- "Move Chore" Modal Logic ---
-        function openMoveModal(choreItem) {
-            choreToMoveData = { ...choreItem.dataset }; // Store all data attributes
-            
-            document.getElementById('move-chore-name').textContent = choreToMoveData.name;
-            const optionsContainer = document.getElementById('move-chore-options');
-            optionsContainer.innerHTML = ''; // Clear old options
+        // --- Touch Drag and Drop Logic ---
+        let dragElement = null;
+        let ghostElement = null;
 
-            // Add member buttons
-            appData.members.forEach(member => {
-                if (member.id === choreToMoveData.currentAssignee) return; // Don't show current assignee
-                optionsContainer.innerHTML += `
-                    <button class="move-chore-select-btn w-full text-left py-3 px-4 rounded-md font-medium text-gray-700 bg-gray-100 hover:bg-indigo-100"
-                            data-member-id="${member.id}">
-                        ${member.emoji || '👤'} ${member.name}
-                    </button>
-                `;
-            });
-
-            // Add Unassigned button
-            if (choreToMoveData.currentAssignee !== 'unassigned') {
-                optionsContainer.innerHTML += `
-                    <button class="move-chore-select-btn w-full text-left py-3 px-4 rounded-md font-medium text-yellow-800 bg-yellow-100 hover:bg-yellow-200"
-                            data-member-id="unassigned">
-                        ➔ Unassigned Pool
-                    </button>
-                `;
-            }
-
-            moveChoreModal.classList.remove('hidden');
-        }
-
-        function closeMoveModal() {
-            moveChoreModal.classList.add('hidden');
-            choreToMoveData = null;
-        }
-
-        // Add listeners for modal
-        document.getElementById('move-chore-cancel').addEventListener('click', closeMoveModal);
-        document.getElementById('move-chore-options').addEventListener('click', (e) => {
-            const button = e.target.closest('.move-chore-select-btn');
-            if (button) {
-                const newAssigneeId = button.dataset.memberId;
-                if (choreToMoveData) {
-                    handleChoreAssignment(choreToMoveData, newAssigneeId);
-                }
-                closeMoveModal();
-            }
-        });
-
-
-        // --- HTML5 Drag and Drop Logic (Reverted) ---
-        function addDragAndDropListeners() {
+        function addTouchDragListeners() {
             const items = document.querySelectorAll('.chore-item');
             items.forEach(item => {
-                item.addEventListener('dragstart', handleDragStart);
-                item.addEventListener('dragend', handleDragEnd);
+                item.addEventListener('touchstart', handleTouchStart, { passive: false });
+                // Prevent native drag on touch devices
+                item.addEventListener('dragstart', (e) => e.preventDefault());
             });
 
-            const zones = document.querySelectorAll('.drop-zone');
-            zones.forEach(zone => {
-                zone.addEventListener('dragover', handleDragOver);
-                zone.addEventListener('dragenter', handleDragEnter);
-                zone.addEventListener('dragleave', handleDragLeave);
-                zone.addEventListener('drop', handleDrop);
-            });
+            document.body.addEventListener('touchmove', handleTouchMove, { passive: false });
+            document.body.addEventListener('touchend', handleTouchEnd);
         }
 
-        function handleDragStart(e) {
-            dragElement = this;
-            e.dataTransfer.effectAllowed = 'move';
-            // Set data (though we just use the dragElement global)
-            e.dataTransfer.setData('text/plain', this.dataset.taskId); 
+        function handleTouchStart(e) {
+            // e.preventDefault(); // This is handled by passive: false
+            dragElement = e.target.closest('.chore-item');
+            if (!dragElement) return;
+
+            // Create ghost
+            ghostElement = dragElement.cloneNode(true);
+            ghostElement.classList.add('drag-ghost');
+            document.body.appendChild(ghostElement);
             
-            // Use setTimeout to allow browser to render drag image before changing opacity
-            setTimeout(() => {
-                this.classList.add('drag-ghost');
-            }, 0);
-        }
-        
-        function handleDragEnd(e) {
-            this.classList.remove('drag-ghost');
-            document.querySelectorAll('.drop-target-active').forEach(zone => {
-                zone.classList.remove('drop-target-active');
-            });
-            dragElement = null;
+            // Position ghost
+            const touch = e.touches[0];
+            ghostElement.style.width = `${dragElement.offsetWidth}px`;
+            ghostElement.style.left = `${touch.pageX - dragElement.offsetWidth / 2}px`;
+            ghostElement.style.top = `${touch.pageY - dragElement.offsetHeight / 2}px`;
+
+            dragElement.style.opacity = '0.4';
         }
 
-        function handleDragOver(e) {
-            e.preventDefault(); // Necessary to allow dropping
-            e.dataTransfer.dropEffect = 'move';
-            return false;
-        }
+        function handleTouchMove(e) {
+            if (!ghostElement) return;
+            e.preventDefault(); // Prevent scrolling while dragging
 
-        function handleDragEnter(e) {
-            const dropZone = e.target.closest('.drop-zone');
-            if (dropZone) {
-                dropZone.classList.add('drop-target-active');
-            }
-        }
+            const touch = e.touches[0];
+            ghostElement.style.left = `${touch.pageX - ghostElement.offsetWidth / 2}px`;
+            ghostElement.style.top = `${touch.pageY - ghostElement.offsetHeight / 2}px`;
 
-        function handleDragLeave(e) {
-            const dropZone = e.target.closest('.drop-zone');
-            if (dropZone) {
-                // Check if we are leaving to a child element
-                const rect = dropZone.getBoundingClientRect();
-                if (e.clientX < rect.left || e.clientX >= rect.right || e.clientY < rect.top || e.clientY >= rect.bottom) {
-                    dropZone.classList.remove('drop-target-active');
+            // Highlight drop target (Manual check for robustness)
+            let foundZone = null;
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                const rect = zone.getBoundingClientRect();
+                if (
+                    touch.clientX >= rect.left &&
+                    touch.clientX <= rect.right &&
+                    touch.clientY >= rect.top &&
+                    touch.clientY <= rect.bottom
+                ) {
+                    zone.classList.add('drop-target-active');
+                    foundZone = zone;
+                } else {
+                    zone.classList.remove('drop-target-active');
                 }
-            }
+            });
         }
-        
-        function handleDrop(e) {
-            e.preventDefault();
-            e.stopPropagation(); // Stop it from bubbling up
 
-            const dropZone = e.target.closest('.drop-zone');
-            if (dropZone && dragElement) {
-                dropZone.classList.remove('drop-target-active');
-                
-                let newAssigneeId = dropZone.dataset.memberId;
+        function handleTouchEnd(e) {
+            if (!ghostElement) return;
+
+            // Find drop target (Manual check for robustness)
+            const touch = e.changedTouches[0];
+            let validDropZone = null;
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                const rect = zone.getBoundingClientRect();
+                if (
+                    touch.clientX >= rect.left &&
+                    touch.clientX <= rect.right &&
+                    touch.clientY >= rect.top &&
+                    touch.clientY <= rect.bottom
+                ) {
+                    validDropZone = zone;
+                }
+                zone.classList.remove('drop-target-active'); // Always remove highlight on drop
+            });
+
+            if (validDropZone) {
+                let newAssigneeId = validDropZone.dataset.memberId;
                 if (!newAssigneeId) {
                     newAssigneeId = 'unassigned'; // It's the unassigned pool
                 }
                 
-                // Update Firestore using the dataset from the dragged element
-                handleChoreAssignment(dragElement.dataset, newAssigneeId);
+                // Update Firestore
+                handleChoreAssignment(dragElement, newAssigneeId);
             }
+
+            // Cleanup
+            document.body.removeChild(ghostElement);
+            ghostElement = null;
+            dragElement.style.opacity = '1';
+            dragElement = null;
+            // Drop target active class already removed
         }
         
-        async function handleChoreAssignment(choreData, newAssigneeId) {
-            const {
-                completionDocId,
-                choreDefId,
-                currentAssignee,
-                isAdhoc,
-                name,
-                emoji,
-                points
-            } = choreData;
+        async function handleChoreAssignment(choreItem, newAssigneeId) {
+            const completionDocId = choreItem.dataset.completionDocId;
+            const choreDefId = choreItem.dataset.choreDefId;
+            const currentAssigneeId = choreItem.dataset.currentAssignee;
+            const isAdhoc = choreItem.dataset.isAdhoc === 'true';
 
-            if (newAssigneeId === currentAssignee) return; // No change
+            if (newAssigneeId === currentAssigneeId) return; // No change
 
             showLoading('Reassigning...');
             try {
@@ -1630,12 +1587,12 @@
                     });
                 
                 // This is a recurring chore that hasn't been touched today
-                } else if (isAdhoc === 'false' && choreDefId !== 'null') {
+                } else if (!isAdhoc && choreDefId !== 'null') {
                     // We must create a new completion doc for it
                     await addDoc(paths.completions(), {
-                        name: name,
-                        emoji: emoji,
-                        points: parseInt(points),
+                        name: choreItem.dataset.name,
+                        emoji: choreItem.dataset.emoji,
+                        points: parseInt(choreItem.dataset.points),
                         assigneeId: newAssigneeId,
                         date: getTodayString(),
                         isComplete: false,
@@ -1643,10 +1600,6 @@
                         choreDefId: choreDefId
                     });
                 } else {
-                    // This case might be an ad-hoc chore in the unassigned pool
-                    // But our ad-hoc creation logic assigns a completion doc immediately.
-                    // This logic should cover all cases, but if one slips through:
-                    console.error("Cannot reassign this item, data is inconsistent.", choreData);
                     throw new Error("Cannot reassign this item.");
                 }
                 showSnackbar("Chore reassigned!");
@@ -1689,5 +1642,4 @@
     </script>
 </body>
 </html>
-
 
