@@ -2,7 +2,7 @@
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale-1.0, maximum-scale=1.0, user-scalable=no">
     <title>Family Hub Organizer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,6 +45,47 @@
         }
         .drop-target-active {
             @apply ring-4 ring-indigo-400 ring-dashed;
+        }
+
+        /* Smooth collapse/expand for adhoc form */
+        #adhoc-chore-form {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s ease-out;
+            padding-top: 0;
+            padding-bottom: 0;
+            margin-top: 0;
+        }
+        #adhoc-chore-form.form-open {
+            max-height: 500px; /* Large enough to fit content */
+            @apply p-4 mt-4; /* Re-apply padding/margin when open */
+        }
+
+        /* Fade-in-up animation */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-fade-in-up {
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+
+        /* Confetti particle */
+        .confetti-particle {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            pointer-events: none;
+            z-index: 1000;
+            opacity: 1;
+            transition: transform 1s ease-out, opacity 1s ease-out;
         }
     </style>
 </head>
@@ -98,7 +139,7 @@
                     </div>
 
                     <!-- Adhoc Form (collapsible) -->
-                    <form id="adhoc-chore-form" class="hidden space-y-4 p-4 bg-white rounded-lg shadow-inner">
+                    <form id="adhoc-chore-form" class="space-y-4 bg-white rounded-lg shadow-inner">
                         <h4 class="text-lg font-medium text-gray-700">Add One-Time Chore</h4>
                         <div>
                             <label for="adhoc-chore-name" class="block text-sm font-medium text-gray-700">Chore Name</label>
@@ -454,6 +495,39 @@
             return new Date().toISOString().split('T')[0];
         }
 
+        // --- Confetti Function ---
+        function createConfetti(x, y, color) {
+            const particleCount = 15;
+            const colors = [color, '#f59e0b', '#ef4444', '#10b981', '#3b82f6'];
+            for (let i = 0; i < particleCount; i++) {
+                const particle = document.createElement('div');
+                particle.classList.add('confetti-particle');
+                particle.style.left = `${x}px`;
+                particle.style.top = `${y}px`;
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                
+                document.body.appendChild(particle);
+
+                const angle = Math.random() * Math.PI * 2;
+                const radius = Math.random() * 150 + 50;
+                const translateX = Math.cos(angle) * radius;
+                const translateY = Math.sin(angle) * radius;
+
+                // Animate
+                requestAnimationFrame(() => {
+                    particle.style.transform = `translate(${translateX}px, ${translateY}px) scale(0)`;
+                    particle.style.opacity = '0';
+                });
+
+                // Remove particle after animation
+                setTimeout(() => {
+                    if (particle.parentNode) {
+                        particle.parentNode.removeChild(particle);
+                    }
+                }, 1000);
+            }
+        }
+
         // --- AI Emoji Function ---
         async function getEmojiFromAI(prompt, buttonElement) {
             if (!GEMINI_API_KEY || GEMINI_API_KEY.includes("YOUR-API-KEY")) {
@@ -709,7 +783,7 @@
                         name: completion.name,
                         emoji: completion.emoji,
                         points: completion.points,
-                        assigneeId: completion.assigneeId,
+                        assigneeId: completion.assignaId,
                         isComplete: completion.isComplete,
                         isAdhoc: true,
                         completionDocId: completion.id
@@ -720,7 +794,7 @@
             // Create member cards
             appData.members.forEach(member => {
                 const memberCard = document.createElement('div');
-                memberCard.className = 'bg-white rounded-xl shadow-lg p-4 drop-zone transition-all duration-150';
+                memberCard.className = 'bg-white rounded-xl shadow-lg p-4 drop-zone transition-all duration-150 animate-fade-in-up';
                 memberCard.dataset.memberId = member.id;
                 memberCard.style.borderColor = member.color || '#ccc';
                 memberCard.style.borderWidth = '3px';
@@ -762,7 +836,7 @@
         function createChoreItemHTML(task) {
             const completedClass = task.isComplete ? 'chore-item-completed' : '';
             return `
-                <div class="chore-item ${completedClass} cursor-grab" 
+                <div class="chore-item ${completedClass} cursor-grab animate-fade-in-up" 
                      draggable="true" 
                      data-task-id="${task.id}" 
                      data-chore-def-id="${task.choreDefId || 'null'}"
@@ -823,7 +897,7 @@
                 const dayIndexStr = i.toString();
                 const dayCard = document.createElement('div');
                 const isToday = i === today;
-                dayCard.className = `rounded-lg p-3 ${isToday ? 'bg-indigo-100 border-2 border-indigo-400' : 'bg-gray-50 border'}`;
+                dayCard.className = `rounded-lg p-3 animate-fade-in-up ${isToday ? 'bg-indigo-100 border-2 border-indigo-400' : 'bg-gray-50 border'}`;
                 
                 let choresHTML = '';
                 
@@ -875,7 +949,7 @@
             
             [...appData.members].sort((a,b) => b.points - a.points).forEach(member => {
                 grid.innerHTML += `
-                    <div class="rounded-xl p-4 shadow-lg text-center" style="background-color: ${member.color}20; border: 2px solid ${member.color};">
+                    <div class="rounded-xl p-4 shadow-lg text-center animate-fade-in-up" style="background-color: ${member.color}20; border: 2px solid ${member.color};">
                         <div class="text-2xl mb-1">${member.emoji || '👤'}</div>
                         <div class="font-semibold text-lg" style="color: ${member.color};">${member.name}</div>
                         <div class="font-bold text-3xl text-gray-800">${member.points}</div>
@@ -899,7 +973,7 @@
             const manageRewardsList = document.getElementById('manage-rewards-list');
 
             editList.innerHTML = appData.members.map(member => `
-                <div class="bg-gray-50 p-4 rounded-lg border">
+                <div class="bg-gray-50 p-4 rounded-lg border animate-fade-in-up">
                     <div class="flex items-center space-x-3 mb-4">
                         <input type="text" value="${member.emoji || '👤'}" class="member-edit-emoji w-12 text-center text-2xl p-1 border rounded" data-member-id="${member.id}">
                         <input type="text" value="${member.name}" class="member-edit-name flex-1 p-1 border rounded" data-member-id="${member.id}">
@@ -917,7 +991,7 @@
 
             manageChoresList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Reusable Chores</h3>' + 
                 appData.chores.map(chore => `
-                <div class="flex justify-between items-center bg-gray-50 p-2 rounded">
+                <div class="flex justify-between items-center bg-gray-50 p-2 rounded animate-fade-in-up">
                     <span>${chore.emoji} ${chore.name}</span>
                     <button class="chore-delete-btn text-red-500 hover:text-red-700 font-bold" data-id="${chore.id}">&times;</button>
                 </div>
@@ -925,7 +999,7 @@
             
             manageRewardsList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Available Rewards</h3>' + 
                 appData.rewards.filter(r => !r.claimed).map(reward => `
-                <div class="flex justify-between items-center bg-gray-50 p-2 rounded">
+                <div class="flex justify-between items-center bg-gray-50 p-2 rounded animate-fade-in-up">
                     <span>${reward.emoji} ${reward.name}</span>
                     <button class="reward-delete-btn text-red-500 hover:text-red-700 font-bold" data-id="${reward.id}">&times;</button>
                 </div>
@@ -968,7 +1042,7 @@
             for (let day = 1; day <= daysInMonth; day++) {
                 const isToday = day === todayDate && month === todayMonth && year === todayYear;
                 const dayEl = document.createElement('div');
-                dayEl.className = `border border-gray-200 h-20 md:h-28 p-1.5 overflow-hidden ${isToday ? 'bg-blue-100' : 'bg-white'}`;
+                dayEl.className = `border border-gray-200 h-20 md:h-28 p-1.5 overflow-hidden animate-fade-in-up ${isToday ? 'bg-blue-100' : 'bg-white'}`;
                 dayEl.innerHTML = `<div class="font-semibold text-sm ${isToday ? 'text-blue-700' : 'text-gray-700'}">${day}</div>`;
                 // Add events later
                 grid.appendChild(dayEl);
@@ -996,13 +1070,13 @@
         document.getElementById('toggle-adhoc-form').addEventListener('click', (e) => {
             const form = document.getElementById('adhoc-chore-form');
             const icon = e.currentTarget.querySelector('span');
-            form.classList.toggle('hidden');
-            if (form.classList.contains('hidden')) {
-                icon.textContent = '＋';
-                e.currentTarget.classList.remove('rotate-45');
-            } else {
+            form.classList.toggle('form-open');
+            if (form.classList.contains('form-open')) {
                 icon.textContent = '＋';
                 e.currentTarget.classList.add('rotate-45');
+            } else {
+                icon.textContent = '＋';
+                e.currentTarget.classList.remove('rotate-45');
             }
         });
 
@@ -1119,7 +1193,7 @@
                 });
                 showSnackbar("One-time chore added!");
                 e.target.reset();
-                document.getElementById('adhoc-chore-form').classList.add('hidden');
+                document.getElementById('adhoc-chore-form').classList.remove('form-open');
                 document.getElementById('toggle-adhoc-form').classList.remove('rotate-45');
                 document.getElementById('toggle-adhoc-form').querySelector('span').textContent = '＋';
             } catch (error) {
@@ -1287,17 +1361,17 @@
         document.getElementById('daily-assignments-grid').addEventListener('click', (e) => {
             const button = e.target.closest('.chore-complete-btn');
             if (button) {
-                handleChoreCompletion(button);
+                handleChoreCompletion(button, e);
             }
         });
         document.getElementById('unassigned-chores-list').addEventListener('click', (e) => {
              const button = e.target.closest('.chore-complete-btn');
             if (button) {
-                handleChoreCompletion(button);
+                handleChoreCompletion(button, e);
             }
         });
 
-        async function handleChoreCompletion(button) {
+        async function handleChoreCompletion(button, e) {
             const isComplete = button.dataset.isComplete === 'true';
             const points = parseInt(button.dataset.points);
             const assigneeId = button.dataset.assigneeId;
@@ -1316,6 +1390,12 @@
                 showSnackbar("Assign chore to a member to complete it.", true);
                 return;
             }
+
+            // Get click coordinates for confetti
+            const rect = button.getBoundingClientRect();
+            const clickX = rect.left + rect.width / 2;
+            const clickY = rect.top + rect.height / 2;
+            const memberColor = appData.members.find(m => m.id === assigneeId)?.color || '#3b82f6';
 
             showLoading('Completing chore...');
             try {
@@ -1354,6 +1434,7 @@
                 });
                 
                 showSnackbar("Chore completed! Points awarded!");
+                createConfetti(clickX, clickY, memberColor); // <-- ADDED CONFETTI CALL
 
             } catch (error) {
                 console.error("Chore completion transaction failed:", error);
