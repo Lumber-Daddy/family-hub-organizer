@@ -2,7 +2,7 @@
 <html lang="en" class="h-full">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale-1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Family Hub Organizer</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -19,11 +19,13 @@
         
         /* Sidebar Navigation */
         .nav-btn {
-            @apply flex items-center p-3 md:p-4 w-full text-sm md:text-base font-medium text-slate-300 rounded-lg;
+            /* Increased contrast for inactive text */
+            @apply flex items-center p-3 md:p-4 w-full text-sm md:text-base font-medium text-slate-200 rounded-lg;
             @apply hover:bg-slate-700 hover:text-white transition-colors duration-150;
         }
         .nav-btn svg {
-            @apply w-6 h-6 text-slate-400 transition-colors duration-150;
+            /* Increased contrast for inactive icons */
+            @apply w-6 h-6 text-slate-300 transition-colors duration-150;
         }
         .nav-btn:hover svg, .nav-btn-active svg {
             @apply text-white;
@@ -38,7 +40,10 @@
         /* Chore/Card Items */
         .chore-item, .reward-item {
             @apply bg-white rounded-lg shadow-sm p-4 flex items-center space-x-4 transition-all duration-150;
-            @apply hover:shadow-md hover:scale-[1.02];
+        }
+        /* Removed hover effect from item, as drag handle is now the target */
+        .chore-item:hover {
+             @apply shadow-md;
         }
         .chore-item-completed {
             @apply opacity-50 line-through;
@@ -100,7 +105,8 @@
 <body class="h-full w-full overflow-hidden flex app-bg">
 
     <!-- Sidebar Navigation -->
-    <nav id="sidebar" class="w-20 md:w-60 bg-slate-800 flex flex-col p-4 space-y-2 overflow-y-auto shadow-lg z-20">
+    <!-- Reduced sidebar width on medium screens -->
+    <nav id="sidebar" class="w-20 md:w-52 bg-slate-800 flex flex-col p-4 space-y-2 overflow-y-auto shadow-lg z-20">
         <!-- Logo/Title -->
         <div class="flex items-center justify-center md:justify-start p-2 md:p-4 mb-4">
             <span class="text-white text-3xl md:text-2xl font-bold">
@@ -484,6 +490,7 @@
             completions: []
         };
         let calendarDate = new Date();
+        let touchListenersAdded = false; // Prevents duplicate body listeners
 
         // --- DOM Elements ---
         const loadingIndicator = document.getElementById('loading-indicator');
@@ -613,7 +620,7 @@
                         userId = user.uid;
                         console.log("Firebase Auth Success. UserID:", userId);
                         setupFirestoreListeners();
-                        seedData(); // Seed data if database is empty
+                        // seedData(); // <-- SEEDING REMOVED AS REQUESTED
                     } else {
                         console.log("No user signed in, signing in anonymously...");
                         signInAnonymously(auth).catch((error) => {
@@ -681,51 +688,8 @@
             }
         }
 
-        // --- Seeding Initial Data ---
-        async function seedData() {
-            const membersSnapshot = await getDocs(paths.members());
-            if (membersSnapshot.empty) {
-                console.log("Database is empty. Seeding initial data...");
-                showLoading('Seeding initial data...');
-                
-                const seedMembers = [
-                    { name: "Mom", points: 100, color: memberColors[0], emoji: "👑" },
-                    { name: "Dad", points: 100, color: memberColors[1], emoji: "💪" },
-                    { name: "Lyra", points: 50, color: memberColors[2], emoji: "🦄" },
-                    { name: "Cora", points: 50, color: memberColors[3], emoji: "🦊" }
-                ];
-
-                const memberIds = {};
-                for (const member of seedMembers) {
-                    const docRef = await addDoc(paths.members(), member);
-                    memberIds[member.name] = docRef.id;
-                }
-
-                const seedChores = [
-                    { name: "Empty Dishwasher", emoji: "🧼", points: 20, schedule: ["1", "3", "5"], defaultAssignee: memberIds["Lyra"] || "unassigned" },
-                    { name: "Load Dishwasher", emoji: "🍽️", points: 20, schedule: ["2", "4", "6"], defaultAssignee: memberIds["Cora"] || "unassigned" },
-                    { name: "Feed Dog", emoji: "🐶", points: 10, schedule: ["0", "1", "2", "3", "4", "5", "6"], defaultAssignee: memberIds["Lyra"] || "unassigned" },
-                    { name: "Feed Cat", emoji: "🐱", points: 10, schedule: ["0", "1", "2", "3", "4", "5", "6"], defaultAssignee: memberIds["Cora"] || "unassigned" },
-                    { name: "Laundry", emoji: "🧺", points: 50, schedule: ["0", "4"], defaultAssignee: memberIds["Mom"] || "unassigned" }
-                ];
-                for (const chore of seedChores) {
-                    await addDoc(paths.chores(), chore);
-                }
-
-                const seedRewards = [
-                    { name: "Movie Night", emoji: "🎬", cost: 200, claimed: false },
-                    { name: "Pizza Dinner", emoji: "🍕", cost: 300, claimed: false }
-                ];
-                for (const reward of seedRewards) {
-                    await addDoc(paths.rewards(), reward);
-                }
-                
-                console.log("Seeding complete.");
-                hideLoading();
-            } else {
-                console.log("Database already contains data. Skipping seed.");
-            }
-        }
+        // --- Seeding Initial Data (REMOVED) ---
+        // async function seedData() { ... } // Function is no longer called
 
 
         // --- Render Functions ---
@@ -810,7 +774,7 @@
                         name: completion.name,
                         emoji: completion.emoji,
                         points: completion.points,
-                        assigneeId: completion.assigneeId, // Corrected from assignaId
+                        assigneeId: completion.assigneeId, // <-- TYPO FIX (was assignaId)
                         isComplete: completion.isComplete,
                         isAdhoc: true,
                         completionDocId: completion.id
@@ -863,9 +827,10 @@
 
         function createChoreItemHTML(task) {
             const completedClass = task.isComplete ? 'chore-item-completed' : '';
+            // NEW HTML: Added drag handle
             return `
-                <div class="chore-item ${completedClass} cursor-grab animate-fade-in-up" 
-                     draggable="true" 
+                <div class="chore-item ${completedClass} animate-fade-in-up" 
+                     draggable="false" 
                      data-task-id="${task.id}" 
                      data-chore-def-id="${task.choreDefId || 'null'}"
                      data-completion-doc-id="${task.completionDocId || 'null'}"
@@ -876,16 +841,25 @@
                      data-points="${task.points}"
                      data-current-assignee="${task.assigneeId || 'unassigned'}">
                     
-                    <button class="chore-complete-btn text-3xl p-2 -ml-2 rounded-full transition-transform transform hover:scale-125"
-                            data-task-id="${task.id}"
-                            data-is-complete="${task.isComplete}"
-                            data-points="${task.points}"
-                            data-assignee-id="${task.assigneeId}">
-                        ${task.isComplete ? '✅' : task.emoji}
-                    </button>
-                    <div class="flex-1">
-                        <span class="font-medium">${task.name}</span>
-                        <span class="block text-sm text-gray-500">${task.points} points</span>
+                    <div class="flex items-center space-x-4 flex-1">
+                        <button class="chore-complete-btn text-3xl p-2 -ml-2 rounded-full transition-transform transform hover:scale-125"
+                                data-task-id="${task.id}"
+                                data-is-complete="${task.isComplete}"
+                                data-points="${task.points}"
+                                data-assignee-id="${task.assigneeId}">
+                            ${task.isComplete ? '✅' : task.emoji}
+                        </button>
+                        <div class="flex-1">
+                            <span class="font-medium">${task.name}</span>
+                            <span class="block text-sm text-gray-500">${task.points} points</span>
+                        </div>
+                    </div>
+                    
+                    <!-- Drag Handle -->
+                    <div class="chore-drag-handle p-2 text-slate-400 cursor-grab">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+                        </svg>
                     </div>
                 </div>
             `;
@@ -1477,19 +1451,31 @@
         let ghostElement = null;
 
         function addTouchDragListeners() {
-            const items = document.querySelectorAll('.chore-item');
-            items.forEach(item => {
-                item.addEventListener('touchstart', handleTouchStart, { passive: false });
-                // Prevent native drag on touch devices
-                item.addEventListener('dragstart', (e) => e.preventDefault());
+            const containers = [
+                document.getElementById('daily-assignments-grid'), 
+                document.getElementById('unassigned-chores-list')
+            ];
+            
+            containers.forEach(container => {
+                if (container) {
+                    // Remove old listener to prevent duplicates, then add new one
+                    container.removeEventListener('touchstart', handleTouchStart);
+                    container.addEventListener('touchstart', handleTouchStart, { passive: false });
+                }
             });
 
-            document.body.addEventListener('touchmove', handleTouchMove, { passive: false });
-            document.body.addEventListener('touchend', handleTouchEnd);
+            if (!touchListenersAdded) {
+                document.body.addEventListener('touchmove', handleTouchMove, { passive: false });
+                document.body.addEventListener('touchend', handleTouchEnd);
+                touchListenersAdded = true;
+            }
         }
 
         function handleTouchStart(e) {
-            // e.preventDefault(); // This is handled by passive: false
+            const handle = e.target.closest('.chore-drag-handle');
+            if (!handle) return; // Only drag if the handle is touched
+            
+            e.preventDefault(); // Prevent text selection/scrolling
             dragElement = e.target.closest('.chore-item');
             if (!dragElement) return;
 
