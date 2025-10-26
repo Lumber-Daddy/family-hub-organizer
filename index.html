@@ -1136,35 +1136,53 @@ const renderCalendarView = () => {
 };
 
 
-// --- Drag and Drop Logic ---
+// --- Drag and Drop / Touch Logic ---
 
 let draggedChore = null;
+let proxyElement = null; // New element for visual dragging on touch
+let dragStartX = 0;
+let dragStartY = 0;
+let currentTargetZone = null; // Stores the DOM element of the drop zone currently being hovered/touched
+
 
 const setupDragAndDrop = () => {
-    // Remove existing listeners to prevent duplication
+    // --- Clean up old listeners ---
+    document.removeEventListener('touchmove', handleTouchMoveGlobal, { passive: false });
+    document.removeEventListener('touchend', handleTouchEndGlobal);
+
     document.querySelectorAll('.chore-item').forEach(item => {
         item.removeEventListener('dragstart', handleDragStart);
         item.removeEventListener('dragend', handleDragEnd);
+        item.removeEventListener('touchstart', handleTouchStart);
     });
     document.querySelectorAll('.drop-zone').forEach(zone => {
         zone.removeEventListener('dragover', handleDragOver);
         zone.removeEventListener('dragleave', handleDragLeave);
         zone.removeEventListener('drop', handleDrop);
     });
-
-    // Add listeners to chore items (draggables)
+    
+    // --- Add Mouse listeners (standard D&D) ---
     document.querySelectorAll('.chore-item').forEach(item => {
         item.addEventListener('dragstart', handleDragStart);
         item.addEventListener('dragend', handleDragEnd);
     });
-
-    // Add listeners to member lists (drop targets)
     document.querySelectorAll('.drop-zone').forEach(zone => {
         zone.addEventListener('dragover', handleDragOver);
         zone.addEventListener('dragleave', handleDragLeave);
         zone.addEventListener('drop', handleDrop);
     });
+
+    // --- Add Touch listeners (for Samsung Fridge / touch devices) ---
+    document.querySelectorAll('.chore-item').forEach(item => {
+        item.addEventListener('touchstart', handleTouchStart, { passive: false });
+    });
+    
+    // Listen for move and end events globally to track dragging anywhere
+    document.addEventListener('touchmove', handleTouchMoveGlobal, { passive: false });
+    document.addEventListener('touchend', handleTouchEndGlobal);
 };
+
+// --- D&D Mouse Handlers (Existing Logic) ---
 
 function handleDragStart(e) {
     draggedChore = dailyChores.find(c => c.id === e.target.dataset.choreId);
@@ -1196,7 +1214,132 @@ async function handleDrop(e) {
     if (!draggedChore) return;
 
     const targetMemberName = e.currentTarget.dataset.memberId; // "Mom", "Dad", or "Unassigned"
+    
+    // Centralized assignment update
+    await handleAssignmentUpdate(targetMemberName);
+}
 
+// --- D&D Touch Handlers (NEW Logic) ---
+
+function getTouchCoords(e) {
+    const touch = e.touches[0] || e.changedTouches[0];
+    return { x: touch.clientX, y: touch.clientY };
+}
+
+function getDropZoneUnderPoint(x, y) {
+    // Temporarily hide the proxy element to find the element underneath
+    if (proxyElement) proxyElement.style.display = 'none';
+
+    // Use document.elementFromPoint to find the element under the touch
+    let target = document.elementFromPoint(x, y);
+
+    // Show the proxy element again
+    if (proxyElement) proxyElement.style.display = 'block';
+
+    // Traverse up to find a drop zone or null
+    while (target && !target.classList.contains('drop-zone') && target !== document.body) {
+        target = target.parentElement;
+    }
+    return target && target.classList.contains('drop-zone') ? target : null;
+}
+
+function handleTouchStart(e) {
+    // Ignore if already dragging or if it's a multi-touch gesture
+    if (draggedChore || e.touches.length > 1) return;
+
+    e.preventDefault(); // Prevent scrolling/native browser touch behaviors
+
+    const choreItem = e.currentTarget;
+    draggedChore = dailyChores.find(c => c.id === choreItem.dataset.choreId);
+    if (!draggedChore || draggedChore.completed) {
+        draggedChore = null;
+        return;
+    }
+    
+    const rect = choreItem.getBoundingClientRect();
+    const coords = getTouchCoords(e);
+    
+    // Record start offsets for smooth drag
+    dragStartX = coords.x - rect.left;
+    dragStartY = coords.y - rect.top;
+
+    // 1. Create Proxy Element (Visual ghost)
+    proxyElement = choreItem.cloneNode(true);
+    proxyElement.id = 'drag-proxy';
+    proxyElement.classList.remove('opacity-40');
+    proxyElement.classList.add('shadow-2xl', 'scale-105', 'rotate-1');
+    proxyElement.style.position = 'fixed';
+    proxyElement.style.width = `${rect.width}px`;
+    proxyElement.style.height = `${rect.height}px`;
+    proxyElement.style.pointerEvents = 'none'; // Don't block touch detection
+    proxyElement.style.zIndex = '1000';
+    
+    document.body.appendChild(proxyElement);
+
+    // 2. Hide Original
+    choreItem.classList.add('opacity-0'); 
+}
+
+function handleTouchMoveGlobal(e) {
+    if (!draggedChore || !proxyElement) return;
+
+    e.preventDefault(); // Crucial to prevent native scrolling while dragging
+
+    const coords = getTouchCoords(e);
+    
+    // 1. Move the proxy element
+    proxyElement.style.left = `${coords.x - dragStartX}px`;
+    proxyElement.style.top = `${coords.y - dragStartY}px`;
+
+    // 2. Detect the target zone
+    const newTargetZone = getDropZoneUnderPoint(coords.x, coords.y);
+    
+    if (newTargetZone !== currentTargetZone) {
+        // Remove highlight from old zone
+        if (currentTargetZone) {
+            currentTargetZone.classList.remove('border-indigo-500');
+        }
+        
+        // Add highlight to new zone
+        if (newTargetZone) {
+            newTargetZone.classList.add('border-indigo-500');
+        }
+        currentTargetZone = newTargetZone;
+    }
+}
+
+
+async function handleTouchEndGlobal(e) {
+    if (!draggedChore || !proxyElement) return;
+
+    e.preventDefault(); // Prevent native end behaviors
+
+    // 1. Final Drop Detection
+    let targetMemberName = null;
+    if (currentTargetZone) {
+        targetMemberName = currentTargetZone.dataset.memberId;
+    }
+
+    // 2. Clean Up Proxy and Original Item
+    document.body.removeChild(proxyElement);
+    const originalItem = document.getElementById(`chore-item-${draggedChore.id}`);
+    if (originalItem) {
+        originalItem.classList.remove('opacity-0');
+    }
+
+    // 3. Reset state
+    document.querySelectorAll('.drop-zone').forEach(zone => zone.classList.remove('border-indigo-500'));
+    draggedChore = null;
+    proxyElement = null;
+    currentTargetZone = null;
+    
+    // 4. Perform Assignment Update
+    if (targetMemberName) {
+        await handleAssignmentUpdate(targetMemberName);
+    }
+}
+
+async function handleAssignmentUpdate(targetMemberName) {
     // If target member is the same as current assignment, do nothing
     if ((draggedChore.assignedTo || 'Unassigned') === targetMemberName) return;
 
@@ -1207,11 +1350,8 @@ async function handleDrop(e) {
     let docRef;
 
     if (draggedChore.isAdHoc) {
-        // Update the ad-hoc chore in the completions collection (as a log entry)
+        // Update the ad-hoc chore log entry
         docRef = doc(db, getChoreCompletionsPath(), draggedChore.logId);
-        
-        // Note: Ad-hoc chores are logs, but for D&D, we track them live in the dailyChores array
-        // The persistence model here is a bit stretched, but for simplicity, we update the log's 'assignedTo' field
     } else {
         // Update the recurring chore definition
         docRef = doc(db, getChoreDefinitionsPath(), draggedChore.defId);
