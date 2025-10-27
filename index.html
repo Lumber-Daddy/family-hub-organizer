@@ -201,7 +201,8 @@
             </div>
 
             <!-- Chore Lists Container -->
-            <div id="daily-chores-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Changed grid-cols-1 md:grid-cols-2 to grid-cols-2 -->
+            <div id="daily-chores-container" class="grid grid-cols-2 gap-4 md:gap-6">
                 <!-- Member sections populated by JS -->
             </div>
         </div>
@@ -302,14 +303,15 @@
                             <!-- Member list populated by JS -->
                         </div>
                     </div>
+                    <!-- Updated Point Adjustment Section -->
                     <div class="bg-white p-6 rounded-lg shadow-sm">
-                        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Manual Point Adjustment</h2>
+                        <h2 class="text-2xl font-semibold text-gray-800 mb-4">Set Member Points</h2>
                         <form id="adjust-points-form" class="space-y-4">
                             <select id="adjust-member-select" class="w-full p-2 border rounded-lg">
                                 <!-- Members loaded by JS -->
                             </select>
-                            <input type="number" id="adjust-points-amount" placeholder="Points to Add/Subtract" class="w-full p-2 border rounded-lg" required>
-                            <button type="submit" class="w-full bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600">Adjust Points</button>
+                            <input type="number" id="adjust-points-amount" placeholder="New Point Total" class="w-full p-2 border rounded-lg" required min="0">
+                            <button type="submit" class="w-full bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600">Set Points</button>
                         </form>
                     </div>
                 </div>
@@ -433,7 +435,7 @@
     <div id="password-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-30 flex items-center justify-center">
         <div class="bg-white p-6 rounded-lg shadow-lg w-full max-w-sm">
             <h2 class="text-xl font-semibold mb-4">Admin Access Required</h2>
-            <p id="password-prompt" class_mb-4>Please enter the admin password.</p>
+            <p id="password-prompt" class="mb-4">Please enter the admin password.</p>
             <input type="password" id="password-input" class="w-full p-2 border rounded-lg mb-4">
             <p id="password-error" class="text-red-500 text-sm mb-4 hidden">Incorrect password. Try again.</p>
             <div class="flex justify-end gap-4">
@@ -508,18 +510,18 @@
         const DAYS_OF_WEEK = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
         const EMOJI_LIST = [
             '🧹', '🧼', '🧺', '🛏️', '🍽️', '🗑️', '♻️', '🐾', '🌱', '🥦', 
-            '🛒', '🐶', '🐱', '🧑‍🍳', '🚽', '🛁', '🧽', '📚', '🎒', '👟',
-            '🌟', '💰', '🧁', '🍰', '🎊', '🌷', '🐠', '🧋', '🎮'
+            '🛒', '🐶', '🐱', '🧑‍🍳', '🚽', '🛁', '🧽', '📚', '🎒', '👟'
         ];
+        // Added hex values
         const COLOR_LIST = [
-            { name: 'Red', bg: 'bg-red-500', border: 'border-red-500' },
-            { name: 'Blue', bg: 'bg-blue-500', border: 'border-blue-500' },
-            { name: 'Green', bg: 'bg-green-500', border: 'border-green-500' },
-            { name: 'Yellow', bg: 'bg-yellow-500', border: 'border-yellow-500' },
-            { name: 'Purple', bg: 'bg-purple-500', border: 'border-purple-500' },
-            { name: 'Pink', bg: 'bg-pink-500', border: 'border-pink-500' },
-            { name: 'Indigo', bg: 'bg-indigo-500', border: 'border-indigo-500' },
-            { name: 'Teal', bg: 'bg-teal-500', border: 'border-teal-500' }
+            { name: 'Red', bg: 'bg-red-500', border: 'border-red-500', hex: '#EF4444' },
+            { name: 'Blue', bg: 'bg-blue-500', border: 'border-blue-500', hex: '#3B82F6' },
+            { name: 'Green', bg: 'bg-green-500', border: 'border-green-500', hex: '#22C55E' },
+            { name: 'Yellow', bg: 'bg-yellow-500', border: 'border-yellow-500', hex: '#EAB308' },
+            { name: 'Purple', bg: 'bg-purple-500', border: 'border-purple-500', hex: '#A855F7' },
+            { name: 'Pink', bg: 'bg-pink-500', border: 'border-pink-500', hex: '#EC4899' },
+            { name: 'Indigo', bg: 'bg-indigo-500', border: 'border-indigo-500', hex: '#6366F1' },
+            { name: 'Teal', bg: 'bg-teal-500', border: 'border-teal-500', hex: '#14B8A6' }
         ];
 
         // === Sound Initialization ===
@@ -603,8 +605,29 @@
             confettiEffect = confetti.create(canvas, { resize: true });
         }
 
-        function triggerConfetti() {
-            if (confettiEffect) {
+        function triggerConfetti(type = 'default') {
+            if (!confettiEffect) return;
+            
+            if (type === 'fireworks') {
+                const duration = 2 * 1000;
+                const animationEnd = Date.now() + duration;
+                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+                function randomInRange(min, max) {
+                    return Math.random() * (max - min) + min;
+                }
+
+                const interval = setInterval(function() {
+                    const timeLeft = animationEnd - Date.now();
+                    if (timeLeft <= 0) {
+                        return clearInterval(interval);
+                    }
+                    const particleCount = 50 * (timeLeft / duration);
+                    // since particles fall down, start a bit higher than random
+                    confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.9), y: Math.random() - 0.2 } });
+                }, 250);
+            } else {
+                // Default redeem
                 confettiEffect({
                     particleCount: 150,
                     spread: 90,
@@ -905,15 +928,27 @@
             const container = document.getElementById('daily-chores-container');
             container.innerHTML = ''; // Clear existing
             
+            // Sort members by displayOrder
+            const sortedMembers = [...localState.members].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            
             // 1. Create sections for each member
-            localState.members.forEach(member => {
+            sortedMembers.forEach(member => {
                 const memberChores = localState.dailyChores.filter(chore => chore.assignedTo === member.id);
                 const section = document.createElement('div');
-                section.className = `bg-white p-4 rounded-lg shadow-sm chore-list-droppable" data-member-id="${member.id}`;
+                section.className = `p-4 rounded-lg shadow-sm chore-list-droppable" data-member-id="${member.id}`;
+                
+                // Apply background tint using hex
+                const colorInfo = COLOR_LIST.find(c => c.bg === member.color);
+                const bgColor = colorInfo ? colorInfo.hex + '20' : '#FFFFFF'; // Add '20' for ~12% alpha
+                section.style.backgroundColor = bgColor;
+                
                 section.innerHTML = `
-                    <h2 class="text-xl font-semibold mb-4 flex items-center">
-                        <span class="h-8 w-8 rounded-full ${member.color} flex items-center justify-center text-white text-lg font-bold mr-3">${member.emoji || member.name[0]}</span>
-                        ${member.name}
+                    <h2 class="text-xl font-semibold mb-4 flex items-center justify-between">
+                        <div class="flex items-center">
+                            <span class="h-8 w-8 rounded-full ${member.color} flex items-center justify-center text-white text-lg font-bold mr-3">${member.emoji || member.name[0]}</span>
+                            <span>${member.name}</span>
+                        </div>
+                        <span class="text-2xl font-bold text-green-600">${member.points || 0}</span>
                     </h2>
                     <div class="space-y-3">
                         ${memberChores.length > 0 ? memberChores.map(chore => renderChoreItem(chore)).join('') : '<p class="text-sm text-gray-400">No chores assigned.</p>'}
@@ -925,6 +960,7 @@
             // 2. Create section for unassigned chores
             const unassignedChores = localState.dailyChores.filter(chore => chore.assignedTo === 'unassigned');
             const unassignedSection = document.createElement('div');
+            // Unassigned remains white
             unassignedSection.className = 'bg-white p-4 rounded-lg shadow-sm chore-list-droppable" data-member-id="unassigned';
             unassignedSection.innerHTML = `
                 <h2 class="text-xl font-semibold mb-4 flex items-center text-gray-600">
@@ -945,8 +981,9 @@
         }
 
         function renderChoreItem(chore) {
+            // Use bg-white for chore items regardless of member card color
             return `
-                <div id="chore-${chore.id}" class="flex items-center justify-between p-3 bg-gray-50 rounded-lg chore-item-draggable" draggable="true" data-chore-id="${chore.id}">
+                <div id="chore-${chore.id}" class="flex items-center justify-between p-3 bg-white rounded-lg chore-item-draggable shadow-sm" draggable="true" data-chore-id="${chore.id}">
                     <div class="flex items-center">
                         <button class="chore-toggle-btn text-2xl mr-3 ${chore.isComplete ? 'animate-pop-in' : ''}" data-chore-id="${chore.id}">
                             ${chore.isComplete ? '✅' : chore.emoji}
@@ -1011,8 +1048,8 @@
                     <div class="space-y-2">
                         ${dayChores.length > 0 ? dayChores.map(chore => {
                             const member = getMemberById(chore.assignedTo);
-                            const color = member ? member.color : 'bg-gray-400';
-                            const borderColor = member ? member.color.replace('bg-', 'border-') : 'border-gray-400';
+                            const colorClass = member ? member.color : 'bg-gray-400'; // Tailwind class
+                            const borderColorClass = member ? member.color.replace('bg-', 'border-') : 'border-gray-400'; // Tailwind border class
                             const initial = member ? (member.emoji || member.name[0]) : '?';
                             
                             // Add delete button only for ad-hoc chores
@@ -1022,10 +1059,10 @@
                                  </button>` : '';
 
                             return `
-                                <div class="flex items-center justify-between gap-2 p-2 bg-white rounded-md border-l-4 ${borderColor} ${chore.isComplete ? 'chore-complete' : ''} shadow-sm weekly-chore-draggable" draggable="true" data-chore-id="${chore.id}">
+                                <div class="flex items-center justify-between gap-2 p-2 bg-white rounded-md border-l-4 ${borderColorClass} ${chore.isComplete ? 'chore-complete' : ''} shadow-sm weekly-chore-draggable" draggable="true" data-chore-id="${chore.id}">
                                     <span class="text-sm truncate" title="${chore.name}">${chore.emoji} ${chore.name}</span>
                                     <div class="flex items-center flex-shrink-0">
-                                        <span class="h-6 w-6 rounded-full ${color} flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" title="${member ? member.name : 'Unassigned'}">
+                                        <span class="h-6 w-6 rounded-full ${colorClass} flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" title="${member ? member.name : 'Unassigned'}">
                                             ${initial}
                                         </span>
                                         ${deleteButton}
@@ -1054,7 +1091,7 @@
 
             // 1. Render Member Point Totals
             pointsContainer.innerHTML = localState.members.map(member => `
-                <div class="p-4 rounded-lg shadow-sm flex items-center" style="background-color: ${member.color.replace('bg-', '#') + '20'}">
+                <div class="p-4 rounded-lg shadow-sm flex items-center" style="background-color: ${COLOR_LIST.find(c=>c.bg === member.color)?.hex + '20' || '#FFFFFF'}">
                     <span class="h-12 w-12 rounded-full ${member.color} flex items-center justify-center text-white text-2xl font-bold mr-4">${member.emoji || member.name[0]}</span>
                     <div>
                         <p class="text-lg font-semibold text-gray-800">${member.name}</p>
@@ -1088,13 +1125,14 @@
                 noClaimedMsg.classList.add('hidden');
                 claimedContainer.innerHTML = claimedItems.map(item => {
                     const member = getMemberById(item.claimedBy);
+                    const memberColorClass = member ? member.color.replace('bg-', 'text-') : 'text-gray-500'; // Get text color class
                     return `
                         <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg mb-2">
                             <div class="flex items-center">
                                 <span class="text-2xl mr-3">${item.emoji}</span>
                                 <div>
                                     <p class="font-medium">${item.name}</p>
-                                    <p class="text-sm text-gray-500">Claimed by <span class="font-medium ${member ? member.color.replace('bg-', 'text-') : ''}">${member ? member.name : '...'}</span> for ${item.cost} pts</p>
+                                    <p class="text-sm text-gray-500">Claimed by <span class="font-medium ${memberColorClass}">${member ? member.name : '...'}</span> for ${item.cost} pts</p>
                                 </div>
                             </div>
                             <button class="deliver-reward-btn bg-blue-600 text-white px-3 py-1 rounded-lg font-medium text-sm hover:bg-blue-700" data-claimed-id="${item.id}">
@@ -1134,18 +1172,30 @@
         // === Render: Setup Members ===
         function renderSetupMembers() {
             const listContainer = document.getElementById('member-list');
-            listContainer.innerHTML = localState.members.map(member => `
+            
+            // Sort by displayOrder before rendering
+            const sortedMembers = [...localState.members].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            
+            listContainer.innerHTML = sortedMembers.map((member, index) => `
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div class="flex items-center">
                         <span class="h-8 w-8 rounded-full ${member.color} flex items-center justify-center text-white text-lg font-bold mr-3">${member.emoji || member.name[0]}</span>
                         <span class="font-medium">${member.name}</span>
                     </div>
                     <div class="flex gap-2">
+                        <!-- Reorder Buttons -->
+                        <button class="move-member-btn p-1 text-gray-400 hover:text-blue-600 ${index === 0 ? 'opacity-25 cursor-not-allowed' : ''}" data-member-id="${member.id}" data-direction="up" ${index === 0 ? 'disabled' : ''}>
+                            <i data-lucide="arrow-up-circle" class="h-5 w-5 pointer-events-none"></i>
+                        </button>
+                        <button class="move-member-btn p-1 text-gray-400 hover:text-blue-600 ${index === sortedMembers.length - 1 ? 'opacity-25 cursor-not-allowed' : ''}" data-member-id="${member.id}" data-direction="down" ${index === sortedMembers.length - 1 ? 'disabled' : ''}>
+                            <i data-lucide="arrow-down-circle" class="h-5 w-5 pointer-events-none"></i>
+                        </button>
+                        <!-- Edit/Delete Buttons -->
                         <button class="edit-member-btn p-1 text-gray-400 hover:text-blue-600" data-member-id="${member.id}">
-                            <i data-lucide="edit-2" class="h-5 w-5"></i>
+                            <i data-lucide="edit-2" class="h-5 w-5 pointer-events-none"></i>
                         </button>
                         <button class="delete-member-btn p-1 text-gray-400 hover:text-red-600" data-member-id="${member.id}" data-member-name="${member.name}">
-                            <i data-lucide="trash-2" class="h-5 w-5"></i>
+                            <i data-lucide="trash-2" class="h-5 w-5 pointer-events-none"></i>
                         </button>
                     </div>
                 </div>
@@ -1162,6 +1212,7 @@
                     .map(day => day.charAt(0).toUpperCase() + day.slice(1))
                     .join(', ');
                 const assignee = getMemberById(chore.defaultAssignee);
+                const assigneeColorClass = assignee ? assignee.color.replace('bg-','text-') : 'text-gray-500'; // text color
                 
                 return `
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
@@ -1169,15 +1220,15 @@
                         <p class="font-medium">${chore.emoji} ${chore.name} (+${chore.points} pts)</p>
                         <p class="text-sm text-gray-500">
                             Schedule: ${schedule || 'None'} | 
-                            Default: <span class="font-medium ${assignee ? assignee.color.replace('bg-','text-') : ''}">${assignee ? assignee.name : 'Unassigned'}</span>
+                            Default: <span class="font-medium ${assigneeColorClass}">${assignee ? assignee.name : 'Unassigned'}</span>
                         </p>
                     </div>
                     <div class="flex gap-2">
                         <button class="edit-chore-btn p-1 text-gray-400 hover:text-blue-600" data-chore-id="${chore.id}">
-                            <i data-lucide="edit-2" class="h-5 w-5"></i>
+                            <i data-lucide="edit-2" class="h-5 w-5 pointer-events-none"></i>
                         </button>
                         <button class="delete-chore-btn p-1 text-gray-400 hover:text-red-600" data-chore-id="${chore.id}" data-chore-name="${chore.name}">
-                            <i data-lucide="trash-2" class="h-5 w-5"></i>
+                            <i data-lucide="trash-2" class="h-5 w-5 pointer-events-none"></i>
                         </button>
                     </div>
                 </div>
@@ -1197,10 +1248,10 @@
                     <div class="flex items-center gap-4">
                         <span class="font-bold text-green-600">${reward.cost} pts</span>
                         <button class="edit-reward-btn p-1 text-gray-400 hover:text-blue-600" data-reward-id="${reward.id}">
-                            <i data-lucide="edit-2" class="h-5 w-5"></i>
+                            <i data-lucide="edit-2" class="h-5 w-5 pointer-events-none"></i>
                         </button>
                         <button class="delete-reward-btn p-1 text-gray-400 hover:text-red-600" data-reward-id="${reward.id}" data-reward-name="${reward.name}">
-                            <i data-lucide="trash-2" class="h-5 w-5"></i>
+                            <i data-lucide="trash-2" class="h-5 w-5 pointer-events-none"></i>
                         </button>
                     </div>
                 </div>
@@ -1233,8 +1284,10 @@
             const selects = document.querySelectorAll('#adhoc-assignee, #chore-assignee, #assign-member-select, #adjust-member-select, #redeem-member-select');
             const currentValues = {};
             selects.forEach(sel => { currentValues[sel.id] = sel.value; });
-
-            const options = localState.members.map(member => `<option value="${member.id}">${member.name}</option>`).join('');
+            
+            // Sort members by displayOrder for dropdowns
+            const sortedMembers = [...localState.members].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            const options = sortedMembers.map(member => `<option value="${member.id}">${member.name}</option>`).join('');
             
             selects.forEach(sel => {
                 if (sel.id === 'adhoc-assignee' || sel.id === 'chore-assignee' || sel.id === 'assign-member-select') {
@@ -1251,7 +1304,7 @@
                     if (sel.id === 'adhoc-assignee' || sel.id === 'chore-assignee' || sel.id === 'assign-member-select') {
                          sel.value = 'unassigned';
                     } else {
-                         sel.value = localState.members[0].id;
+                         sel.value = sortedMembers[0].id; // Default to first *sorted* member
                     }
                 }
             });
@@ -1346,6 +1399,9 @@
                 playSound(newIsComplete ? 'complete' : 'uncomplete');
                 
                 if (newIsComplete) {
+                    // Trigger fireworks!
+                    triggerConfetti('fireworks');
+                    
                     const choreElement = document.getElementById(`chore-${choreId}`);
                     if (choreElement) {
                         const emojiButton = choreElement.querySelector('.chore-toggle-btn');
@@ -1612,7 +1668,7 @@
             if (!reward || !member || member.points < reward.cost) return;
             
             playSound('redeem');
-            triggerConfetti();
+            triggerConfetti('default'); // Use default confetti for redeem
             
             const newPoints = member.points - reward.cost;
             
@@ -1666,6 +1722,50 @@
         }
         
         // === Event Handlers: Setup Members ===
+        async function handleMoveMember(e) {
+            // Need to target the button, not the icon inside it
+            const btn = e.target.closest('.move-member-btn');
+            if (!btn) return;
+
+            const memberId = btn.dataset.memberId;
+            const direction = btn.dataset.direction;
+            
+            // Get a fresh sorted list
+            const sortedMembers = [...localState.members].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            const currentIndex = sortedMembers.findIndex(m => m.id === memberId);
+            
+            if (currentIndex === -1) return;
+            
+            let swapIndex = -1;
+            if (direction === 'up' && currentIndex > 0) {
+                swapIndex = currentIndex - 1;
+            } else if (direction === 'down' && currentIndex < sortedMembers.length - 1) {
+                swapIndex = currentIndex + 1;
+            }
+            
+            if (swapIndex === -1) return;
+            
+            // Swap the members in the local array
+            [sortedMembers[currentIndex], sortedMembers[swapIndex]] = [sortedMembers[swapIndex], sortedMembers[currentIndex]];
+            
+            // Now, re-index the entire list and commit to Firestore
+            const F_MEMBERS_COL = `/artifacts/${appId}/public/data/members`;
+            const batch = writeBatch(db);
+            
+            sortedMembers.forEach((member, index) => {
+                const docRef = doc(db, F_MEMBERS_COL, member.id);
+                batch.update(docRef, { displayOrder: index });
+            });
+            
+            try {
+                await batch.commit();
+                playSound('click');
+                // Snapshot will re-render, no need to manually call
+            } catch (e) {
+                console.error("Error reordering members:", e);
+            }
+        }
+
         async function handleMemberFormSubmit(e) {
             e.preventDefault();
             const id = document.getElementById('member-id').value;
@@ -1684,8 +1784,10 @@
                     const memberRef = doc(db, F_MEMBERS_COL, id);
                     await updateDoc(memberRef, memberData);
                 } else {
-                    // Add new (with 0 points)
+                    // Add new (with 0 points and displayOrder)
                     memberData.points = 0;
+                    // Assign order based on current count before adding
+                    memberData.displayOrder = localState.members.length; 
                     await addDoc(collection(db, F_MEMBERS_COL), memberData);
                 }
                 playSound('complete');
@@ -1696,6 +1798,7 @@
         }
         
         function handleEditMember(e) {
+            // Target button, not icon
             const btn = e.target.closest('.edit-member-btn');
             if (!btn) return;
             
@@ -1724,6 +1827,7 @@
         }
         
         function handleDeleteMember(e) {
+            // Target button, not icon
             const btn = e.target.closest('.delete-member-btn');
             if (!btn) return;
             
@@ -1736,11 +1840,37 @@
                 needsPassword: true,
                 onConfirm: async () => {
                     try {
-                        // TODO: Also delete/unassign chores
                         const F_MEMBERS_COL = `/artifacts/${appId}/public/data/members`;
-                        await deleteDoc(doc(db, F_MEMBERS_COL, memberId));
+                        const F_DAILY_CHORES_COL = `/artifacts/${appId}/public/data/dailyChores`;
+                        const batch = writeBatch(db);
+
+                        // 1. Delete the member
+                        const memberRef = doc(db, F_MEMBERS_COL, memberId);
+                        batch.delete(memberRef);
+
+                        // 2. Unassign their daily chores
+                        const q = query(collection(db, F_DAILY_CHORES_COL), where("assignedTo", "==", memberId));
+                        const choreSnapshot = await getDocs(q);
+                        choreSnapshot.forEach(doc => {
+                            batch.update(doc.ref, { assignedTo: "unassigned" });
+                        });
+                        
+                        // 3. Unassign default assignee from chore templates
+                        const F_CHORES_COL = `/artifacts/${appId}/public/data/choreTemplates`;
+                        const qTemplates = query(collection(db, F_CHORES_COL), where("defaultAssignee", "==", memberId));
+                        const templateSnapshot = await getDocs(qTemplates);
+                         templateSnapshot.forEach(doc => {
+                            batch.update(doc.ref, { defaultAssignee: "unassigned" });
+                        });
+
+
+                        await batch.commit();
                         playSound('uncomplete');
-                        // Note: onSnapshot will auto-re-render
+                        // Re-render will happen automatically via snapshot listener
+                        
+                        // Also re-index remaining members displayOrder
+                        await reindexMemberOrder();
+
                     } catch (error) {
                         console.error("Error deleting member:", error);
                     }
@@ -1748,19 +1878,37 @@
             });
         }
         
+        // Helper to re-index displayOrder after deletion
+        async function reindexMemberOrder() {
+            const F_MEMBERS_COL = `/artifacts/${appId}/public/data/members`;
+            const snapshot = await getDocs(collection(db, F_MEMBERS_COL));
+            const members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            members.sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+
+            const batch = writeBatch(db);
+            members.forEach((member, index) => {
+                if (member.displayOrder !== index) {
+                    const docRef = doc(db, F_MEMBERS_COL, member.id);
+                    batch.update(docRef, { displayOrder: index });
+                }
+            });
+            await batch.commit();
+        }
+
+        
         function handleAdjustPointsForm(e) {
             e.preventDefault();
             const memberId = document.getElementById('adjust-member-select').value;
             const amount = parseInt(document.getElementById('adjust-points-amount').value, 10);
             
-            if (!memberId || isNaN(amount)) return;
+            if (!memberId || isNaN(amount) || amount < 0) return; // Ensure positive number
             
             // Callback to run after password success
             const onConfirm = async () => {
                 const member = getMemberById(memberId);
                 if (!member) return;
                 
-                const newPoints = (member.points || 0) + amount;
+                const newPoints = amount; // SET points, don't add
                 
                 try {
                     const F_MEMBERS_COL = `/artifacts/${appId}/public/data/members`;
@@ -1776,7 +1924,7 @@
             
             // Show password modal
             showPasswordModal({
-                prompt: `Enter password to adjust ${getMemberById(memberId)?.name}'s points by ${amount}.`,
+                prompt: `Enter password to SET ${getMemberById(memberId)?.name}'s points to ${amount}.`,
                 onSuccess: onConfirm
             });
         }
@@ -1820,6 +1968,7 @@
         }
         
         function handleEditChore(e) {
+             // Target button, not icon
             const btn = e.target.closest('.edit-chore-btn');
             if (!btn) return;
 
@@ -1853,6 +2002,7 @@
         }
 
         function handleDeleteChore(e) {
+             // Target button, not icon
             const btn = e.target.closest('.delete-chore-btn');
             if (!btn) return;
             
@@ -1922,6 +2072,7 @@
         }
         
         function handleEditReward(e) {
+            // Target button, not icon
             const btn = e.target.closest('.edit-reward-btn');
             if (!btn) return;
             
@@ -1949,6 +2100,7 @@
         }
 
         function handleDeleteReward(e) {
+             // Target button, not icon
             const btn = e.target.closest('.delete-reward-btn');
             if (!btn) return;
             
@@ -1984,6 +2136,7 @@
         function handlePasswordSubmit() {
             const input = document.getElementById('password-input').value;
             if (input === PASSWORD) {
+                document.getElementById('password-error').classList.add('hidden'); // Hide error on success
                 if (passwordSuccessCallback) {
                     passwordSuccessCallback();
                 }
@@ -2030,6 +2183,7 @@
                     return;
                 }
             }
+            document.getElementById('delete-error').classList.add('hidden'); // Hide error on success
             
             // Password is correct or not needed
             if (deleteSuccessCallback) {
@@ -2116,21 +2270,31 @@
             // Setup Members
             document.getElementById('member-form').addEventListener('submit', handleMemberFormSubmit);
             document.getElementById('member-cancel-btn').addEventListener('click', resetMemberForm);
-            document.getElementById('member-list-container').addEventListener('click', handleEditMember);
-            document.getElementById('member-list-container').addEventListener('click', handleDeleteMember);
+            // Use event delegation for dynamic buttons within the list
+            document.getElementById('member-list-container').addEventListener('click', (e) => {
+                if (e.target.closest('.edit-member-btn')) handleEditMember(e);
+                if (e.target.closest('.delete-member-btn')) handleDeleteMember(e);
+                if (e.target.closest('.move-member-btn')) handleMoveMember(e);
+            });
             document.getElementById('adjust-points-form').addEventListener('submit', handleAdjustPointsForm);
             
             // Setup Chores
             document.getElementById('chore-form').addEventListener('submit', handleChoreFormSubmit);
             document.getElementById('chore-cancel-btn').addEventListener('click', resetChoreForm);
-            document.getElementById('chore-list').addEventListener('click', handleEditChore);
-            document.getElementById('chore-list').addEventListener('click', handleDeleteChore);
+             // Use event delegation for dynamic buttons within the list
+            document.getElementById('chore-list').addEventListener('click', (e) => {
+                if (e.target.closest('.edit-chore-btn')) handleEditChore(e);
+                if (e.target.closest('.delete-chore-btn')) handleDeleteChore(e);
+            });
             
             // Setup Rewards
             document.getElementById('reward-form').addEventListener('submit', handleRewardFormSubmit);
             document.getElementById('reward-cancel-btn').addEventListener('click', resetRewardForm);
-            document.getElementById('reward-list').addEventListener('click', handleEditReward);
-            document.getElementById('reward-list').addEventListener('click', handleDeleteReward);
+             // Use event delegation for dynamic buttons within the list
+            document.getElementById('reward-list').addEventListener('click', (e) => {
+                 if (e.target.closest('.edit-reward-btn')) handleEditReward(e);
+                 if (e.target.closest('.delete-reward-btn')) handleDeleteReward(e);
+            });
             
             // Password Modal
             document.getElementById('password-cancel-btn').addEventListener('click', closePasswordModal);
@@ -2158,5 +2322,4 @@
     </script>
 </body>
 </html>
-
 
