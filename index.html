@@ -1,1743 +1,1843 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Family Hub Organizer</title>
+    
+    <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- Tone.js for Sound Effects -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
-    <style>
-        body {
-            font-family: 'Poppins', sans-serif;
-            overscroll-behavior: none;
-        }
-        .app-bg {
-            background-color: #f4f4f5; /* Light zinc background */
-        }
-        
-        /* Sidebar Navigation */
-        .nav-btn {
-            @apply flex items-center p-3 md:p-4 w-full text-sm md:text-base font-medium text-slate-200 rounded-lg;
-            @apply hover:bg-slate-700 hover:text-white transition-colors duration-150;
-        }
-        .nav-btn svg {
-             /* Make icons white and slightly transparent when inactive */
-            @apply w-6 h-6 text-white opacity-75 transition-colors duration-150; 
-        }
-        .nav-btn:hover svg, .nav-btn-active svg {
-            @apply opacity-100; /* Fully opaque on hover/active */
-        }
-        .nav-btn-active {
-            @apply bg-indigo-600 text-white shadow-inner;
-        }
-        .nav-btn-active svg {
-             @apply opacity-100;
-        }
-        .nav-btn span {
-            @apply ml-4 hidden md:inline;
-        }
-
-        /* Chore/Card Items */
-        .chore-item {
-            @apply bg-white rounded-lg shadow-sm p-4 flex items-center space-x-4 transition-all duration-150 cursor-grab;
-        }
-         /* Reward Item Styling */
-        .reward-item {
-            @apply bg-white rounded-lg shadow-sm p-4 flex flex-col items-center text-center transition-all duration-150 border-t-4;
-            border-color: #f59e0b; /* Amber color for rewards */
-        }
-         .reward-item-affordable {
-            @apply opacity-100;
-        }
-        .reward-item-unaffordable {
-            @apply opacity-50 cursor-not-allowed;
-        }
-        .reward-item:hover {
-             @apply shadow-md;
-        }
-        .chore-item:hover {
-             @apply shadow-md;
-        }
-        .chore-item-completed {
-            @apply opacity-50 line-through; 
-        }
-        .drag-ghost {
-            position: absolute;
-            pointer-events: none;
-            opacity: 0.8;
-            transform: scale(1.05);
-            z-index: 1000;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-        }
-        .drop-target-active {
-            @apply ring-4 ring-indigo-400 ring-dashed;
-        }
-
-        /* Adhoc Form */
-        #adhoc-chore-form {
-            max-height: 0;
-            overflow: hidden;
-            transition: max-height 0.5s ease-out;
-            padding-top: 0; padding-bottom: 0; margin-top: 0;
-        }
-        #adhoc-chore-form.form-open {
-            max-height: 500px; 
-            @apply p-4 mt-4; 
-        }
-
-        /* Animation */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(20px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fade-in-up {
-            animation: fadeInUp 0.5s ease-out forwards;
-        }
-
-        /* Confetti */
-        .confetti-particle {
-            position: fixed; width: 10px; height: 10px; border-radius: 50%;
-            pointer-events: none; z-index: 1000; opacity: 1;
-            transition: transform 1s ease-out, opacity 1s ease-out;
-        }
-
-        /* Modals */
-        .modal {
-            @apply fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4 hidden; /* Ensure hidden initially */
-        }
-        .modal-content {
-            @apply bg-white rounded-lg shadow-xl p-6 max-w-sm w-full;
-        }
-        .assign-option {
-            @apply block w-full text-left px-4 py-2 text-sm text-gray-700 rounded-md hover:bg-indigo-100 hover:text-indigo-700;
-        }
-        /* Emoji Select */
-        .emoji-select, .member-edit-emoji { /* Apply style to member emoji input too */
-             @apply mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-lg;
-             padding-top: 0.3rem; padding-bottom: 0.3rem;
-             text-align: center;
-        }
-        .member-edit-emoji { @apply w-16; } /* Specific width for member emoji input */
-
-         /* Setup Sub-Navigation */
-        .setup-subnav-btn {
-            /* Added border for better button appearance */
-            @apply px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 border border-transparent; 
-        }
-        .setup-subnav-btn-active {
-            @apply bg-indigo-600 text-white border-indigo-700 shadow-sm;
-        }
-        .setup-subnav-btn-inactive {
-             /* Added explicit border color for inactive */
-            @apply text-gray-600 hover:bg-gray-200 border border-gray-300;
-        }
-         .setup-subnav-btn-inactive:hover {
-             @apply border-gray-400; /* Darker border on hover */
-         }
-        .setup-subpage { @apply hidden; }
-        .setup-subpage-active { @apply block; } /* Use block instead of removing hidden */
-
-        /* Claimed Rewards */
-        .claimed-reward-item {
-            @apply flex justify-between items-center bg-slate-100 p-3 rounded-lg shadow-sm animate-fade-in-up;
-        }
-        /* Weekly schedule completed chore */
-        .schedule-chore-completed {
-             @apply line-through opacity-60;
-        }
-
-    </style>
-</head>
-<body class="h-full w-full overflow-hidden flex app-bg">
-
-    <!-- Sidebar Navigation -->
-    <nav id="sidebar" class="w-20 md:w-48 bg-slate-800 flex flex-col p-4 space-y-2 overflow-y-auto shadow-lg z-20">
-        <!-- Logo/Title -->
-        <div class="flex items-center justify-center md:justify-start p-2 md:p-4 mb-4">
-             <span class="text-white text-3xl md:text-2xl font-bold">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 md:w-6 md:h-6 md:mr-2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
-                </svg>              
-            </span>
-            <span class="hidden md:inline text-white text-xl font-bold">Family Hub</span>
-        </div>
-
-        <!-- Nav Buttons -->
-        <button id="nav-daily-list" class="nav-btn nav-btn-active" onclick="changeTab('daily-list', 'Daily List & Assignments')">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.31h5.375c.495 0 .742.656.375 1.007l-4.34 3.16a.563.563 0 0 0-.182.658l1.625 5.111a.563.563 0 0 1-.812.622l-4.34-3.16a.563.563 0 0 0-.658 0l-4.34 3.16a.563.563 0 0 1-.812-.622l1.625-5.111a.563.563 0 0 0-.182-.658l-4.34-3.16a.563.563 0 0 1 .375-1.007h5.375a.563.563 0 0 0 .475-.31l2.125-5.11Z" /></svg>
-            <span>Daily List</span>
-        </button>
-        <button id="nav-weekly-schedule" class="nav-btn" onclick="changeTab('weekly-schedule', 'Weekly Schedule')">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5" /></svg>
-            <span>Weekly Schedule</span>
-        </button>
-        <button id="nav-points" class="nav-btn" onclick="changeTab('points', 'Points & Rewards')">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 18.75h-9a2.25 2.25 0 0 1-2.25-2.25v-9A2.25 2.25 0 0 1 7.5 5.25h9a2.25 2.25 0 0 1 2.25 2.25v9a2.25 2.25 0 0 1-2.25 2.25Z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 12.75h-7.5a.75.75 0 0 1 0-1.5h7.5a.75.75 0 0 1 0 1.5Z" /></svg>
-            <span>Points & Rewards</span>
-        </button>
-        <button id="nav-setup" class="nav-btn" onclick="changeTab('setup', 'App Setup & Management')">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
-            <span>Setup</span>
-        </button>
-        <!-- Calendar Button Removed -->
-
-        <!-- Loading Indicator -->
-        <div id="loading-indicator" class="hidden items-center space-x-2 mt-auto p-4">
-            <svg class="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-            </svg>
-            <span class="text-sm font-medium text-slate-300">Syncing...</span>
-        </div>
-    </nav>
-
-    <!-- Main Content Area -->
-    <main class="flex-1 overflow-y-auto">
-        <div class="p-6 md:p-10">
-            <!-- Content Header -->
-            <h1 id="content-title" class="text-3xl font-bold text-slate-800 mb-8">Daily List & Assignments</h1>
-
-            <!-- Daily List Tab -->
-            <div id="content-daily-list" class="tab-content space-y-8">
-                <!-- Date/Time Header -->
-                <div id="daily-list-header" class="text-center mb-6 p-4 bg-white rounded-lg shadow-sm">
-                    <div id="current-time" class="text-4xl font-bold text-indigo-600">--:-- --</div>
-                    <div id="current-date" class="text-lg text-gray-600">Loading date...</div>
-                </div>
-
-                <!-- Active Assignments -->
-                <div id="daily-assignments-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    <!-- Member cards will be injected here -->
-                </div>
-
-                <!-- Unassigned Chores Pool -->
-                <div id="unassigned-pool" class="bg-white rounded-lg shadow-sm border-t-4 border-yellow-400 p-4 drop-zone">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-xl font-semibold text-yellow-800">Unassigned Chores Pool</h3>
-                        <button id="toggle-adhoc-form" class="bg-indigo-500 hover:bg-indigo-600 text-white rounded-full w-10 h-10 flex items-center justify-center shadow-lg transition-transform transform hover:scale-110">
-                            <span class="text-2xl font-light">＋</span>
-                        </button>
-                    </div>
-
-                    <!-- Adhoc Form (collapsible) -->
-                    <form id="adhoc-chore-form" class="space-y-4 bg-slate-50 rounded-lg shadow-inner">
-                        <h4 class="text-lg font-medium text-gray-700">Add One-Time Chore</h4>
-                        <div>
-                            <label for="adhoc-chore-name" class="block text-sm font-medium text-gray-700">Chore Name</label>
-                            <div class="mt-1 flex rounded-md shadow-sm">
-                                <input type="text" id="adhoc-chore-name" class="flex-1 block w-full rounded-md border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Take out recycling">
-                            </div>
-                        </div>
-                        <div class="flex space-x-4">
-                            <div class="flex-1">
-                                <label for="adhoc-chore-emoji" class="block text-sm font-medium text-gray-700">Emoji</label>
-                                <select id="adhoc-chore-emoji" class="emoji-select">
-                                    <!-- Chore emoji options -->
-                                </select>
-                            </div>
-                            <div class="flex-1">
-                                <label for="adhoc-chore-points" class="block text-sm font-medium text-gray-700">Points</label>
-                                <input type="number" id="adhoc-chore-points" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="10">
-                            </div>
-                        </div>
-                        <div>
-                            <label for="adhoc-chore-assignee" class="block text-sm font-medium text-gray-700">Assign To</label>
-                            <select id="adhoc-chore-assignee" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                                <option value="unassigned">Unassigned</option>
-                                <!-- Member options -->
-                            </select>
-                        </div>
-                        <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                            Add Chore
-                        </button>
-                    </form>
-
-                    <!-- Unassigned Chores List -->
-                    <div id="unassigned-chores-list" class="space-y-3 mt-4 min-h-[50px]">
-                        <!-- Unassigned chores -->
-                    </div>
-                </div>
-
-            </div>
-
-            <!-- Weekly Schedule Tab -->
-            <div id="content-weekly-schedule" class="tab-content hidden">
-                <div class="bg-white rounded-xl shadow-lg p-4 md:p-6">
-                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4" id="weekly-schedule-grid">
-                        <!-- Weekly schedule cards -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Points & Rewards Tab -->
-            <div id="content-points" class="tab-content hidden space-y-8">
-                <!-- Member Point Totals -->
-                <div>
-                    <h2 class="text-2xl font-bold text-slate-700 mb-4">Point Totals</h2>
-                    <div id="point-totals-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        <!-- Member point cards will be injected here -->
-                    </div>
-                </div>
-
-                <!-- Redeem Rewards Section -->
-                <div class="bg-white rounded-xl shadow-lg p-6 mb-8">
-                    <h2 class="text-2xl font-bold text-slate-700 mb-6">Redeem Rewards</h2>
-                    <div class="mb-6 max-w-sm mx-auto">
-                        <label for="redeem-member-selector" class="block text-sm font-medium text-gray-700 mb-1">Select Member to Redeem For:</label>
-                        <select id="redeem-member-selector" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                            <option value="">-- Select Member --</option>
-                            <!-- Member options -->
-                        </select>
-                    </div>
-                    <div id="rewards-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <!-- Reward cards will be dynamically inserted here -->
-                        <p id="no-rewards-msg" class="hidden col-span-full text-center text-gray-500">No rewards available.</p>
-                    </div>
-                    <div id="redeem-feedback" class="mt-6 text-center font-medium"></div>
-                </div>
-
-                <!-- Recently Claimed Rewards -->
-                 <div class="bg-white rounded-xl shadow-lg p-6">
-                    <h2 class="text-2xl font-bold text-slate-700 mb-6">Recently Claimed (Pending Delivery)</h2>
-                    <div id="claimed-rewards-list" class="space-y-3">
-                         <p id="no-claimed-rewards-msg" class="text-center text-gray-500">No rewards have been claimed recently.</p>
-                        <!-- Claimed rewards list items will be injected here -->
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- Setup Tab -->
-            <div id="content-setup" class="tab-content hidden">
-                 <!-- Sub Navigation -->
-                 <div class="mb-6 flex justify-center space-x-2 border-b pb-2">
-                    <button id="setup-subnav-members" class="setup-subnav-btn setup-subnav-btn-active" onclick="changeSetupSubPage('members')">Members</button>
-                    <button id="setup-subnav-chores" class="setup-subnav-btn setup-subnav-btn-inactive" onclick="changeSetupSubPage('chores')">Chores</button>
-                    <button id="setup-subnav-rewards" class="setup-subnav-btn setup-subnav-btn-inactive" onclick="changeSetupSubPage('rewards')">Rewards</button>
-                </div>
-
-                <!-- Members Sub-Page -->
-                 <div id="setup-subpage-members" class="setup-subpage setup-subpage-active space-y-6">
-                    <div class="bg-white rounded-xl shadow-lg p-6">
-                        <h2 class="text-2xl font-bold text-slate-700 mb-6">Add Family Member</h2>
-                        <form id="add-member-form" class="space-y-4">
-                            <div>
-                                <label for="member-name" class="block text-sm font-medium text-gray-700">Name</label>
-                                <input type="text" id="member-name" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" required>
-                            </div>
-                            <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                Add Member
-                            </button>
-                        </form>
-                    </div>
-                    <div class="bg-white rounded-xl shadow-lg p-6">
-                        <h2 class="text-2xl font-bold text-slate-700 mb-6">Edit Members</h2>
-                        <div id="edit-members-list" class="space-y-4">
-                            <!-- Edit member cards -->
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Chores Sub-Page -->
-                 <div id="setup-subpage-chores" class="setup-subpage space-y-6">
-                     <div class="bg-white rounded-xl shadow-lg p-6">
-                        <h2 class="text-2xl font-bold text-slate-700 mb-6">Create Reusable Chore</h2>
-                        <form id="add-chore-form" class="space-y-4">
-                            <div>
-                                <label for="chore-name" class="block text-sm font-medium text-gray-700">Chore Name</label>
-                                <input type="text" id="chore-name" class="mt-1 flex-1 block w-full rounded-md border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Feed Dog" required>
-                            </div>
-                            <div class="flex space-x-4">
-                                <div class="flex-1">
-                                    <label for="chore-emoji" class="block text-sm font-medium text-gray-700">Emoji</label>
-                                    <select id="chore-emoji" class="emoji-select">
-                                        <!-- Chore emoji options -->
-                                    </select>
-                                </div>
-                                <div class="flex-1">
-                                    <label for="chore-points" class="block text-sm font-medium text-gray-700">Points</label>
-                                    <input type="number" id="chore-points" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="10" required>
-                                </div>
-                            </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Repeat on</label>
-                                <div class="mt-2 grid grid-cols-4 sm:grid-cols-7 gap-2">
-                                    <label class="flex items-center space-x-2 p-2 border rounded-md"><input type="checkbox" class="chore-day rounded text-indigo-600" value="1"> <span>Mon</span></label>
-                                    <label class="flex items-center space-x-2 p-2 border rounded-md"><input type="checkbox" class="chore-day rounded text-indigo-600" value="2"> <span>Tue</span></label>
-                                    <label class="flex items-center space-x-2 p-2 border rounded-md"><input type="checkbox" class="chore-day rounded text-indigo-600" value="3"> <span>Wed</span></label>
-                                    <label class="flex items-center space-x-2 p-2 border rounded-md"><input type="checkbox" class="chore-day rounded text-indigo-600" value="4"> <span>Thu</span></label>
-                                    <label class="flex items-center space-x-2 p-2 border rounded-md"><input type="checkbox" class="chore-day rounded text-indigo-600" value="5"> <span>Fri</span></label>
-                                    <label class="flex items-center space-x-2 p-2 border rounded-md"><input type="checkbox" class="chore-day rounded text-indigo-600" value="6"> <span>Sat</span></label>
-                                    <label class="flex items-center space-x-2 p-2 border rounded-md"><input type="checkbox" class="chore-day rounded text-indigo-600" value="0"> <span>Sun</span></label>
-                                </div>
-                            </div>
-                            <div>
-                                <label for="chore-assignee" class="block text-sm font-medium text-gray-700">Set Default Assignment</label>
-                                <select id="chore-assignee" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md">
-                                    <option value="unassigned">Unassigned</option>
-                                    <!-- Member options -->
-                                </select>
-                            </div>
-                            <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
-                                Create Chore
-                            </button>
-                        </form>
-                    </div>
-                     <div class="bg-white rounded-xl shadow-lg p-6">
-                        <h2 class="text-2xl font-bold text-slate-700 mb-6">Manage Reusable Chores</h2>
-                        <div id="manage-chores-list" class="space-y-3">
-                            <!-- Chores with delete buttons -->
-                        </div>
-                    </div>
-                </div>
-
-                 <!-- Rewards Sub-Page -->
-                 <div id="setup-subpage-rewards" class="setup-subpage space-y-6">
-                    <div class="bg-white rounded-xl shadow-lg p-6">
-                        <h2 class="text-2xl font-bold text-slate-700 mb-6">Create Reward</h2>
-                        <form id="add-reward-form" class="space-y-4">
-                            <div>
-                                <label for="reward-name" class="block text-sm font-medium text-gray-700">Reward Name</label>
-                                <input type="text" id="reward-name" class="mt-1 flex-1 block w-full rounded-md border-gray-300 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" placeholder="e.g., Movie Night" required>
-                            </div>
-                            <div class="flex space-x-4">
-                                <div class="flex-1">
-                                    <label for="reward-emoji" class="block text-sm font-medium text-gray-700">Emoji</label>
-                                    <select id="reward-emoji" class="emoji-select">
-                                        <!-- Chore/Reward emoji options, default 🎉 -->
-                                    </select>
-                                </div>
-                                <div class="flex-1">
-                                    <label for="reward-cost" class="block text-sm font-medium text-gray-700">Point Cost</label>
-                                    <input type="number" id="reward-cost" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" value="100" required>
-                                </div>
-                            </div>
-                            <button type="submit" class="w-full inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
-                                Create Reward
-                            </button>
-                        </form>
-                    </div>
-                     <div class="bg-white rounded-xl shadow-lg p-6">
-                        <h2 class="text-2xl font-bold text-slate-700 mb-6">Manage Available Rewards</h2>
-                        <div id="manage-rewards-list" class="space-y-3">
-                            <!-- Rewards with delete buttons -->
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-             <!-- Calendar Tab Content Removed -->
-        </div>
-    </main>
-
-    <!-- Global Feedback Snackbar -->
-    <div id="snackbar" class="hidden fixed bottom-10 right-10 bg-gray-900 text-white px-6 py-3 rounded-full shadow-lg text-sm font-medium z-50">
-        Feedback message
-    </div>
-
-    <!-- FATAL ERROR MODAL -->
-    <div id="fatal-error-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-75 flex items-center justify-center z-50 p-4">
-        <div class="bg-white rounded-lg shadow-2xl p-8 max-w-lg w-full">
-            <h2 class="text-3xl font-bold text-red-600 mb-4">FATAL ERROR</h2>
-            <p class="text-lg text-gray-700 mb-2">Could not connect to Firebase.</p>
-            <p class="text-sm text-gray-600 mb-6">This usually means your network is down, or the API keys in the code are incorrect, or you haven't enabled Authentication/Firestore in your Firebase Console.</p>
-            <div class="bg-gray-100 p-4 rounded-md">
-                <p class="text-sm font-semibold text-gray-800">Error details:</p>
-                <pre id="fatal-error-details" class="text-xs text-red-700 whitespace-pre-wrap font-mono mt-2"></pre>
-            </div>
-        </div>
-    </div>
-
-    <!-- Assignment Modal -->
-    <div id="assignment-modal" class="modal"> <!-- Added hidden class back -->
-        <div class="modal-content">
-            <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Assign Chore To:</h3>
-            <div id="assignment-options" class="space-y-1">
-                <!-- Member options -->
-            </div>
-            <div class="mt-4 flex justify-end">
-                <button id="cancel-assignment" type="button" class="inline-flex justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                    Cancel
-                </button>
-            </div>
-        </div>
-    </div>
-
-
-    <!-- Firebase and App Logic -->
+    
+    <!-- 2. Firebase JS SDKs (using modules) -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
-            getAuth, 
-            signInAnonymously, 
-            onAuthStateChanged 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, 
-            setLogLevel, 
-            doc, 
-            getDoc, 
-            setDoc, 
-            addDoc, 
-            updateDoc, 
-            deleteDoc, 
-            onSnapshot, 
-            collection, 
-            query, 
-            where, 
-            getDocs, 
-            runTransaction,
-            arrayUnion,
-            Timestamp
+            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, 
+            onSnapshot, collection, query, where, getDocs, serverTimestamp 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- START: PRE-CONFIGURED FIREBASE KEYS ---
-        const firebaseConfig = {
-          apiKey: "AIzaSyD_piA_kA7WZFN7GgxCDPpNNxyjrVRTj3M",
-          authDomain: "family-hub-organizer.firebaseapp.com",
-          projectId: "family-hub-organizer",
-          storageBucket: "family-hub-organizer.firebasestorage.app",
-          messagingSenderId: "468888595189",
-          appId: "1:468888595189:web:eb6f33ee8e62cdc489b3bc"
+        // Make SDK functions globally available for inline event handlers
+        window.firebase = {
+            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setLogLevel,
+            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
+            onSnapshot, collection, query, where, getDocs, serverTimestamp
         };
-        const FIREBASE_APP_ID = "family-hub-organizer";
-        // --- END: PRE-CONFIGURED FIREBASE KEYS ---
+    </script>
+    
+    <!-- 3. Helper Libraries: Tone.js (sound) & Confetti.js (animation) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- 4. Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide.min.js"></script>
+
+    <!-- 5. Custom Styles -->
+    <style>
+        /* Smooth transitions for UI elements */
+        .transition-all {
+            transition: all 0.3s ease-in-out;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c4c4c4;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+        /* Style for completed chore */
+        .chore-complete {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+        /* Simple rotate animation for loading icon */
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        .animate-spin {
+            animation: spin 1s linear infinite;
+        }
+        /* Hide number input arrows */
+        input[type=number]::-webkit-inner-spin-button,
+        input[type=number]::-webkit-outer-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type=number] {
+            -moz-appearance: textfield;
+        }
+        /* Draggable style */
+        .chore-dragging {
+            opacity: 0.5;
+            border: 2px dashed #0ea5e9;
+        }
+        .drag-over-target {
+            background-color: #f0f9ff; /* light-blue-50 */
+            border: 2px dashed #0ea5e9;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans text-gray-800 h-screen overflow-hidden">
+
+    <!-- Loading Overlay -->
+    <div id="loading-overlay" class="fixed inset-0 bg-white/70 backdrop-blur-sm z-[999] flex flex-col items-center justify-center">
+        <div data-lucide="loader-circle" class="animate-spin text-blue-600 h-16 w-16"></div>
+        <p class="mt-4 text-lg font-medium text-gray-700">Connecting to Family Hub...</p>
+        <p id="loading-error" class="mt-2 text-red-600 hidden"></p>
+    </div>
+
+    <div class="flex h-full">
+        <!-- ==== Sidebar Navigation ==== -->
+        <nav class="w-20 md:w-64 bg-gray-800 text-white flex flex-col shadow-lg">
+            <div class="flex items-center justify-center md:justify-start md:pl-6 h-20 border-b border-gray-700">
+                <span data-lucide="home" class="h-8 w-8 text-blue-400"></span>
+                <span class="hidden md:block ml-3 text-2xl font-bold">Family Hub</span>
+            </div>
+            
+            <ul class="flex flex-col py-4 space-y-2">
+                <!-- Navigation Links -->
+                <li>
+                    <a href="#" class="nav-link flex items-center justify-center md:justify-start py-3 px-6 text-gray-300 hover:bg-gray-700 hover:text-white transition-all" data-view="daily">
+                        <span data-lucide="clipboard-list"></span>
+                        <span class="hidden md:block ml-4">Daily List</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link flex items-center justify-center md:justify-start py-3 px-6 text-gray-300 hover:bg-gray-700 hover:text-white transition-all" data-view="weekly">
+                        <span data-lucide="calendar-days"></span>
+                        <span class="hidden md:block ml-4">Weekly Schedule</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link flex items-center justify-center md:justify-start py-3 px-6 text-gray-300 hover:bg-gray-700 hover:text-white transition-all" data-view="rewards">
+                        <span data-lucide="star"></span>
+                        <span class="hidden md:block ml-4">Points & Rewards</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="#" class="nav-link flex items-center justify-center md:justify-start py-3 px-6 text-gray-300 hover:bg-gray-700 hover:text-white transition-all" data-view="setup">
+                        <span data-lucide="settings"></span>
+                        <span class="hidden md:block ml-4">Setup</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- ==== Main Content Area ==== -->
+        <main class="flex-1 flex flex-col h-screen">
+            <!-- Header Bar -->
+            <header class="flex items-center justify-between h-20 bg-white shadow-md px-6 z-10">
+                <h2 id="view-title" class="text-3xl font-bold text-gray-800">Daily List</h2>
+                <div class="text-right">
+                    <div id="current-time" class="text-2xl font-semibold text-gray-700"></div>
+                    <div id="current-date" class="text-sm text-gray-500"></div>
+                </div>
+            </header>
+
+            <!-- Content Views (overflow-y-auto is key) -->
+            <div class="flex-1 p-6 md:p-8 overflow-y-auto">
+                
+                <!-- ==== 1. Daily List View ==== -->
+                <div id="view-daily" class="view-content space-y-6">
+                    <!-- Ad-Hoc Chore Collapsible -->
+                    <details class="bg-white rounded-lg shadow-sm border border-gray-200">
+                        <summary class="p-4 cursor-pointer font-medium text-lg text-blue-600 flex items-center justify-between">
+                            <span>Add Ad-Hoc Chore</span>
+                            <span data-lucide="plus-circle" class="h-5 w-5"></span>
+                        </summary>
+                        <form id="add-adhoc-chore-form" class="p-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-5 gap-4">
+                            <input type="text" id="adhoc-name" placeholder="Chore Name" class="md:col-span-2 form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <input type="text" id="adhoc-emoji" placeholder="Emoji (e.g., ✨)" class="form-input px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
+                            <input type="number" id="adhoc-points" placeholder="Points" class="form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <select id="adhoc-assignee" class="form-select px-4 py-2 border border-gray-300 rounded-lg">
+                                <option value="unassigned">Unassigned</option>
+                                <!-- Member options will be populated by JS -->
+                            </select>
+                            <button type="submit" class="md:col-span-5 w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                                <span data-lucide="plus"></span> Add Chore
+                            </button>
+                        </form>
+                    </details>
+                    
+                    <!-- Chore Lists Container -->
+                    <div id="daily-chores-container" class="space-y-6">
+                        <!-- Content generated by JS -->
+                    </div>
+                </div>
+
+                <!-- ==== 2. Weekly Schedule View ==== -->
+                <div id="view-weekly" class="view-content hidden">
+                    <div id="weekly-schedule-grid" class="grid grid-cols-1 md:grid-cols-7 gap-4">
+                        <!-- Day columns generated by JS -->
+                    </div>
+                </div>
+
+                <!-- ==== 3. Points & Rewards View ==== -->
+                <div id="view-rewards" class="view-content hidden space-y-6">
+                    <!-- Member Point Totals -->
+                    <div>
+                        <h3 class="text-2xl font-semibold mb-4">Point Totals</h3>
+                        <div id="member-points-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            <!-- Member point cards generated by JS -->
+                        </div>
+                    </div>
+                    
+                    <!-- Reward Redemption -->
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <h3 class="text-2xl font-semibold mb-4">Redeem Rewards</h3>
+                        <div class="flex items-center gap-4 mb-6">
+                            <label for="redeem-member-select" class="text-lg font-medium">I am:</label>
+                            <select id="redeem-member-select" class="form-select px-4 py-2 border border-gray-300 rounded-lg w-full md:w-1/3">
+                                <option value="">Select a member...</option>
+                                <!-- Member options populated by JS -->
+                            </select>
+                        </div>
+                        <div id="available-rewards-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                            <!-- Reward cards generated by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Claimed (Not Delivered) Rewards -->
+                    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                        <h3 class="text-2xl font-semibold mb-4">Pending Rewards</h3>
+                        <div id="claimed-rewards-list" class="space-y-3">
+                            <!-- Claimed rewards list generated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ==== 4. Setup View ==== -->
+                <div id="view-setup" class="view-content hidden">
+                    <!-- Setup Sub-Navigation -->
+                    <div class="mb-6 flex space-x-2 border-b border-gray-300">
+                        <button class="setup-nav-link py-3 px-5 font-medium text-gray-500 hover:text-gray-800" data-setup-view="members">Members</button>
+                        <button class="setup-nav-link py-3 px-5 font-medium text-gray-500 hover:text-gray-800" data-setup-view="chores">Chores</button>
+                        <button class="setup-nav-link py-3 px-5 font-medium text-gray-500 hover:text-gray-800" data-setup-view="rewards">Rewards</button>
+                    </div>
+
+                    <!-- Setup Content Panes -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        
+                        <!-- ==== Setup: Members ==== -->
+                        <div id="setup-view-members" class="setup-view-content lg:col-span-1 space-y-6">
+                            <!-- Add Member -->
+                            <form id="add-member-form" class="bg-white p-6 rounded-lg shadow-md border border-gray-200 space-y-4">
+                                <h4 class="text-xl font-semibold">Add New Member</h4>
+                                <input type="text" id="member-name" placeholder="Member Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <input type="text" id="member-emoji" placeholder="Emoji (e.g., 👨‍👩‍👧)" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
+                                <select id="member-color" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                    <option value="">Select Color</option>
+                                    <option value="bg-red-500">Red</option>
+                                    <option value="bg-blue-500">Blue</option>
+                                    <option value="bg-green-500">Green</option>
+                                    <option value="bg-yellow-500">Yellow</option>
+                                    <option value="bg-purple-500">Purple</option>
+                                    <option value="bg-pink-500">Pink</option>
+                                    <option value="bg-indigo-500">Indigo</option>
+                                    <option value="bg-teal-500">Teal</option>
+                                </select>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                                    <span data-lucide="user-plus"></span> Add Member
+                                </button>
+                            </form>
+                            
+                            <!-- Adjust Points -->
+                            <form id="adjust-points-form" class="bg-white p-6 rounded-lg shadow-md border border-gray-200 space-y-4">
+                                <h4 class="text-xl font-semibold">Adjust Points (Admin)</h4>
+                                <select id="adjust-points-member" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                    <option value="">Select Member</option>
+                                </select>
+                                <input type="number" id="adjust-points-amount" placeholder="Points to Add/Subtract" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <input type="password" id="adjust-points-password" placeholder="Admin Password" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <button type="submit" class="w-full bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition-all flex items-center justify-center gap-2">
+                                    <span data-lucide="edit"></span> Adjust Points
+                                </button>
+                            </form>
+                        </div>
+                        <div id="member-list-container" class="setup-view-content lg:col-span-2 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                            <h4 class="text-xl font-semibold mb-4">Existing Members</h4>
+                            <div id="setup-members-list" class="space-y-3">
+                                <!-- Member list generated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- ==== Setup: Chores ==== -->
+                        <div id="setup-view-chores" class="setup-view-content hidden lg:col-span-1 space-y-6">
+                            <form id="add-chore-form" class="bg-white p-6 rounded-lg shadow-md border border-gray-200 space-y-4">
+                                <h4 class="text-xl font-semibold">Add Recurring Chore</h4>
+                                <input type="text" id="chore-name" placeholder="Chore Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <input type="text" id="chore-emoji" placeholder="Emoji" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
+                                <input type="number" id="chore-points" placeholder="Points" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <select id="chore-default-assignee" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg">
+                                    <option value="unassigned">Default: Unassigned</option>
+                                </select>
+                                <div class="space-y-2">
+                                    <label class="font-medium">Schedule (Recurring Days):</label>
+                                    <div class="grid grid-cols-4 gap-2 text-sm">
+                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="mon" class="form-checkbox rounded"> Mon</label>
+                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="tue" class="form-checkbox rounded"> Tue</label>
+                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="wed" class="form-checkbox rounded"> Wed</label>
+                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="thu" class="form-checkbox rounded"> Thu</label>
+                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="fri" class="form-checkbox rounded"> Fri</label>
+                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="sat" class="form-checkbox rounded"> Sat</label>
+                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="sun" class="form-checkbox rounded"> Sun</label>
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                                    <span data-lucide="plus-circle"></span> Add Chore Template
+                                </button>
+                            </form>
+                        </div>
+                        <div id="chore-list-container" class="setup-view-content hidden lg:col-span-2 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                            <h4 class="text-xl font-semibold mb-4">Existing Chore Templates</h4>
+                            <div id="setup-chores-list" class="space-y-3">
+                                <!-- Chore list generated by JS -->
+                            </div>
+                        </div>
+
+                        <!-- ==== Setup: Rewards ==== -->
+                        <div id="setup-view-rewards" class="setup-view-content hidden lg:col-span-1 space-y-6">
+                            <form id="add-reward-form" class="bg-white p-6 rounded-lg shadow-md border border-gray-200 space-y-4">
+                                <h4 class="text-xl font-semibold">Add New Reward</h4>
+                                <input type="text" id="reward-name" placeholder="Reward Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <input type="text" id="reward-emoji" placeholder="Emoji (e.g., 🍦)" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
+                                <input type="number" id="reward-cost" placeholder="Point Cost" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
+                                    <span data-lucide="award"></span> Add Reward
+                                </button>
+                            </form>
+                        </div>
+                        <div id="reward-list-container" class="setup-view-content hidden lg:col-span-2 bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                            <h4 class="text-xl font-semibold mb-4">Available Rewards</h4>
+                            <div id="setup-rewards-list" class="space-y-3">
+                                <!-- Reward list generated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div> <!-- End Setup View -->
+            </div> <!-- End Content Views Container -->
+        </main>
+    </div> <!-- End Main Flex Container -->
 
 
-        // --- Global State ---
-        let db;
-        let auth;
-        let userId;
-        let currentTab = 'daily-list';
-        let currentSetupSubPage = 'members'; // State for setup sub-page
-        const ADMIN_PASSWORD = "3281555"; // Password for points modification
-        let membersUnsubscribe = () => {};
-        let choresUnsubscribe = () => {};
-        let rewardsUnsubscribe = () => {};
-        let completionsUnsubscribe = () => {}; // Now listens for the whole week
-        let dateTimeInterval = null; // Interval for updating time display
-        let synth; // Tone.js synth
-        let paths; // Declare paths globally
-        let audioContextStarted = false; // Flag for audio context
+    <!-- ==== Modals ==== -->
 
-        let memberColors = [
-            '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', 
-            '#ec4899', '#06b6d4', '#d946ef'
-        ];
-        
-        const choreEmojis = [
-            '❓', '🧹', '🗑️', '🍽️', '🐶', '🐱', '🧺', '🛏️', '📚', '🌱', 
-            '🚗', '📦', '✏️', '🧑‍🍳', '🛒', '♻️', '💡', '📫', '🧸', '🖥️', 
-            '💧', '👟', '🧥', '🍁'
-        ];
-        const memberEmojis = [ // Keep this separate for member context if needed later
-            '👤', '👑', '🦸', '🚀', '🦄', '🎨', '🎸', '⚽', '🧩', '🧠', 
-            '🧑‍🔬', '🧑‍🚀', '🧑‍💻', '🧑‍🎨', '🧑‍🚒', '👮', '👷', '💡', '🌟', '❤️', 
-            '🦖', '🦋', '🤖', '🎮' 
-        ];
+    <!-- Global Message/Toast -->
+    <div id="toast-message" class="fixed bottom-6 right-6 p-4 rounded-lg shadow-xl text-white transition-all translate-x-[120%]" role="alert">
+        <span id="toast-text"></span>
+    </div>
 
-        let appData = {
+    <!-- Assign Chore Modal -->
+    <div id="assign-chore-modal" class_ ="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md">
+            <h3 class="text-2xl font-semibold mb-4">Assign Chore</h3>
+            <p class="mb-4">Assign "<span id="assign-chore-name" class="font-medium"></span>" to:</p>
+            <select id="assign-chore-select" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg mb-6">
+                <!-- Options populated by JS -->
+            </select>
+            <div class="flex justify-end gap-3">
+                <button onclick="hideModal('assign-chore-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
+                <button id="assign-chore-submit" class="py-2 px-5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all">Save Assignment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Password Modal -->
+    <div id="password-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm">
+            <h3 class="text-2xl font-semibold mb-4">Admin Access</h3>
+            <p class="mb-4 text-gray-600">Please enter the admin password to continue.</p>
+            <input type="password" id="password-input" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg mb-4" placeholder="Password">
+            <p id="password-error" class="text-red-500 text-sm mb-4 hidden">Incorrect password. Please try again.</p>
+            <div class="flex justify-end gap-3">
+                <button onclick="hideModal('password-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
+                <button id="password-submit" class="py-2 px-5 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition-all">Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Delete Modal -->
+    <div id="confirm-delete-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm">
+            <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mx-auto mb-4">
+                <span data-lucide="trash-2" class="h-8 w-8 text-red-600"></span>
+            </div>
+            <h3 class="text-2xl font-semibold mb-2 text-center">Are you sure?</h3>
+            <p class="mb-6 text-gray-600 text-center">This action cannot be undone. This will permanently delete <strong id="delete-item-name"></strong>.</p>
+            <div class="flex justify-center gap-3">
+                <button onclick="hideModal('confirm-delete-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
+                <button id="confirm-delete-button" class="py-2 px-5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-all">Delete</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modals (for Setup) -->
+    <!-- Edit Member Modal -->
+    <div id="edit-member-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <form id="edit-member-form" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md space-y-4">
+            <h3 class="text-2xl font-semibold">Edit Member</h3>
+            <input type="hidden" id="edit-member-id">
+            <input type="text" id="edit-member-name" placeholder="Member Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+            <input type="text" id="edit-member-emoji" placeholder="Emoji" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
+            <select id="edit-member-color" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                <option value="bg-red-500">Red</option>
+                <option value="bg-blue-500">Blue</option>
+                <option value="bg-green-500">Green</option>
+                <option value="bg-yellow-500">Yellow</option>
+                <option value="bg-purple-500">Purple</option>
+                <option value="bg-pink-500">Pink</option>
+                <option value="bg-indigo-500">Indigo</option>
+                <option value="bg-teal-500">Teal</option>
+            </select>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="hideModal('edit-member-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
+                <button type="submit" class="py-2 px-5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all">Save Changes</button>
+            </div>
+        </form>
+    </div>
+    
+    <!-- Edit Chore Modal -->
+    <div id="edit-chore-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <form id="edit-chore-form" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg space-y-4">
+            <h3 class="text-2xl font-semibold">Edit Chore Template</h3>
+            <input type="hidden" id="edit-chore-id">
+            <input type="text" id="edit-chore-name" placeholder="Chore Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+            <input type="text" id="edit-chore-emoji" placeholder="Emoji" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
+            <input type="number" id="edit-chore-points" placeholder="Points" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+            <select id="edit-chore-default-assignee" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg">
+                <!-- options populated by JS -->
+            </select>
+            <div class="space-y-2">
+                <label class="font-medium">Schedule (Recurring Days):</label>
+                <div id="edit-chore-schedule-container" class="grid grid-cols-4 gap-2 text-sm">
+                    <!-- checkboxes populated by JS -->
+                </div>
+            </div>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="hideModal('edit-chore-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
+                <button type="submit" class="py-2 px-5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all">Save Changes</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Edit Reward Modal -->
+    <div id="edit-reward-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
+        <form id="edit-reward-form" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md space-y-4">
+            <h3 class="text-2xl font-semibold">Edit Reward</h3>
+            <input type="hidden" id="edit-reward-id">
+            <input type="text" id="edit-reward-name" placeholder="Reward Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+            <input type="text" id="edit-reward-emoji" placeholder="Emoji" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
+            <input type="number" id="edit-reward-cost" placeholder="Point Cost" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="hideModal('edit-reward-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
+                <button type="submit" class="py-2 px-5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all">Save Changes</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Main Application Script -->
+    <script type="module">
+        // === Firebase SDK Imports (from global window object) ===
+        const {
+            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setLogLevel
+        } = window.firebase;
+        const {
+            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
+            onSnapshot, collection, query, where, getDocs, serverTimestamp
+        } = window.firebase;
+
+        // === Global State ===
+        let db, auth, userId, appId;
+        let localState = {
             members: [],
-            chores: [],
+            chores: [], // Reusable chore templates
             rewards: [],
-            completions: [], // Will now hold completions for the current week
-            claimedRewards: [] // Store claimed rewards
+            dailyChores: [], // Instances of chores for specific days
+            claimedRewards: []
         };
-        // calendarDate removed
-        let touchListenersAdded = false; 
-        let currentChoreToAssign = null; 
-
-        // --- DOM Elements ---
-        // Add checks within functions using these to ensure they exist
-        const loadingIndicator = document.getElementById('loading-indicator');
-        const snackbar = document.getElementById('snackbar');
-        const contentTitle = document.getElementById('content-title');
-        const assignmentModal = document.getElementById('assignment-modal');
-        const assignmentOptionsContainer = document.getElementById('assignment-options');
-        const cancelAssignmentButton = document.getElementById('cancel-assignment');
-        const redeemMemberSelector = document.getElementById('redeem-member-selector'); 
-        const rewardsGrid = document.getElementById('rewards-grid'); 
-        const noRewardsMsg = document.getElementById('no-rewards-msg');
-        const redeemFeedbackEl = document.getElementById('redeem-feedback');
-        const claimedRewardsList = document.getElementById('claimed-rewards-list');
-        const noClaimedRewardsMsg = document.getElementById('no-claimed-rewards-msg');
-        // Daily list elements might not exist immediately, get them inside render/update functions
-
-
-        // --- Utility & Sound Functions ---
+        let currentView = 'daily';
+        let currentSetupView = 'members';
+        let selectedChoreForAssignment = null;
+        let selectedRedeemerId = null;
+        let passwordSuccessCallback = null;
+        let deleteSuccessCallback = null;
+        let hasCheckedDailyChores = false; // Flag to prevent re-generation
         
-        function showLoading(label = 'Syncing...') {
-            try {
-                if (!loadingIndicator) return;
-                loadingIndicator.querySelector('span').textContent = label;
-                loadingIndicator.classList.remove('hidden');
-                loadingIndicator.classList.add('flex');
-            } catch (e) { console.error("showLoading failed:", e); }
-        }
-
-        function hideLoading() {
-            try {
-                if (!loadingIndicator) return;
-                loadingIndicator.classList.add('hidden');
-                loadingIndicator.classList.remove('flex');
-            } catch (e) { console.error("hideLoading failed:", e); }
-        }
-
-        function showSnackbar(message, isError = false) {
-            try {
-                if (!snackbar) return;
-                snackbar.textContent = message;
-                snackbar.classList.remove('hidden', 'bg-red-600', 'bg-gray-900');
-                snackbar.classList.add(isError ? 'bg-red-600' : 'bg-gray-900');
-                setTimeout(() => {
-                    snackbar.classList.add('hidden');
-                }, 3000);
-            } catch (e) { console.error("showSnackbar failed:", e); }
-        }
-
-        function showFatalError(message, error) {
-            console.error(message, error);
-            try {
-                const detailsEl = document.getElementById('fatal-error-details');
-                const modalEl = document.getElementById('fatal-error-modal');
-                 if (detailsEl) detailsEl.textContent = error.toString();
-                 if (modalEl) modalEl.classList.remove('hidden');
-            } catch (e) { console.error("showFatalError failed:", e); }
-        }
-
-        // More robust date string function (YYYY-MM-DD)
-        function getDateString(date) {
-            try {
-                // Use UTC methods to avoid timezone shifts affecting the date itself
-                const year = date.getUTCFullYear();
-                const month = (date.getUTCMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed
-                const day = date.getUTCDate().toString().padStart(2, '0');
-                return `${year}-${month}-${day}`;
-            } catch (e) {
-                 console.error("getDateString failed:", e);
-                 // Fallback using current local date if UTC fails
-                 const localDate = new Date();
-                 const year = localDate.getFullYear();
-                 const month = (localDate.getMonth() + 1).toString().padStart(2, '0');
-                 const day = localDate.getDate().toString().padStart(2, '0');
-                 return `${year}-${month}-${day}`;
-            }
-        }
-        function getTodayString() {
-             return getDateString(new Date());
-        }
-
-
-        function createConfetti(x, y, color) { /* ... unchanged ... */ }
-
-        async function startAudioContext() {
-            if (!audioContextStarted && typeof Tone !== 'undefined' && Tone.context && Tone.context.state !== 'running') {
-                 try {
-                     await Tone.start();
-                     audioContextStarted = true;
-                     console.log("AudioContext started by user interaction.");
-                 } catch (e) { console.error("Error starting AudioContext:", e); }
-            } else if (typeof Tone === 'undefined' || !Tone.context) {
-                 console.warn("Tone.js or AudioContext not available.");
-            }
-        }
-
-        function initializeSounds() {
-            try {
-                if (typeof Tone !== 'undefined' && Tone.Synth) {
-                    synth = new Tone.Synth().toDestination();
-                    console.log("Tone.js synth initialized.");
-                    document.body.addEventListener('click', startAudioContext, { once: true, capture: true }); 
-                    document.body.addEventListener('touchend', startAudioContext, { once: true, capture: true }); 
-                } else { console.warn("Tone.js not loaded. Sound effects disabled."); }
-            } catch (e) { console.error("initializeSounds failed:", e); }
-        }
-
-        function playSound(note = 'C4', duration = '8n') {
-             if (synth && audioContextStarted && Tone.context.state === 'running') {
-                try {
-                    synth.triggerAttackRelease(note, duration, Tone.now()); 
-                } catch (error) { console.error("Error playing sound:", error); }
-            } else {
-                 console.warn("Cannot play sound - Synth not ready or AudioContext not running.", {synth, audioContextStarted, state: Tone?.context?.state});
-                 if (!audioContextStarted && typeof Tone !== 'undefined') { startAudioContext(); }
-            }
-        }
+        const PASSWORD = '3281555';
+        const DAYS_OF_WEEK = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+        const WEEK_DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
         
-         function playSoundSequence(notes = ['C4', 'E4', 'G4', 'C5'], duration = '8n', delayBetween = 0.1) {
-            if (synth && audioContextStarted && Tone.context.state === 'running') {
-                try {
+        // === Sound Effects ===
+        let sounds;
+        function initSounds() {
+            if (window.Tone) {
+                sounds = {
+                    complete: new Tone.Synth().toDestination(),
+                    uncomplete: new Tone.Synth().toDestination(),
+                    redeem: new Tone.PluckSynth().toDestination(),
+                    error: new Tone.MembraneSynth().toDestination(),
+                    success: new Tone.Synth().toDestination(),
+                };
+                // Pre-connect to avoid audio context issues
+                Tone.start();
+            }
+        }
+        function playSound(soundName) {
+            if (!sounds) return;
+            try {
+                if (soundName === 'complete') {
+                    sounds.complete.triggerAttackRelease("C5", "8n", Tone.now());
+                } else if (soundName === 'uncomplete') {
+                    sounds.uncomplete.triggerAttackRelease("C4", "8n", Tone.now());
+                } else if (soundName === 'redeem') {
+                    // Fanfare
                     const now = Tone.now();
-                    notes.forEach((note, index) => {
-                         synth.triggerAttackRelease(note, duration, now + index * delayBetween);
-                    });
-                } catch (error) { console.error("Error playing sound sequence:", error); }
-            } else {
-                 console.warn("Cannot play sound sequence - Synth not ready or AudioContext not running.");
-                  if (!audioContextStarted && typeof Tone !== 'undefined') { startAudioContext(); }
+                    sounds.redeem.triggerAttackRelease("C5", "8n", now);
+                    sounds.redeem.triggerAttackRelease("E5", "8n", now + 0.2);
+                    sounds.redeem.triggerAttackRelease("G5", "8n", now + 0.4);
+                } else if (soundName === 'success') {
+                    sounds.success.triggerAttackRelease("G5", "8n", Tone.now());
+                } else if (soundName === 'error') {
+                    sounds.error.triggerAttackRelease("C3", "4n", Tone.now());
+                }
+            } catch (e) {
+                console.error("Sound error:", e);
             }
         }
 
-
-        // --- Emoji Select Populator ---
-        function populateEmojiSelect(selectElement, emojis, defaultEmoji = '❓') {
-             try {
-                if (!selectElement) {
-                     // console.warn("populateEmojiSelect: Element not found."); // Reduce noise
-                     return;
-                }
-                let optionsList = emojis.includes(defaultEmoji) ? [...emojis] : [defaultEmoji, ...emojis];
-                if (emojis.includes(defaultEmoji)) {
-                    optionsList = [defaultEmoji, ...emojis.filter(e => e !== defaultEmoji)];
-                }
-                
-                selectElement.innerHTML = optionsList.map(emoji => 
-                    `<option value="${emoji}">${emoji}</option>`
-                ).join('');
-                selectElement.value = defaultEmoji;
-             } catch (e) { console.error("populateEmojiSelect failed:", e, selectElement?.id); }
+        // === Date & Time ===
+        function updateTime() {
+            const now = new Date();
+            const timeEl = document.getElementById('current-time');
+            const dateEl = document.getElementById('current-date');
+            if(timeEl) timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            if(dateEl) dateEl.textContent = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
 
-        // --- Date/Time Header Update ---
-        function updateDateTimeHeader() {
+        // === Firebase Initialization ===
+        async function initFirebase() {
             try {
-                // Get elements *inside* the function for robustness
-                const timeEl = document.getElementById('current-time');
-                const dateEl = document.getElementById('current-date');
-                if (currentTab !== 'daily-list' || !timeEl || !dateEl) return; 
-                
-                const now = new Date();
-                timeEl.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
-                dateEl.textContent = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-            } catch (e) { console.error("updateDateTimeHeader failed:", e); }
-        }
+                // 1. Get App ID and Config from USER
+                appId = 'family-hub-organizer';
+                const firebaseConfig = {
+                    apiKey: "AIzaSyD_piA_kA7WZFN7GgxCDPpNNxyjrVRTj3M",
+                    authDomain: "family-hub-organizer.firebaseapp.com",
+                    projectId: "family-hub-organizer",
+                    storageBucket: "family-hub-organizer.firebasestorage.app",
+                    messagingSenderId: "468888595189",
+                    appId: "1:468888595189:web:eb6f33ee8e62cdc489b3bc"
+                };
 
+                if (!firebaseConfig.apiKey) {
+                    throw new Error("Firebase config is missing.");
+                }
 
-        // --- Firestore Initialization ---
-        async function initializeFirebase() {
-             console.log("Initializing Firebase..."); // Log start
-            try {
-                setLogLevel('Debug');
+                // 2. Initialize Firebase
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                
-                 // *** Define paths object HERE, after db is initialized ***
-                 paths = {
-                    members: () => collection(db, `artifacts/${FIREBASE_APP_ID}/public/data/members`),
-                    member: (id) => doc(db, `artifacts/${FIREBASE_APP_ID}/public/data/members`, id),
-                    chores: () => collection(db, `artifacts/${FIREBASE_APP_ID}/public/data/chores`),
-                    chore: (id) => doc(db, `artifacts/${FIREBASE_APP_ID}/public/data/chores`, id),
-                    rewards: () => collection(db, `artifacts/${FIREBASE_APP_ID}/public/data/rewards`),
-                    reward: (id) => doc(db, `artifacts/${FIREBASE_APP_ID}/public/data/rewards`, id),
-                    completions: () => collection(db, `artifacts/${FIREBASE_APP_ID}/public/data/completions`),
-                    completion: (id) => doc(db, `artifacts/${FIREBASE_APP_ID}/public/data/completions`, id),
-                };
-                 console.log("Paths object defined:", paths); // Log paths definition
-                // *** End paths definition ***
+                setLogLevel('debug'); // Enable Firestore logs
 
-                initializeSounds(); 
-
-                console.log("Setting up Auth listener..."); // Log before listener
-                onAuthStateChanged(auth, (user) => {
-                    console.log("Auth state changed. User:", user ? user.uid : 'null'); // Log auth change
+                // 3. Handle Authentication
+                onAuthStateChanged(auth, async (user) => {
                     if (user) {
+                        // User is signed in
                         userId = user.uid;
-                        console.log("Firebase Auth Success. UserID:", userId);
-                        setupFirestoreListeners(); 
-                        
-                        updateDateTimeHeader();
-                        if (dateTimeInterval) clearInterval(dateTimeInterval);
-                        dateTimeInterval = setInterval(updateDateTimeHeader, 1000); 
-
+                        console.log('Firebase Authenticated. User ID:', userId);
+                        // User is authenticated, now load data
+                        await loadData();
+                        // Hide loading overlay
+                        document.getElementById('loading-overlay').classList.add('hidden');
                     } else {
-                        console.log("No user signed in, signing in anonymously...");
-                        signInAnonymously(auth).catch((error) => {
-                            showFatalError("Anonymous sign-in failed.", error);
-                        });
+                        // User is signed out, try to sign in
+                        console.log('No user. Attempting sign-in...');
+                        try {
+                            // Use Anonymous sign-in directly
+                            await signInAnonymously(auth);
+                        } catch (authError) {
+                            console.error('Firebase sign-in error:', authError);
+                            showLoadingError('Could not sign in. Please refresh.');
+                        }
                     }
                 });
-
-            } catch (error) {
-                showFatalError("Firebase initialization failed.", error);
+            } catch (e) {
+                console.error("Firebase Init Error:", e);
+                showLoadingError('Failed to initialize. Check console.');
             }
         }
-
-        // --- Firestore Data Paths (REMOVED - defined in initializeFirebase) ---
-
-        // --- Firestore Listeners (Updated Completions Listener) ---
-        function setupFirestoreListeners() {
-            console.log("Setting up Firestore listeners..."); // Log start
-            // Wrap the entire function body for safety
-             try {
-                showLoading('Loading data...');
-                // Unsubscribe previous listeners if they exist
-                if (typeof membersUnsubscribe === 'function') membersUnsubscribe();
-                if (typeof choresUnsubscribe === 'function') choresUnsubscribe();
-                if (typeof rewardsUnsubscribe === 'function') rewardsUnsubscribe();
-                if (typeof completionsUnsubscribe === 'function') completionsUnsubscribe();
-
-                // *** Defensive Check for paths object ***
-                if (typeof paths !== 'object' || paths === null || typeof paths.members !== 'function') {
-                     throw new Error("Internal Error: paths object not correctly defined before setting listeners.");
-                }
-                console.log("Paths object confirmed before listeners."); // Log confirmation
-
-                // Members
-                membersUnsubscribe = onSnapshot(paths.members(), (snapshot) => {
-                    appData.members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    console.log("Members updated:", appData.members);
-                    renderAll();
-                    hideLoading(); 
-                }, (error) => { console.error("Error listening to members:", error); hideLoading(); });
-
-                // Chores
-                choresUnsubscribe = onSnapshot(paths.chores(), (snapshot) => {
-                    appData.chores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    console.log("Chores updated:", appData.chores);
-                    renderAll();
-                }, (error) => console.error("Error listening to chores:", error));
-
-                // Rewards
-                rewardsUnsubscribe = onSnapshot(paths.rewards(), (snapshot) => {
-                    appData.rewards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    console.log("Rewards updated:", appData.rewards);
-                    appData.claimedRewards = appData.rewards.filter(r => r.claimed === true && r.delivered !== true);
-                    renderAll();
-                }, (error) => console.error("Error listening to rewards:", error));
-
-                // Completions (Listen for the CURRENT WEEK)
-                 const todayJsDayIndex = new Date().getDay(); // 0 for Sunday
-                 const startOfWeek = new Date();
-                 startOfWeek.setUTCDate(startOfWeek.getUTCDate() - todayJsDayIndex); // Use UTC days
-                 startOfWeek.setUTCHours(0, 0, 0, 0); // Use UTC hours
-                 const startOfWeekStr = getDateString(startOfWeek); 
-
-                 const endOfWeek = new Date(startOfWeek);
-                 endOfWeek.setUTCDate(endOfWeek.getUTCDate() + 6); // Use UTC days
-                 endOfWeek.setUTCHours(23, 59, 59, 999); // Use UTC hours
-                 const endOfWeekStr = getDateString(endOfWeek); 
-
-                 console.log(`Listening for completions between ${startOfWeekStr} and ${endOfWeekStr}`); 
-
-                const qCompletions = query(paths.completions(), 
-                    where("date", ">=", startOfWeekStr),
-                    where("date", "<=", endOfWeekStr) 
-                );
-                completionsUnsubscribe = onSnapshot(qCompletions, (snapshot) => {
-                    appData.completions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    console.log("Weekly Completions updated via listener:", appData.completions);
-                    renderAll(); // Re-render everything that depends on completions
-                }, (error) => console.error("Error listening to weekly completions:", error));
-
-            } catch (error) {
-                showFatalError("Failed to set up Firestore listeners.", error);
-                hideLoading();
-            }
-        }
-
-        // --- Render Functions ---
         
-        function renderAll() {
-             console.log("renderAll called. Current Tab:", currentTab); // Log start
-            // Added check for DOM elements readiness
-            if (!db || !document.getElementById('daily-assignments-grid') || !document.getElementById('content-setup')) {
-                 console.warn("renderAll called before DOM ready or Firebase init.");
-                 return; 
+        function showLoadingError(message) {
+            const errorEl = document.getElementById('loading-error');
+            errorEl.textContent = message;
+            errorEl.classList.remove('hidden');
+            document.getElementById('loading-overlay').querySelector('[data-lucide="loader-circle"]').classList.add('hidden');
+        }
+
+        // === Firestore Data Loading (Real-time) ===
+        async function loadData() {
+            if (!db || !userId) return;
+
+            const F_BASE_PATH = `/artifacts/${appId}/public/data`;
+            const F_MEMBERS_COL = `${F_BASE_PATH}/members`;
+            const F_CHORES_COL = `${F_BASE_PATH}/chores`;
+            const F_REWARDS_COL = `${F_BASE_PATH}/rewards`;
+            const F_DAILY_CHORES_COL = `${F_BASE_PATH}/dailyChores`;
+            const F_CLAIMED_REWARDS_COL = `${F_BASE_PATH}/claimedRewards`;
+
+            // Expose collection paths for handlers
+            window.F_MEMBERS_COL = F_MEMBERS_COL;
+            window.F_CHORES_COL = F_CHORES_COL;
+            window.F_REWARDS_COL = F_REWARDS_COL;
+            window.F_DAILY_CHORES_COL = F_DAILY_CHORES_COL;
+            window.F_CLAIMED_REWARDS_COL = F_CLAIMED_REWARDS_COL;
+
+            // 1. Listen for Members
+            onSnapshot(collection(db, F_MEMBERS_COL), (snapshot) => {
+                localState.members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAll();
+            }, (error) => console.error("Error listening to members:", error));
+
+            // 2. Listen for Chore Templates
+            onSnapshot(collection(db, F_CHORES_COL), (snapshot) => {
+                localState.chores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                checkAndGenerateDailyChores(); // Re-check if chores are loaded
+                renderAll();
+            }, (error) => console.error("Error listening to chores:", error));
+
+            // 3. Listen for Rewards
+            onSnapshot(collection(db, F_REWARDS_COL), (snapshot) => {
+                localState.rewards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAll();
+            }, (error) => console.error("Error listening to rewards:", error));
+
+            // 4. Listen for Daily Chores (for today)
+            const todayISO = new Date().toISOString().split('T')[0];
+            const qDaily = query(collection(db, F_DAILY_CHORES_COL), where("date", "==", todayISO));
+            
+            onSnapshot(qDaily, (snapshot) => {
+                localState.dailyChores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                hasCheckedDailyChores = false; // Reset check flag on new data
+                checkAndGenerateDailyChores(); // Check generation logic
+                renderAll();
+            }, (error) => console.error("Error listening to daily chores:", error));
+
+            // 5. Listen for Claimed (not delivered) Rewards
+            const qClaimed = query(collection(db, F_CLAIMED_REWARDS_COL), where("delivered", "==", false));
+            onSnapshot(qClaimed, (snapshot) => {
+                localState.claimedRewards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderAll();
+            }, (error) => console.error("Error listening to claimed rewards:", error));
+        }
+
+        // === Core Logic: Daily Chore Generation ===
+        async function checkAndGenerateDailyChores() {
+            // Only run if we have chore templates and haven't run today
+            if (hasCheckedDailyChores || localState.chores.length === 0) {
+                return;
             }
             
-            // Wrap in try...catch
-            try {
-                renderMemberOptions(); 
-                if (appData.members.length > 0) {
-                     console.log("Rendering tab content for:", currentTab); // Log tab render
-                     if (currentTab === 'daily-list') renderDailyList();
-                     else if (currentTab === 'weekly-schedule') renderWeeklyScheduleWithCurrentData(); 
-                     else if (currentTab === 'points') renderPointsAndRewards();
-                     else if (currentTab === 'setup') renderSetup(); 
-                     // Calendar rendering removed
-                } else if (currentTab !== 'setup') {
-                    console.log("No members, forcing setup tab.");
-                    changeTab('setup', 'App Setup & Management'); 
-                    showSnackbar("Add family members to get started!", false);
-                } else {
-                     console.log("Rendering setup tab (no members).");
-                     renderSetup(); // Render setup even if no members
+            console.log("Checking if daily chores need generation...");
+            hasCheckedDailyChores = true; // Mark as checked for this cycle
+            
+            const today = new Date();
+            const todayISO = today.toISOString().split('T')[0];
+            const todayDayString = DAYS_OF_WEEK[today.getDay()];
+            
+            // Find which template chores *should* exist today
+            const choresToGenerate = localState.chores.filter(chore =>
+                chore.schedule && chore.schedule.includes(todayDayString)
+            );
+            
+            // Find which template chores *already exist* for today
+            const existingTemplateChoreIds = new Set(
+                localState.dailyChores
+                    .filter(dc => !dc.isAdHoc && dc.choreTemplateId)
+                    .map(dc => dc.choreTemplateId)
+            );
+
+            // Generate the ones that are missing
+            for (const choreTemplate of choresToGenerate) {
+                if (!existingTemplateChoreIds.has(choreTemplate.id)) {
+                    console.log(`Generating daily chore for: ${choreTemplate.name}`);
+                    try {
+                        await addDoc(collection(db, F_DAILY_CHORES_COL), {
+                            choreTemplateId: choreTemplate.id,
+                            name: choreTemplate.name,
+                            emoji: choreTemplate.emoji,
+                            points: choreTemplate.points,
+                            assignedTo: choreTemplate.defaultAssignee === 'unassigned' ? null : (choreTemplate.defaultAssignee || null),
+                            date: todayISO,
+                            isComplete: false,
+                            isAdHoc: false,
+                            createdAt: serverTimestamp()
+                        });
+                    } catch (e) {
+                        console.error("Error generating daily chore:", e);
+                    }
                 }
-                 console.log("renderAll finished."); // Log end
-            } catch (error) {
-                console.error("RenderAll failed:", error);
-                showSnackbar("Error updating the view. Check console.", true);
+            }
+        }
+        
+        // === Master Render Function ===
+        function renderAll() {
+            if (!localState.members) return; // Wait for core data
+            
+            // Populate shared dropdowns
+            populateMemberDropdowns();
+            
+            // Render current view
+            switch(currentView) {
+                case 'daily':
+                    renderDailyList();
+                    break;
+                case 'weekly':
+                    renderWeeklySchedule();
+                    break;
+                case 'rewards':
+                    renderRewardsPage();
+                    break;
+                case 'setup':
+                    renderSetup();
+                    break;
             }
         }
 
-        function renderMemberOptions() {
-             try {
-                const selects = document.querySelectorAll('select[id$="-assignee"], select#redeem-member-selector'); 
-                const sortedMembers = [...appData.members].sort((a, b) => a.name.localeCompare(b.name));
-                
-                selects.forEach(select => {
-                    if (!select) return; // Add check for element
-                    const currentValue = select.value;
-                    let options = '';
-                    
-                    if (select.id === 'redeem-member-selector') {
-                        options += '<option value="">-- Select Member --</option>';
-                    } else if (select.id.includes('adhoc') || select.id.includes('chore')) {
-                        options = '<option value="unassigned">Unassigned</option>';
-                    }
+        // === Render Functions ===
 
-                    sortedMembers.forEach(member => {
-                        options += `<option value="${member.id}" ${member.id === currentValue ? 'selected' : ''}>
-                            ${member.emoji || ''} ${member.name}
-                        </option>`;
-                    });
-                    select.innerHTML = options;
-
-                    if (currentValue && select.querySelector(`option[value="${currentValue}"]`)) {
-                        select.value = currentValue;
-                    }
-                });
-             } catch (e) { console.error("renderMemberOptions failed:", e); }
-        }
-
-        // --- Daily List Tab ---
+        // --- Render: Daily List ---
         function renderDailyList() {
-             console.log("Rendering Daily List..."); // Log start
-            try {
-                const grid = document.getElementById('daily-assignments-grid');
-                const unassignedList = document.getElementById('unassigned-chores-list');
-                if (!grid || !unassignedList) {
-                     console.warn("Daily list elements not found.");
-                     return; 
-                }
-                grid.innerHTML = '';
-                unassignedList.innerHTML = '';
+            const container = document.getElementById('daily-chores-container');
+            if (!container) return;
+            
+            let html = '';
+            
+            // 1. Unassigned Chores
+            const unassignedChores = localState.dailyChores.filter(c => !c.assignedTo);
+            html += renderMemberChoreSection(null, unassignedChores);
+            
+            // 2. Member Chore Lists
+            localState.members.forEach(member => {
+                const memberChores = localState.dailyChores.filter(c => c.assignedTo === member.id);
+                html += renderMemberChoreSection(member, memberChores);
+            });
+            
+            container.innerHTML = html;
+            attachDragDropHandlers();
+        }
+        
+        function renderMemberChoreSection(member, chores) {
+            const memberId = member ? member.id : 'unassigned';
+            const color = member ? member.color : 'bg-gray-500';
+            const emoji = member ? member.emoji : '❓';
+            const name = member ? member.name : 'Unassigned';
 
-                const todayJsDay = new Date().getDay(); // 0 = Sun
-                const todayStr = getTodayString();
-                
-                // Use appData.completions filtered for today
-                const todaysCompletions = appData.completions.filter(c => c.date === todayStr); 
-                const recurringChores = appData.chores.filter(chore => chore.schedule.includes(todayJsDay.toString()));
-                const allTasksForToday = [];
+            let choreListHtml = chores.length > 0
+                ? chores.map(chore => renderChoreItem(chore)).join('')
+                : '<p class="text-gray-500 italic p-4">No chores assigned.</p>';
 
-                // Add recurring
-                recurringChores.forEach(chore => {
-                    const completion = todaysCompletions
-                        .filter(c => c.choreDefId === chore.id)
-                        .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))[0]; 
-
-                    allTasksForToday.push({
-                        id: completion ? completion.id : `temp_${chore.id}`,
-                        choreDefId: chore.id, name: chore.name, emoji: chore.emoji, points: chore.points,
-                        assigneeId: completion ? completion.assigneeId : chore.defaultAssignee,
-                        isComplete: completion ? completion.isComplete : false,
-                        isAdhoc: false,
-                        completionDocId: completion ? completion.id : null
-                    });
-                });
-
-                // Add ad-hoc (from today's completions only)
-                todaysCompletions.forEach(completion => {
-                    if (completion.isAdhoc && !allTasksForToday.find(t => t.id === completion.id)) {
-                        allTasksForToday.push({
-                            id: completion.id, choreDefId: null, name: completion.name, emoji: completion.emoji,
-                            points: completion.points, assigneeId: completion.assigneeId, 
-                            isComplete: completion.isComplete, isAdhoc: true, completionDocId: completion.id
-                        });
-                    }
-                });
-
-                // Create member cards
-                appData.members.forEach(member => {
-                    const memberCard = document.createElement('div');
-                    memberCard.className = 'bg-white rounded-lg shadow-sm border-t-4 p-4 drop-zone transition-all duration-150 animate-fade-in-up';
-                    memberCard.dataset.memberId = member.id;
-                    memberCard.style.borderColor = member.color || '#ccc';
-                    
-                    memberCard.innerHTML = `
-                        <div class="flex justify-between items-center mb-4">
-                            <h3 class="text-xl font-semibold text-slate-700">
-                                ${member.emoji || ''} ${member.name}
-                            </h3>
-                            <span class="font-bold text-lg" style="color: ${member.color || '#111'}">
-                                ${member.points || 0} pts
-                            </span>
-                        </div>
-                        <div class="space-y-3 min-h-[50px]"></div>
-                    `;
-                     if (grid) grid.appendChild(memberCard);
-                });
-
-                // Populate chores
-                allTasksForToday.forEach(task => {
-                    const choreHTML = createChoreItemHTML(task);
-                    let targetList;
-                    
-                    if (task.assigneeId && task.assigneeId !== 'unassigned') {
-                        const memberCard = grid?.querySelector(`[data-member-id="${task.assigneeId}"]`);
-                        targetList = memberCard ? memberCard.querySelector('.space-y-3') : null;
-                    }
-                    
-                    if (!targetList) {
-                        targetList = unassignedList;
-                    }
-                     if (targetList) {
-                        targetList.insertAdjacentHTML('beforeend', choreHTML);
-                     } else {
-                         console.warn("Could not find target list for chore:", task);
-                     }
-                });
-
-                addTouchDragListeners();
-                 console.log("Daily List rendering finished."); // Log end
-            } catch (e) { console.error("renderDailyList failed:", e); }
+            return `
+                <div 
+                    class="bg-white rounded-lg shadow-md border border-gray-200 overflow-hidden member-drop-target" 
+                    data-member-id="${memberId}"
+                >
+                    <h3 class="text-xl font-semibold p-4 flex items-center gap-3 ${color} text-white">
+                        <span class="text-2xl">${emoji}</span>
+                        <span>${name}</span>
+                    </h3>
+                    <div class="p-2 space-y-2">
+                        ${choreListHtml}
+                    </div>
+                </div>
+            `;
         }
 
-        function createChoreItemHTML(task) {
-             try {
-                const completedClass = task.isComplete ? 'chore-item-completed' : '';
-                 const currentAssignee = task.assigneeId || 'unassigned'; 
-                return `
-                    <div class="chore-item ${completedClass} animate-fade-in-up" 
-                         draggable="true" 
-                         data-task-id="${task.id}" 
-                         data-chore-def-id="${task.choreDefId || 'null'}"
-                         data-completion-doc-id="${task.completionDocId || 'null'}"
-                         data-is-adhoc="${task.isAdhoc}"
-                         data-is-complete="${task.isComplete}"
-                         data-name="${task.name}"
-                         data-emoji="${task.emoji}"
-                         data-points="${task.points}"
-                         data-current-assignee="${currentAssignee}"> 
-                        
-                        <div class="flex items-center space-x-4 flex-1">
-                            <button class="chore-complete-btn text-3xl p-2 -ml-2 rounded-full transition-transform transform hover:scale-125"
-                                    data-is-complete="${task.isComplete}" 
-                                    data-points="${task.points}">
-                                ${task.isComplete ? '✅' : task.emoji}
-                            </button>
-                            <div class="flex-1">
-                                <span class="font-medium">${task.name}</span>
-                                <span class="block text-sm text-gray-500">${task.points} points</span>
-                            </div>
+        function renderChoreItem(chore) {
+            const completeClass = chore.isComplete ? 'chore-complete' : '';
+            const checkEmoji = chore.isComplete ? '✅' : chore.emoji;
+            
+            return `
+                <div 
+                    class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200 ${completeClass} transition-all chore-item" 
+                    draggable="true" 
+                    data-chore-id="${chore.id}"
+                >
+                    <div class="flex items-center gap-3">
+                        <button 
+                            class="text-2xl hover:scale-110 transition-transform" 
+                            onclick="window.toggleChoreComplete('${chore.id}')"
+                        >
+                            ${checkEmoji}
+                        </button>
+                        <div>
+                            <span class="font-medium">${chore.name}</span>
+                            ${chore.isAdHoc ? '<span class="text-xs bg-purple-100 text-purple-700 font-medium px-2 py-0.5 rounded-full ml-2">Ad-Hoc</span>' : ''}
                         </div>
-                        
-                        <button class="assign-chore-btn p-2 text-slate-400 hover:text-indigo-600 rounded-full hover:bg-indigo-100">
-                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                            </svg>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="font-bold text-blue-600">${chore.points} pts</span>
+                        <button 
+                            class="p-2 bg-gray-200 text-gray-600 rounded-lg hover:bg-gray-300 transition-all"
+                            onclick="window.openAssignModal('${chore.id}')"
+                        >
+                            <span data-lucide="user-cog" class="h-5 w-5"></span>
                         </button>
                     </div>
-                `;
-             } catch (e) { 
-                 console.error("createChoreItemHTML failed:", e, task); 
-                 return '<div class="text-red-500">Error rendering chore</div>'; // Fallback
-             }
+                </div>
+            `;
         }
 
-        // --- Weekly Schedule Tab (Uses UPDATED appData.completions) ---
-        function renderWeeklyScheduleWithCurrentData() {
-             console.log("Rendering Weekly Schedule..."); // Log start
-             try {
-                const grid = document.getElementById('weekly-schedule-grid');
-                 if (!grid) {
-                     console.warn("Weekly schedule grid not found.");
-                     return;
-                 }
-                grid.innerHTML = '';
-                 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                 const todayJsDayIndex = new Date().getDay(); // 0 for Sunday
-                
-                const startOfWeek = new Date();
-                 startOfWeek.setUTCDate(startOfWeek.getUTCDate() - todayJsDayIndex); // Use UTC days
-                 startOfWeek.setUTCHours(0, 0, 0, 0); // Use UTC hours
+        // --- Render: Weekly Schedule ---
+        async function renderWeeklySchedule() {
+            const grid = document.getElementById('weekly-schedule-grid');
+            if (!grid) return;
+            
+            // 1. Get dates for the current week (Mon-Sun)
+            const today = new Date();
+            const currentDay = today.getDay(); // 0 (Sun) - 6 (Sat)
+            const weekStart = new Date(today);
+            // Adjust to Monday (if Sun, go back 6 days, else go back currentDay-1)
+            weekStart.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
+            weekStart.setHours(0, 0, 0, 0);
 
-                // Use the appData.completions array which now holds the whole week's data
-                const weeklyCompletionsFromAppData = appData.completions; 
-                console.log("Weekly Schedule using Completions from AppData:", weeklyCompletionsFromAppData); 
+            let weekDates = [];
+            for (let i = 0; i < 7; i++) {
+                const date = new Date(weekStart);
+                date.setDate(weekStart.getDate() + i);
+                weekDates.push(date);
+            }
+            
+            const weekStartISO = weekStart.toISOString().split('T')[0];
+            const weekEnd = new Date(weekDates[6]);
+            weekEnd.setHours(23, 59, 59, 999);
+            const weekEndISO = weekEnd.toISOString().split('T')[0];
 
-                for (let i = 0; i < 7; i++) { // Loop Sunday (0) to Saturday (6)
-                    const dayIndexStr = i.toString(); // Day index for schedule check (0-6)
-                    const dayDate = new Date(startOfWeek);
-                    dayDate.setUTCDate(startOfWeek.getUTCDate() + i); // Use UTC days
-                     const dayDateStr = getDateString(dayDate); // UTC YYYY-MM-DD
-                    
-                    const dayCard = document.createElement('div');
-                    const isToday = i === todayJsDayIndex;
-                    dayCard.className = `rounded-lg p-3 animate-fade-in-up ${isToday ? 'bg-indigo-100 border-2 border-indigo-400' : 'bg-slate-50 border'}`;
-                    
-                    let choresHTML = '';
-                    const completionsForThisDay = weeklyCompletionsFromAppData.filter(c => c.date === dayDateStr) || []; 
-                    console.log(`Rendering Day ${i} (${days[i]}, ${dayDateStr}), Completions:`, completionsForThisDay.length); // Log day rendering
-
-                    // --- Recurring Chores for this day ---
-                    appData.chores
-                        .filter(c => c.schedule.includes(dayIndexStr))
-                        .forEach(c => {
-                            const completion = completionsForThisDay
-                                .filter(comp => comp.choreDefId === c.id)
-                                .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))[0]; 
-                             console.log(` - Recurring: ${c.name}, Completion found:`, !!completion); // Log recurring check
-                            choresHTML += getScheduleChoreHTML(c, false, completion); 
-                        });
-                    
-                    // --- Ad-hoc Chores for this day (from the filtered list) ---
-                    completionsForThisDay
-                        .filter(c => c.isAdhoc) 
-                        .forEach(c => {
-                             console.log(` - Adhoc: ${c.name}, Date: ${c.date}`); // Log adhoc check
-                            choresHTML += getScheduleChoreHTML(c, true, c); 
-                        });
-
-                    dayCard.innerHTML = `
-                        <h4 class="font-bold text-center text-gray-700 mb-3 ${isToday ? 'text-indigo-700' : ''}">${days[i]}</h4>
-                        <div class="space-y-2">
-                            ${choresHTML || '<div class="text-xs text-center text-gray-400">No chores</div>'}
-                        </div>
-                    `;
-                    grid.appendChild(dayCard);
-                }
-                 console.log("Weekly Schedule rendering finished."); // Log end
-            } catch (e) { console.error("renderWeeklyScheduleWithCurrentData failed:", e); }
-        }
-
-        // --- getScheduleChoreHTML (no changes needed) ---
-        function getScheduleChoreHTML(choreData, isAdhoc = false, completion = null) {
+            // 2. Query all chores for this week
+            // Note: This is a complex query that might require indexes.
+            // A more robust way (if indexes are an issue) is to fetch 7 individual days.
+            // For now, let's try a range query.
+            let weeklyChores = [];
             try {
-                const assigneeId = isAdhoc ? choreData.assigneeId : choreData.defaultAssignee;
-                const member = appData.members.find(m => m.id === assigneeId);
-                const color = member ? member.color : '#9ca3af';
-                const memberName = member ? member.name.split(' ')[0] : (assigneeId === 'unassigned' ? 'Un...' : '???'); 
-                const memberEmoji = member ? member.emoji : '⚪'; 
-                const isComplete = completion?.isComplete; 
-                const completedClass = isComplete ? 'schedule-chore-completed' : ''; 
+                const q = query(collection(db, F_DAILY_CHORES_COL), 
+                    where("date", ">=", weekStartISO),
+                    where("date", "<=", weekEndISO)
+                );
+                const snapshot = await getDocs(q);
+                weeklyChores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (e) {
+                console.error("Error fetching weekly chores:", e);
+                grid.innerHTML = `<p class="text-red-500 col-span-7">Error loading weekly schedule. You may need to create Firestore indexes.</p>`;
+                return;
+            }
 
-                return `
-                    <div class="rounded-md p-2 text-xs ${completedClass}" style="background-color: ${color}20; border-left: 4px solid ${color};">
-                        <div class="font-medium text-gray-800">${choreData.emoji} ${choreData.name} ${isAdhoc ? '(One-Time)' : ''}</div>
-                        <div class="text-gray-600 flex justify-end items-center" style="color: ${color};">
-                            <span class="font-semibold mr-1">${memberName}</span>
-                            ${memberEmoji}
+            // 3. Build HTML
+            let html = '';
+            for (const date of weekDates) {
+                const dateISO = date.toISOString().split('T')[0];
+                const dayName = WEEK_DAYS_FULL[date.getDay()];
+                
+                const choresForDay = weeklyChores.filter(c => c.date === dateISO);
+                
+                let choresHtml = choresForDay.length > 0
+                    ? choresForDay.map(c => renderWeeklyChoreItem(c)).join('')
+                    : '<p class="text-sm text-gray-500 italic p-2">No chores.</p>';
+
+                html += `
+                    <div class="bg-white rounded-lg shadow-md border border-gray-200">
+                        <h4 class="text-lg font-semibold p-3 border-b border-gray-200 bg-gray-50 rounded-t-lg">
+                            ${dayName}
+                            <span class="text-sm font-normal text-gray-500 ml-2">${date.toLocaleDateString([], { month: 'numeric', day: 'numeric' })}</span>
+                        </h4>
+                        <div class="p-2 space-y-2">
+                            ${choresHtml}
                         </div>
                     </div>
                 `;
-            } catch(e) {
-                 console.error("getScheduleChoreHTML failed:", e, choreData);
-                 return '<div class="text-red-500 text-xs">Error</div>';
             }
+            grid.innerHTML = html;
+            lucide.createIcons(); // Re-render icons
+        }
+        
+        function renderWeeklyChoreItem(chore) {
+            const member = localState.members.find(m => m.id === chore.assignedTo);
+            const completeClass = chore.isComplete ? 'chore-complete' : '';
+            
+            let assigneeHtml;
+            if (member) {
+                assigneeHtml = `
+                    <span class="flex items-center gap-1.5 text-sm">
+                        <span class="w-5 h-5 rounded-full ${member.color} text-white flex items-center justify-center text-xs font-bold">${member.name[0]}</span>
+                        ${member.name}
+                    </span>`;
+            } else {
+                assigneeHtml = `<span class="text-sm text-gray-500 italic">Unassigned</span>`;
+            }
+            
+            return `
+                <div class="p-2.5 bg-gray-100 rounded-md border border-gray-200 ${completeClass}">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="font-medium text-sm">${chore.emoji} ${chore.name}</span>
+                        ${chore.isComplete ? '<span data-lucide="check" class="h-4 w-4 text-green-600"></span>' : ''}
+                    </div>
+                    ${assigneeHtml}
+                </div>
+            `;
         }
 
-
-       // --- Points & Rewards Tab ---
-        function renderPointsAndRewards() { 
-             console.log("Rendering Points & Rewards..."); // Log start
-             try {
-                const pointsGrid = document.getElementById('point-totals-grid');
-                // Check elements before proceeding
-                if (!pointsGrid || !rewardsGrid || !claimedRewardsList || !noRewardsMsg || !noClaimedRewardsMsg) {
-                    console.warn("Points & Rewards elements not found.");
+        // --- Render: Points & Rewards ---
+        function renderRewardsPage() {
+            // 1. Render Member Point Totals
+            const pointsGrid = document.getElementById('member-points-grid');
+            if (pointsGrid) {
+                pointsGrid.innerHTML = localState.members.map(member => `
+                    <div class="p-4 rounded-lg shadow-lg ${member.color} text-white">
+                        <div class="flex items-center gap-3 mb-2">
+                            <span class="text-3xl">${member.emoji}</span>
+                            <span class="text-xl font-semibold">${member.name}</span>
+                        </div>
+                        <div class="text-4xl font-bold text-right">${member.points || 0}</div>
+                        <div class="text-sm text-right opacity-80">points</div>
+                    </div>
+                `).join('');
+            }
+            
+            // 2. Render Available Rewards (based on selected redeemer)
+            renderAvailableRewards();
+            
+            // 3. Render Claimed (but not delivered) Rewards
+            const claimedList = document.getElementById('claimed-rewards-list');
+            if (claimedList) {
+                const pendingRewards = localState.claimedRewards.filter(r => !r.delivered);
+                if (pendingRewards.length === 0) {
+                    claimedList.innerHTML = '<p class="text-gray-500 italic">No rewards are pending delivery.</p>';
                     return;
                 }
                 
-                pointsGrid.innerHTML = ''; 
-                rewardsGrid.innerHTML = ''; 
-                if(redeemFeedbackEl) redeemFeedbackEl.textContent = ''; 
-                claimedRewardsList.innerHTML = ''; 
-
-                // Render Member Point Totals
-                [...appData.members].sort((a,b) => b.points - a.points).forEach(member => {
-                    pointsGrid.innerHTML += `
-                        <div class="rounded-lg p-4 shadow-sm text-center animate-fade-in-up bg-white border-t-4" style="border-color: ${member.color};">
-                            <div class="text-3xl mb-2">${member.emoji || '👤'}</div>
-                            <div class="font-semibold text-lg text-slate-700">${member.name}</div>
-                            <div class="font-bold text-3xl" style="color: ${member.color};">${member.points}</div>
-                            <div class="text-sm text-gray-500">points</div>
-                        </div>
-                    `;
-                });
-
-                // Render Redeemable Reward Cards
-                const availableRewards = appData.rewards.filter(r => !r.claimed && !r.delivered); 
-                const selectedMemberId = redeemMemberSelector?.value; // Null check
-                const selectedMember = appData.members.find(m => m.id === selectedMemberId);
-                const memberPoints = selectedMember ? selectedMember.points : -1;
-
-                if (availableRewards.length === 0) {
-                    noRewardsMsg.classList.remove('hidden');
-                } else {
-                    noRewardsMsg.classList.add('hidden');
-                    availableRewards.forEach(reward => {
-                        const canAfford = selectedMember && memberPoints >= reward.cost;
-                        const cardClass = canAfford ? 'reward-item-affordable' : 'reward-item-unaffordable';
-                        
-                        rewardsGrid.innerHTML += `
-                            <div class="reward-item ${cardClass} animate-fade-in-up" data-reward-id="${reward.id}" data-cost="${reward.cost}">
-                                <div class="text-4xl mb-2">${reward.emoji}</div>
-                                <div class="font-medium text-sm text-slate-700 mb-1">${reward.name}</div>
-                                <div class="font-bold text-amber-600 mb-3">${reward.cost} pts</div>
-                                <button class="redeem-btn text-xs py-1 px-3 rounded-full ${canAfford ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}" 
-                                        ${!canAfford ? 'disabled' : ''}
-                                        data-reward-id="${reward.id}"
-                                        data-cost="${reward.cost}">
-                                    Redeem
-                                </button>
-                            </div>
-                        `;
-                    });
-                }
-                 if(rewardsGrid) attachRedeemButtonListeners(); // Attach only if grid exists
-
-                // Render Claimed (but not delivered) Rewards List
-                 // Use the filtered appData.claimedRewards
-                if (appData.claimedRewards.length === 0) {
-                     noClaimedRewardsMsg.classList.remove('hidden');
-                 } else {
-                     noClaimedRewardsMsg.classList.add('hidden');
-                     const sortedClaimed = [...appData.claimedRewards].sort((a, b) => (b.claimedAt?.seconds || 0) - (a.claimedAt?.seconds || 0));
-                     sortedClaimed.forEach(reward => {
-                         const claimedByMember = appData.members.find(m => m.id === reward.claimedBy);
-                         claimedRewardsList.innerHTML += `
-                             <div class="claimed-reward-item">
-                                 <div>
-                                     <span class="text-xl mr-2">${reward.emoji}</span>
-                                     <span class="font-medium">${reward.name}</span>
-                                     <span class="text-sm text-gray-600 ml-2">(Claimed by: ${claimedByMember?.name || 'Unknown'})</span>
-                                 </div>
-                                 <button class="mark-delivered-btn text-xs py-1 px-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white" 
-                                         data-reward-id="${reward.id}">
-                                     Mark Delivered
-                                 </button>
-                             </div>
-                         `;
-                     });
-                 }
-                 if (claimedRewardsList) attachDeliveredButtonListeners(); // Attach only if list exists
-                  console.log("Points & Rewards rendering finished."); // Log end
-            } catch (e) { console.error("renderPointsAndRewards failed:", e); }
-        }
-
-        // --- Setup Tab ---
-        function renderSetup() { 
-             console.log("Rendering Setup Tab for subpage:", currentSetupSubPage); // Log start
-             try {
-                const editList = document.getElementById('edit-members-list');
-                const manageChoresList = document.getElementById('manage-chores-list');
-                const manageRewardsList = document.getElementById('manage-rewards-list');
-
-                // Sub-page Visibility (Corrected Logic)
-                 const pages = ['members', 'chores', 'rewards'];
-                 pages.forEach(pageId => {
-                     const pageEl = document.getElementById(`setup-subpage-${pageId}`);
-                     const navBtnEl = document.getElementById(`setup-subnav-${pageId}`);
-                     if (pageEl && navBtnEl) {
-                         if (pageId === currentSetupSubPage) {
-                             pageEl.classList.add('setup-subpage-active');
-                             pageEl.classList.remove('hidden'); 
-                             navBtnEl.classList.add('setup-subnav-btn-active');
-                             navBtnEl.classList.remove('setup-subnav-btn-inactive');
-                         } else {
-                             pageEl.classList.remove('setup-subpage-active');
-                             pageEl.classList.add('hidden'); 
-                             navBtnEl.classList.remove('setup-subnav-btn-active');
-                             navBtnEl.classList.add('setup-subnav-btn-inactive');
-                         }
-                     } else {
-                          console.warn(`Missing elements for setup subpage or nav button: ${pageId}`);
-                     }
-                 });
-
-                // Render Content based on Sub-page
-                if (currentSetupSubPage === 'members') {
-                    if (!editList) return; 
-                    editList.innerHTML = appData.members.map(member => `
-                        <div class="bg-slate-50 p-4 rounded-lg border-t-4 animate-fade-in-up" style="border-color: ${member.color};">
-                            <div class="flex items-center space-x-3 mb-4">
-                                <input type="text" value="${member.emoji || '👤'}" class="member-edit-emoji emoji-select w-16" data-member-id="${member.id}">
-                                <input type="text" value="${member.name}" class="member-edit-name flex-1 p-1 border rounded" data-member-id="${member.id}">
-                                <select class="member-edit-color p-1 border rounded" data-member-id="${member.id}">
-                                    ${memberColors.map(color => `<option value="${color}" ${member.color === color ? 'selected' : ''} style="background: ${color}; color: ${color};">Color</option>`).join('')}
-                                    <option value="#888888" ${!memberColors.includes(member.color) ? 'selected' : ''}>Default</option>
-                                </select>
-                            </div>
-                             <!-- Points Modification (Password Protected) -->
-                             <div class="mt-4 pt-4 border-t border-gray-200">
-                                 <label class="block text-sm font-medium text-gray-700">Current Points: ${member.points}</label>
-                                 <div class="flex items-center space-x-2 mt-1">
-                                    <input type="number" placeholder="New points" class="member-edit-points p-1 border rounded w-24" data-member-id="${member.id}">
-                                    <button class="member-save-points-btn text-xs py-1 px-2 rounded bg-orange-500 text-white hover:bg-orange-600" data-member-id="${member.id}">Set Points (Admin)</button>
-                                 </div>
-                             </div>
-                            <div class="flex space-x-2 mt-4">
-                                <button class="member-save-btn flex-1 text-sm py-1 px-2 rounded bg-green-500 text-white hover:bg-green-600" data-member-id="${member.id}">Save Changes</button>
-                                <button class="member-delete-btn flex-1 text-sm py-1 px-2 rounded bg-red-500 text-white hover:bg-red-600" data-member-id="${member.id}">Delete Member</button>
-                            </div>
-                        </div>
-                    `).join('');
-                } else if (currentSetupSubPage === 'chores') {
-                     if (!manageChoresList) return; 
-                     manageChoresList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Reusable Chores</h3>' + 
-                        appData.chores.map(chore => {
-                            const scheduleDays = chore.schedule.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ');
-                            const assignee = appData.members.find(m => m.id === chore.defaultAssignee);
-                            const assigneeText = assignee ? `${assignee.emoji} ${assignee.name}` : 'Unassigned';
-                            return `
-                                <div class="flex justify-between items-center bg-slate-50 p-3 rounded shadow-sm animate-fade-in-up border-l-4 border-gray-300">
-                                    <div>
-                                        <span class="text-xl mr-2">${chore.emoji}</span>
-                                        <span class="font-medium">${chore.name}</span>
-                                        <span class="block text-xs text-gray-500 ml-8">
-                                            ${chore.points} pts | ${scheduleDays || 'Not scheduled'} | Default: ${assigneeText}
-                                        </span>
-                                    </div>
-                                    <button class="chore-delete-btn text-red-500 hover:text-red-700 p-1" data-id="${chore.id}">
-                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
-                                    </button>
-                                </div>
-                            `;
-                        }).join('');
-                     if(appData.chores.length === 0) manageChoresList.innerHTML += '<p class="text-sm text-gray-500">No reusable chores created yet.</p>';
-                } else if (currentSetupSubPage === 'rewards') {
-                    if (!manageRewardsList) return; 
-                    manageRewardsList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Available Rewards</h3>' + 
-                        appData.rewards.filter(r => !r.claimed && !r.delivered).map(reward => `
-                        <div class="flex justify-between items-center bg-slate-50 p-3 rounded shadow-sm animate-fade-in-up border-l-4 border-amber-400">
+                claimedList.innerHTML = pendingRewards.map(reward => {
+                    const member = localState.members.find(m => m.id === reward.memberId);
+                    const memberName = member ? member.name : 'Unknown Member';
+                    const claimedAt = reward.claimedAt ? reward.claimedAt.toDate().toLocaleDateString() : 'Just now';
+                    
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                             <div>
                                 <span class="text-xl mr-2">${reward.emoji}</span>
                                 <span class="font-medium">${reward.name}</span>
-                                <span class="block text-xs text-amber-600 font-semibold ml-8">${reward.cost} points</span>
+                                <span class="text-sm text-gray-600 ml-2">(Claimed by <strong>${memberName}</strong> on ${claimedAt})</span>
                             </div>
-                            <button class="reward-delete-btn text-red-500 hover:text-red-700 p-1" data-id="${reward.id}">
-                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                            <button 
+                                class="py-2 px-4 bg-green-600 text-white font-medium rounded-lg hover:bg-green-700 transition-all text-sm flex items-center gap-1.5"
+                                onclick="window.handleDeliverReward('${reward.id}')"
+                            >
+                                <span data-lucide="check-check" class="h-4 w-4"></span>
+                                Mark Delivered
                             </button>
                         </div>
-                    `).join('');
-                    if(appData.rewards.filter(r => !r.claimed && !r.delivered).length === 0) manageRewardsList.innerHTML += '<p class="text-sm text-gray-500">No rewards created yet.</p>';
-                }
-                 console.log("Setup tab rendering finished."); // Log end
-            } catch (e) { console.error("renderSetup failed:", e); }
-        }
-
-        // --- Calendar Tab Function Removed ---
-
-
-        // --- Event Handlers ---
-
-        // Tab Navigation
-        function changeTab(tabId, title) {
-             console.log("Changing tab to:", tabId); // Log tab change
-             // Wrap in try...catch
-            try {
-                 // Check if the sidebar button exists before proceeding
-                 const navBtnEl = document.getElementById(`nav-${tabId}`);
-                 if (!navBtnEl) {
-                      console.error(`Nav button element not found for tab: ${tabId}`);
-                      return; // Prevent changing if button doesn't exist
-                 }
-
-                currentTab = tabId;
-                // Hide all content tabs first
-                document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-                // Show the selected one
-                const contentEl = document.getElementById(`content-${tabId}`);
-                 if (contentEl) {
-                     contentEl.classList.remove('hidden');
-                 } else {
-                     console.error(`Content element not found for tab: ${tabId}`);
-                     return; // Stop if content area doesn't exist
-                 }
-                
-                // Update sidebar button styles
-                document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('nav-btn-active'));
-                 navBtnEl.classList.add('nav-btn-active'); // We know it exists now
-
-
-                // Update title
-                if (contentTitle) {
-                     contentTitle.textContent = title;
-                }
-                
-                // Trigger render for the newly active tab if necessary
-                renderAll(); // Re-render content after changing tab
-                
-                // Special case for time header
-                if (tabId === 'daily-list') updateDateTimeHeader();
-            } catch (e) { console.error("changeTab failed:", e, tabId); }
-        }
-
-        // Setup Sub-Page Navigation
-        function changeSetupSubPage(subPageId) { 
-             console.log("Changing setup subpage to:", subPageId); // Log
-             try {
-                currentSetupSubPage = subPageId;
-                renderSetup(); // Re-render the setup tab content
-            } catch (e) { console.error("changeSetupSubPage failed:", e, subPageId); }
-        }
-
-        // Toggle Adhoc Form
-        const toggleAdhocBtn = document.getElementById('toggle-adhoc-form');
-         if (toggleAdhocBtn) {
-             toggleAdhocBtn.addEventListener('click', (e) => {
-                try {
-                    const form = document.getElementById('adhoc-chore-form');
-                    const button = e.currentTarget; 
-                    const icon = button.querySelector('span');
-                    if (!form || !icon) return; // Add checks
-                    form.classList.toggle('form-open');
-                    if (form.classList.contains('form-open')) {
-                        icon.textContent = '✕'; 
-                        button.classList.add('rotate-180'); 
-                    } else {
-                        icon.textContent = '＋';
-                        button.classList.remove('rotate-180');
-                    }
-                } catch (e) { console.error("toggle-adhoc-form click failed:", e); }
-            });
-         }
-
-
-        // Add Member
-        const addMemberForm = document.getElementById('add-member-form');
-         if (addMemberForm) addMemberForm.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); 
-
-        // Edit/Delete/Modify Points Member (with delegation)
-        const editMembersListContainer = document.getElementById('edit-members-list');
-        if (editMembersListContainer) { /* ... unchanged ... */ }
-
-
-        // Add Reusable Chore
-         const addChoreForm = document.getElementById('add-chore-form');
-         if (addChoreForm) addChoreForm.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); 
-
-        // Add One-Time (Adhoc) Chore
-         const adhocChoreForm = document.getElementById('adhoc-chore-form');
-         if (adhocChoreForm) adhocChoreForm.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); 
-
-        // Delete Chore/Reward (Using delegation on Setup content)
-        const setupContent = document.getElementById('content-setup');
-         if(setupContent){ /* ... unchanged ... */ }
-
-
-        // Add Reward
-         const addRewardForm = document.getElementById('add-reward-form');
-         if (addRewardForm) addRewardForm.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); 
-
-        // --- Redeem Reward Logic ---
-        if (redeemMemberSelector) redeemMemberSelector.addEventListener('change', () => { /* ... unchanged ... */ }); // Add null check
-        function attachRedeemButtonListeners() { /* ... unchanged ... */ }
-        async function handleRedeemClick(e) { /* ... unchanged ... */ }
-
-        // --- Mark Reward Delivered Logic ---
-        function attachDeliveredButtonListeners() { /* ... unchanged ... */ }
-         async function handleMarkDeliveredClick(e) { /* ... unchanged ... */ }
-
-
-        // Complete/Uncomplete Chore (Event delegation)
-        const mainElement = document.querySelector('main');
-         if (mainElement) {
-             mainElement.addEventListener('click', (e) => {
-                try {
-                    const completeButton = e.target.closest('.chore-complete-btn');
-                    const assignButton = e.target.closest('.assign-chore-btn');
-
-                    if (completeButton) {
-                        handleChoreCompletionToggle(completeButton, e); 
-                    } else if (assignButton) {
-                         openAssignmentModal(assignButton.closest('.chore-item'));
-                    }
-                } catch (e) { console.error("Main click delegate failed:", e); }
-            });
-         }
-
-
-        // Updated function to handle both complete and uncomplete
-        async function handleChoreCompletionToggle(button, e) {
-             let newCompletionState; 
-             const choreItem = button.closest('.chore-item'); 
-             if (!choreItem) {
-                  console.error("Could not find parent chore item for button:", button);
-                  return; 
-             }
-
-             // Wrap in try...catch
-            try {
-                 const assigneeId = choreItem.dataset.currentAssignee; 
-
-                 if (!assigneeId || assigneeId === 'unassigned') {
-                     showSnackbar("Assign chore to a member first.", true);
-                     return;
-                 }
-
-
-                const isCurrentlyComplete = choreItem.dataset.isComplete === 'true'; 
-                newCompletionState = !isCurrentlyComplete; 
-
-                const points = parseInt(choreItem.dataset.points); 
-                
-                const completionDocId = choreItem.dataset.completionDocId;
-                const isAdhoc = choreItem.dataset.isAdhoc === 'true';
-                const choreDefId = choreItem.dataset.choreDefId === 'null' ? null : choreItem.dataset.choreDefId;
-
-
-                const member = appData.members.find(m => m.id === assigneeId);
-                if (!member) {
-                     showSnackbar("Cannot find assigned member.", true); 
-                     console.error("Member data not found for assigneeId:", assigneeId, appData.members);
-                     return;
-                }
-                const memberColor = member.color || '#3b82f6';
-                const clickX = e.clientX;
-                const clickY = e.clientY;
-
-                const actionLabel = isCurrentlyComplete ? 'Uncompleting' : 'Completing';
-                showLoading(`${actionLabel} chore...`);
-
-                await runTransaction(db, async (transaction) => {
-                    let completionRef;
-                    let memberRef = paths.member(assigneeId); 
-
-                    // --- Perform Reads FIRST ---
-                    const memberDoc = await transaction.get(memberRef); 
-                    if (!memberDoc.exists()) throw new Error("Member not found.");
-                    const currentPoints = memberDoc.data().points || 0;
-
-                    let existingCompletionDoc = null; 
-                    if (completionDocId && completionDocId !== 'null') {
-                        completionRef = paths.completion(completionDocId);
-                        existingCompletionDoc = await transaction.get(completionRef); 
-                    }
-                    // --- End Reads ---
-
-                    // --- Calculate New State and Prepare Writes ---
-                    const pointChange = newCompletionState ? points : -points; 
-                    const newPoints = currentPoints + pointChange;
-
-                    if (existingCompletionDoc?.exists()) {
-                        transaction.update(completionRef, { isComplete: newCompletionState });
-                    } else if (newCompletionState) { 
-                        completionRef = doc(collection(db, paths.completions().path)); 
-                        transaction.set(completionRef, {
-                            name: choreItem.dataset.name,
-                            emoji: choreItem.dataset.emoji,
-                            points: parseInt(choreItem.dataset.points),
-                            assigneeId: assigneeId,
-                            date: getTodayString(),
-                            isComplete: true, 
-                            isAdhoc: isAdhoc, 
-                            choreDefId: choreDefId,
-                            timestamp: Timestamp.now() 
-                        });
-                    } else {
-                         console.warn("Attempted to uncomplete chore with no existing completion doc:", choreItem.dataset);
-                    }
-
-                    transaction.update(memberRef, { points: newPoints }); 
-                });
-                
-                // --- Success Actions ---
-                hideLoading(); 
-                 showSnackbar(`Chore ${newCompletionState ? 'completed' : 'marked incomplete'}!`); 
-                if (newCompletionState) {
-                    createConfetti(clickX, clickY, memberColor);
-                    playSound('C5', '16n'); 
-                } else {
-                     playSound('C4', '16n'); 
-                }
-
-            } catch (error) { 
-                console.error("Chore completion/uncompletion failed:", error);
-                 const failedActionLabel = newCompletionState === undefined ? (choreItem.dataset.isComplete === 'true' ? 'Uncompleting' : 'Completing') : (newCompletionState ? 'Completing' : 'Uncompleting');
-                showSnackbar(`${failedActionLabel} failed: ${error.message}`, true);
-                hideLoading(); 
-            } 
-        }
-
-
-
-       // --- Assignment Modal Logic ---
-        function openAssignmentModal(choreItem) {
-             console.log("Opening assignment modal for:", choreItem?.dataset); // Log opening
-            try {
-                if (!choreItem) {
-                     console.warn("openAssignmentModal called without choreItem");
-                     return;
-                }
-                currentChoreToAssign = {
-                    completionDocId: choreItem.dataset.completionDocId,
-                    choreDefId: choreItem.dataset.choreDefId,
-                    currentAssigneeId: choreItem.dataset.currentAssignee,
-                    isAdhoc: choreItem.dataset.isAdhoc === 'true',
-                    name: choreItem.dataset.name,
-                    emoji: choreItem.dataset.emoji,
-                    points: parseInt(choreItem.dataset.points)
-                };
-
-                 if (!assignmentOptionsContainer || !assignmentModal) {
-                     console.error("Assignment modal elements not found.");
-                     return;
-                 }
-
-                assignmentOptionsContainer.innerHTML = ''; 
-
-                const unassignedButton = document.createElement('button');
-                unassignedButton.className = 'assign-option';
-                unassignedButton.textContent = '⚪ Unassigned';
-                unassignedButton.dataset.assigneeId = 'unassigned';
-                assignmentOptionsContainer.appendChild(unassignedButton);
-
-                appData.members.forEach(member => {
-                    const button = document.createElement('button');
-                    button.className = 'assign-option';
-                    button.innerHTML = `
-                        <span class="inline-block w-3 h-3 rounded-full mr-2" style="background-color: ${member.color};"></span>
-                        ${member.emoji || ''} ${member.name}
                     `;
-                    button.dataset.assigneeId = member.id;
-                    assignmentOptionsContainer.appendChild(button);
-                });
+                }).join('');
+                lucide.createIcons(); // Re-render icons
+            }
+        }
+        
+        function renderAvailableRewards() {
+            const rewardsGrid = document.getElementById('available-rewards-grid');
+            if (!rewardsGrid) return;
+            
+            const selectedMember = localState.members.find(m => m.id === selectedRedeemerId);
+            const memberPoints = selectedMember ? (selectedMember.points || 0) : -1;
+            
+            if (!selectedRedeemerId) {
+                rewardsGrid.innerHTML = '<p class="text-gray-500 italic col-span-full">Please select a member to see available rewards.</p>';
+                return;
+            }
+            
+            if (localState.rewards.length === 0) {
+                rewardsGrid.innerHTML = '<p class="text-gray-500 italic col-span-full">No rewards have been set up yet.</p>';
+                return;
+            }
 
-                assignmentModal.classList.remove('hidden'); // Show the modal
-            } catch (e) { console.error("openAssignmentModal failed:", e); }
+            rewardsGrid.innerHTML = localState.rewards.map(reward => {
+                const canAfford = memberPoints >= reward.cost;
+                const affordClass = !canAfford ? 'opacity-50 grayscale' : 'hover:shadow-lg hover:-translate-y-1';
+                const buttonDisabled = !canAfford ? 'disabled' : '';
+                const buttonClass = !canAfford ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700';
+
+                return `
+                    <div class="bg-white rounded-lg shadow-md border border-gray-200 p-4 flex flex-col items-center justify-between transition-all ${affordClass}">
+                        <span class="text-5xl mb-2">${reward.emoji}</span>
+                        <span class="font-semibold text-center mb-2">${reward.name}</span>
+                        <span class="font-bold text-xl text-blue-600 mb-4">${reward.cost} pts</span>
+                        <button 
+                            class="w-full py-2 px-4 text-white font-medium rounded-lg transition-all text-sm ${buttonClass}"
+                            onclick="window.handleRedeemReward('${reward.id}')"
+                            ${buttonDisabled}
+                        >
+                            Redeem
+                        </button>
+                    </div>
+                `;
+            }).join('');
         }
 
-        function closeAssignmentModal() {
-            try {
-                if(assignmentModal) assignmentModal.classList.add('hidden'); // Hide the modal
-                currentChoreToAssign = null; 
-            } catch (e) { console.error("closeAssignmentModal failed:", e); }
+        // --- Render: Setup ---
+        function renderSetup() {
+            // 1. Render Sub-view Content
+            switch(currentSetupView) {
+                case 'members':
+                    renderSetupMembers();
+                    break;
+                case 'chores':
+                    renderSetupChores();
+                    break;
+                case 'rewards':
+                    renderSetupRewards();
+                    break;
+            }
+            
+            // 2. Highlight active sub-nav
+            document.querySelectorAll('.setup-nav-link').forEach(link => {
+                const isActive = link.dataset.setupView === currentSetupView;
+                link.classList.toggle('text-blue-600', isActive);
+                link.classList.toggle('border-b-2', isActive);
+                link.classList.toggle('border-blue-600', isActive);
+                link.classList.toggle('text-gray-500', !isActive);
+            });
+            
+            // 3. Show/Hide setup panes
+            document.querySelectorAll('.setup-view-content').forEach(pane => {
+                pane.classList.toggle('hidden', !pane.id.includes(currentSetupView));
+            });
         }
-
-        // Attach listeners using event delegation *once* in DOMContentLoaded
         
-       
-
-        // --- Touch Drag and Drop Logic ---
-        let dragElement = null;
-        let ghostElement = null;
-        function addTouchDragListeners() { /* ... unchanged ... */ }
-        function handleTouchStart(e) { /* ... unchanged ... */ }
-        function handleTouchMove(e) { /* ... unchanged ... */ }
-        function handleTouchEnd(e) { /* ... unchanged ... */ }
-        
-        // Handle Chore Assignment (called from modal)
-        async function handleChoreAssignment(choreData, newAssigneeId) { 
-             console.log("Handling chore assignment:", choreData, newAssigneeId); // Log assignment start
-             try {
-                const { 
-                    completionDocId, 
-                    choreDefId, 
-                    currentAssigneeId, 
-                    isAdhoc, 
-                    name, 
-                    emoji, 
-                    points 
-                } = choreData;
-
-                if (newAssigneeId === currentAssigneeId) {
-                    console.log("Assignment skipped: Assignee is the same.");
-                    return; 
+        function renderSetupMembers() {
+            const list = document.getElementById('setup-members-list');
+            if (list) {
+                if (localState.members.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 italic">No members added yet.</p>';
+                    return;
                 }
-
-                showLoading('Reassigning...');
-                try {
-                    if (completionDocId && completionDocId !== 'null') {
-                        console.log(`Updating existing completion doc ${completionDocId} for ${isAdhoc ? 'adhoc' : 'recurring'} chore.`);
-                        await updateDoc(paths.completion(completionDocId), {
-                            assigneeId: newAssigneeId
-                        });
+                list.innerHTML = localState.members.map(member => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div class="flex items-center gap-3">
+                            <span class="text-2xl">${member.emoji}</span>
+                            <span class="w-4 h-4 rounded-full ${member.color}"></span>
+                            <span class="font-medium">${member.name}</span>
+                            <span class="text-gray-600">(${member.points || 0} pts)</span>
+                        </div>
+                        <div class="flex gap-2">
+                            <button class="text-blue-600 hover:text-blue-800 font-medium text-sm" onclick="window.openEditMemberModal('${member.id}')">Edit</button>
+                            <button class="text-red-600 hover:text-red-800 font-medium text-sm" onclick="window.confirmDelete('member', '${member.id}', '${member.name}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        function renderSetupChores() {
+            const list = document.getElementById('setup-chores-list');
+            if (list) {
+                if (localState.chores.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 italic">No chore templates added yet.</p>';
+                    return;
+                }
+                list.innerHTML = localState.chores.map(chore => {
+                    const schedule = chore.schedule ? chore.schedule.join(', ').toUpperCase() : 'Not set';
+                    const assignee = localState.members.find(m => m.id === chore.defaultAssignee);
+                    const assigneeName = assignee ? assignee.name : 'Unassigned';
                     
-                    } else if (!isAdhoc && choreDefId && choreDefId !== 'null') {
-                        // Create a NEW completion doc when assigning a recurring chore for the first time today
-                         console.log(`Creating new completion doc for recurring chore ${choreDefId}.`);
-                        await addDoc(paths.completions(), {
-                            name: name,
-                            emoji: emoji,
-                            points: points,
-                            assigneeId: newAssigneeId, // Use the new assignee
-                            date: getTodayString(),
-                            isComplete: false, // Starts incomplete
-                            isAdhoc: false,
-                            choreDefId: choreDefId,
-                            timestamp: Timestamp.now()
-                        });
-                    } else if (isAdhoc && (!completionDocId || completionDocId === 'null')) {
-                         // Create a NEW completion doc for an adhoc chore being assigned for the first time
-                         console.log(`Creating new completion doc for new adhoc chore ${name}.`);
-                          await addDoc(paths.completions(), {
-                            name: name, emoji: emoji, points: points, assigneeId: newAssigneeId,
-                            date: getTodayString(), isComplete: false, isAdhoc: true, choreDefId: null,
-                            timestamp: Timestamp.now()
-                        });
-                    }
-                     else {
-                        console.error("Unhandled chore assignment case:", choreData, newAssigneeId);
-                        throw new Error("Could not determine how to assign this chore.");
-                    }
-                    showSnackbar("Chore reassigned!");
-                     console.log("Chore reassignment successful."); // Log success
-
-                } catch (error) {
-                    console.error("Failed to reassign chore in Firestore:", error);
-                    showSnackbar("Failed to reassign chore.", true);
-                } finally { 
-                    hideLoading();
+                    return `
+                        <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                            <div>
+                                <span class="font-medium">${chore.emoji} ${chore.name}</span>
+                                <span class="text-blue-600 font-bold ml-2">(${chore.points} pts)</span>
+                                <p class="text-sm text-gray-500">Schedule: ${schedule}</p>
+                                <p class="text-sm text-gray-500">Default: ${assigneeName}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button class="text-blue-600 hover:text-blue-800 font-medium text-sm" onclick="window.openEditChoreModal('${chore.id}')">Edit</button>
+                                <button class="text-red-600 hover:text-red-800 font-medium text-sm" onclick="window.confirmDelete('chore', '${chore.id}', '${chore.name}')">Delete</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        function renderSetupRewards() {
+            const list = document.getElementById('setup-rewards-list');
+            if (list) {
+                if (localState.rewards.length === 0) {
+                    list.innerHTML = '<p class="text-gray-500 italic">No rewards added yet.</p>';
+                    return;
                 }
-            } catch (e) { console.error("handleChoreAssignment failed:", e); }
+                list.innerHTML = localState.rewards.map(reward => `
+                    <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                        <div>
+                            <span class="font-medium">${reward.emoji} ${reward.name}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-blue-600">${reward.cost} pts</span>
+                            <button class="text-blue-600 hover:text-blue-800 font-medium text-sm" onclick="window.openEditRewardModal('${reward.id}')">Edit</button>
+                            <button class="text-red-600 hover:text-red-800 font-medium text-sm" onclick="window.confirmDelete('reward', '${reward.id}', '${reward.name}')">Delete</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+        }
+        
+        // --- Populate Shared Dropdowns ---
+        function populateMemberDropdowns() {
+            const selects = [
+                document.getElementById('adhoc-assignee'),
+                document.getElementById('assign-chore-select'),
+                document.getElementById('adjust-points-member'),
+                document.getElementById('chore-default-assignee'),
+                document.getElementById('edit-chore-default-assignee'),
+                document.getElementById('redeem-member-select')
+            ];
+            
+            const memberOptions = localState.members.map(m => `<option value="${m.id}">${m.emoji} ${m.name}</option>`).join('');
+            
+            selects.forEach(select => {
+                if (select) {
+                    let firstOption;
+                    if (select.id === 'redeem-member-select') {
+                        firstOption = '<option value="">Select a member...</option>';
+                    } else if (select.id === 'adjust-points-member') {
+                        firstOption = '<option value="">Select Member</option>';
+                    } else {
+                        firstOption = '<option value="unassigned">Unassigned</option>';
+                    }
+                    select.innerHTML = firstOption + memberOptions;
+                }
+            });
+            
+            // Restore selected values
+            if (selectedRedeemerId) {
+                document.getElementById('redeem-member-select').value = selectedRedeemerId;
+            }
         }
 
 
-        // Calendar Navigation Removed
+        // === UI Interaction Functions ===
 
-        // --- Global Error Handlers ---
-        window.addEventListener('unhandledrejection', (event) => { /* ... */ });
-        window.addEventListener('error', (event) => { /* ... */ });
+        // --- Main Navigation ---
+        function showView(viewName) {
+            currentView = viewName;
+            document.querySelectorAll('.view-content').forEach(view => {
+                view.classList.toggle('hidden', view.id !== `view-${viewName}`);
+            });
+            
+            // Update active nav link
+            document.querySelectorAll('.nav-link').forEach(link => {
+                const isActive = link.dataset.view === viewName;
+                link.classList.toggle('bg-gray-700', isActive);
+                link.classList.toggle('text-white', isActive);
+                link.classList.toggle('text-gray-300', !isActive);
+            });
+            
+            // Update header title
+            const titles = {
+                daily: 'Daily List',
+                weekly: 'Weekly Schedule',
+                rewards: 'Points & Rewards',
+                setup: 'Setup'
+            };
+            document.getElementById('view-title').textContent = titles[viewName];
+            
+            // Trigger render for the new view
+            renderAll();
+        }
+        window.showView = showView; // Expose to global
 
-        // --- App Initialization ---
-        window.changeTab = changeTab;
-        window.changeSetupSubPage = changeSetupSubPage; 
+        // --- Setup Sub-Navigation ---
+        function showSetupView(viewName) {
+            currentSetupView = viewName;
+            renderSetup();
+        }
         
+        // === Modal Controls ===
+        function showModal(modalId) {
+            document.getElementById(modalId)?.classList.remove('hidden');
+        }
+        function hideModal(modalId) {
+            document.getElementById(modalId)?.classList.add('hidden');
+        }
+        window.hideModal = hideModal;
+
+        // --- Password Modal ---
+        function showPasswordModal(callback) {
+            passwordSuccessCallback = callback;
+            document.getElementById('password-input').value = '';
+            document.getElementById('password-error').classList.add('hidden');
+            showModal('password-modal');
+        }
+        
+        async function handleSubmitPassword() {
+            const input = document.getElementById('password-input').value;
+            if (input === PASSWORD) {
+                if (passwordSuccessCallback) {
+                    try {
+                        await passwordSuccessCallback();
+                        showToast('Action successful!', 'success');
+                        playSound('success');
+                    } catch (e) {
+                        console.error("Password callback error:", e);
+                        showToast('An error occurred.', 'error');
+                        playSound('error');
+                    }
+                }
+                hideModal('password-modal');
+                passwordSuccessCallback = null;
+            } else {
+                document.getElementById('password-error').classList.remove('hidden');
+                playSound('error');
+            }
+        }
+
+        // --- Confirm Delete Modal ---
+        function confirmDelete(type, id, name) {
+            document.getElementById('delete-item-name').textContent = name;
+            deleteSuccessCallback = async () => {
+                let collectionPath;
+                if (type === 'member') collectionPath = F_MEMBERS_COL;
+                if (type === 'chore') collectionPath = F_CHORES_COL;
+                if (type === 'reward') collectionPath = F_REWARDS_COL;
+                
+                if (collectionPath) {
+                    try {
+                        await deleteDoc(doc(db, collectionPath, id));
+                        // TODO: Handle cascading deletes (e.g., remove member from chores)
+                        showToast(`Deleted ${name}.`, 'success');
+                        playSound('success');
+                    } catch (e) {
+                        console.error("Delete error:", e);
+                        showToast('Error deleting item.', 'error');
+                        playSound('error');
+                    }
+                }
+                hideModal('confirm-delete-modal');
+                deleteSuccessCallback = null;
+            };
+            showModal('confirm-delete-modal');
+        }
+        window.confirmDelete = confirmDelete;
+        
+        // --- Toast Message ---
+        function showToast(message, type = 'info') {
+            const toast = document.getElementById('toast-message');
+            const text = document.getElementById('toast-text');
+            if (!toast || !text) return;
+            
+            text.textContent = message;
+            
+            // Reset classes
+            toast.classList.remove('bg-green-600', 'bg-red-600', 'bg-blue-600', 'translate-x-[120%]', 'opacity-0');
+            
+            if (type === 'success') {
+                toast.classList.add('bg-green-600');
+            } else if (type === 'error') {
+                toast.classList.add('bg-red-600');
+            } else {
+                toast.classList.add('bg-blue-600');
+            }
+            
+            // Animate in
+            toast.classList.remove('translate-x-[120%]');
+            
+            // Animate out
+            setTimeout(() => {
+                toast.classList.add('opacity-0');
+                // Reset position after animation
+                setTimeout(() => {
+                    toast.classList.add('translate-x-[120%]');
+                    toast.classList.remove('opacity-0');
+                }, 500);
+            }, 3000);
+        }
+        
+        // --- Confetti ---
+        function showConfetti() {
+            if (window.confetti) {
+                confetti({
+                    particleCount: 150,
+                    spread: 90,
+                    origin: { y: 0.6 },
+                    zIndex: 1000
+                });
+            }
+        }
+
+
+        // === Event Handlers ===
+
+        // --- Daily List Handlers ---
+        window.toggleChoreComplete = async (dailyChoreId) => {
+            const chore = localState.dailyChores.find(c => c.id === dailyChoreId);
+            if (!chore) return;
+            
+            const newStatus = !chore.isComplete;
+            const memberId = chore.assignedTo;
+            
+            try {
+                // 1. Update chore status
+                await updateDoc(doc(db, F_DAILY_CHORES_COL, dailyChoreId), {
+                    isComplete: newStatus
+                });
+                
+                // 2. Update member points (if assigned)
+                if (memberId) {
+                    const member = localState.members.find(m => m.id === memberId);
+                    if (member) {
+                        const pointsChange = newStatus ? chore.points : -chore.points;
+                        const newPoints = (member.points || 0) + pointsChange;
+                        await updateDoc(doc(db, F_MEMBERS_COL, memberId), {
+                            points: newPoints
+                        });
+                    }
+                }
+                
+                // 3. Play sound
+                playSound(newStatus ? 'complete' : 'uncomplete');
+                
+            } catch (e) {
+                console.error("Error toggling chore:", e);
+                showToast('Error updating chore.', 'error');
+                playSound('error');
+            }
+        };
+        
+        window.openAssignModal = (dailyChoreId) => {
+            selectedChoreForAssignment = dailyChoreId;
+            const chore = localState.dailyChores.find(c => c.id === dailyChoreId);
+            if (!chore) return;
+            
+            document.getElementById('assign-chore-name').textContent = chore.name;
+            document.getElementById('assign-chore-select').value = chore.assignedTo || 'unassigned';
+            showModal('assign-chore-modal');
+        };
+        
+        async function handleSubmitAssignment() {
+            if (!selectedChoreForAssignment) return;
+            
+            const newAssigneeId = document.getElementById('assign-chore-select').value;
+            const assignedTo = newAssigneeId === 'unassigned' ? null : newAssigneeId;
+            
+            try {
+                await updateDoc(doc(db, F_DAILY_CHORES_COL, selectedChoreForAssignment), {
+                    assignedTo: assignedTo
+                });
+                showToast('Chore reassigned!', 'success');
+                playSound('success');
+                hideModal('assign-chore-modal');
+            } catch (e) {
+                console.error("Error assigning chore:", e);
+                showToast('Error reassigning chore.', 'error');
+                playSound('error');
+            }
+            selectedChoreForAssignment = null;
+        }
+
+        async function handleAddAdHocChore(e) {
+            e.preventDefault();
+            const name = document.getElementById('adhoc-name').value;
+            const emoji = document.getElementById('adhoc-emoji').value;
+            const points = parseInt(document.getElementById('adhoc-points').value);
+            const assigneeId = document.getElementById('adhoc-assignee').value;
+            
+            if (!name || !emoji || isNaN(points)) {
+                showToast('Please fill all fields correctly.', 'error');
+                return;
+            }
+            
+            try {
+                await addDoc(collection(db, F_DAILY_CHORES_COL), {
+                    name: name,
+                    emoji: emoji,
+                    points: points,
+                    assignedTo: assigneeId === 'unassigned' ? null : assigneeId,
+                    date: new Date().toISOString().split('T')[0],
+                    isComplete: false,
+                    isAdHoc: true,
+                    createdAt: serverTimestamp()
+                });
+                
+                showToast('Ad-hoc chore added!', 'success');
+                playSound('success');
+                e.target.reset(); // Reset form
+            } catch (e) {
+                console.error("Error adding ad-hoc chore:", e);
+                showToast('Error adding chore.', 'error');
+                playSound('error');
+            }
+        }
+        
+        // --- Drag & Drop Handlers ---
+        let draggedChoreId = null;
+        
+        function attachDragDropHandlers() {
+            const choreItems = document.querySelectorAll('.chore-item');
+            choreItems.forEach(item => {
+                item.addEventListener('dragstart', handleDragStart);
+                item.addEventListener('dragend', handleDragEnd);
+                
+                // Basic touch support (less ideal than modal)
+                item.addEventListener('touchstart', handleDragStart, { passive: false });
+                item.addEventListener('touchend', handleDragEnd);
+            });
+            
+            const dropTargets = document.querySelectorAll('.member-drop-target');
+            dropTargets.forEach(target => {
+                target.addEventListener('dragover', handleDragOver);
+                target.addEventListener('dragleave', handleDragLeave);
+                target.addEventListener('drop', handleDrop);
+
+                // Touch support
+                target.addEventListener('touchmove', handleDragOver, { passive: false });
+                target.addEventListener('touchend', handleDrop);
+            });
+        }
+        
+        function handleDragStart(e) {
+            let choreId;
+            if (e.type === 'touchstart') {
+                choreId = e.currentTarget.dataset.choreId;
+            } else {
+                e.dataTransfer.effectAllowed = 'move';
+                choreId = e.target.dataset.choreId;
+                e.dataTransfer.setData('text/plain', choreId);
+            }
+            draggedChoreId = choreId;
+            e.currentTarget.classList.add('chore-dragging');
+        }
+
+        function handleDragEnd(e) {
+            e.currentTarget.classList.remove('chore-dragging');
+            document.querySelectorAll('.drag-over-target').forEach(t => t.classList.remove('drag-over-target'));
+            draggedChoreId = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault(); // Necessary to allow drop
+            if (e.type === 'touchmove') {
+                 // Find target under touch
+                const touch = e.touches[0];
+                const target = document.elementFromPoint(touch.clientX, touch.clientY);
+                const dropTarget = target ? target.closest('.member-drop-target') : null;
+                
+                // Remove from old targets
+                document.querySelectorAll('.drag-over-target').forEach(t => t.classList.remove('drag-over-target'));
+                if (dropTarget) {
+                    dropTarget.classList.add('drag-over-target');
+                }
+            } else {
+                if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+                const dropTarget = e.currentTarget.closest('.member-drop-target');
+                if (dropTarget) {
+                    dropTarget.classList.add('drag-over-target');
+                }
+            }
+        }
+        
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over-target');
+        }
+        
+        async function handleDrop(e) {
+            e.preventDefault();
+            
+            let dropTarget, choreId;
+            if(e.type === 'touchend') {
+                const target = document.querySelector('.drag-over-target');
+                if (!target) return;
+                dropTarget = target;
+                choreId = draggedChoreId; // Get from global
+            } else {
+                dropTarget = e.currentTarget.closest('.member-drop-target');
+                choreId = e.dataTransfer.getData('text/plain');
+            }
+
+            if (!dropTarget || !choreId) return;
+
+            dropTarget.classList.remove('drag-over-target');
+            const newMemberId = dropTarget.dataset.memberId;
+            const assignedTo = newMemberId === 'unassigned' ? null : newMemberId;
+
+            // Check if it's a new assignment
+            const chore = localState.dailyChores.find(c => c.id === choreId);
+            if (chore && chore.assignedTo !== assignedTo) {
+                try {
+                    await updateDoc(doc(db, F_DAILY_CHORES_COL, choreId), {
+                        assignedTo: assignedTo
+                    });
+                    showToast('Chore reassigned!', 'success');
+                    playSound('success');
+                } catch (err) {
+                    console.error("Drop assign error:", err);
+                    showToast('Error reassigning chore.', 'error');
+                    playSound('error');
+                }
+            }
+        }
+
+        // --- Rewards Handlers ---
+        function handleSelectRedeemer(e) {
+            selectedRedeemerId = e.target.value;
+            renderAvailableRewards();
+        }
+        
+        window.handleRedeemReward = async (rewardId) => {
+            if (!selectedRedeemerId) {
+                showToast('Please select who you are first.', 'error');
+                playSound('error');
+                return;
+            }
+            
+            const member = localState.members.find(m => m.id === selectedRedeemerId);
+            const reward = localState.rewards.find(r => r.id === rewardId);
+            
+            if (!member || !reward) return;
+            
+            if ((member.points || 0) < reward.cost) {
+                showToast("You don't have enough points!", 'error');
+                playSound('error');
+                return;
+            }
+            
+            try {
+                // 1. Subtract points
+                const newPoints = member.points - reward.cost;
+                await updateDoc(doc(db, F_MEMBERS_COL, member.id), {
+                    points: newPoints
+                });
+                
+                // 2. Add to claimed rewards
+                await addDoc(collection(db, F_CLAIMED_REWARDS_COL), {
+                    rewardId: reward.id,
+                    memberId: member.id,
+                    name: reward.name,
+                    emoji: reward.emoji,
+                    cost: reward.cost,
+                    claimedAt: serverTimestamp(),
+                    delivered: false
+                });
+                
+                showToast('Reward claimed! Nice work!', 'success');
+                playSound('redeem');
+                showConfetti();
+                
+            } catch (e) {
+                console.error("Error redeeming reward:", e);
+                showToast('Error claiming reward.', 'error');
+                playSound('error');
+            }
+        };
+        
+        window.handleDeliverReward = async (claimId) => {
+            try {
+                await updateDoc(doc(db, F_CLAIMED_REWARDS_COL, claimId), {
+                    delivered: true
+                });
+                showToast('Reward marked as delivered.', 'success');
+                playSound('success');
+            } catch (e) {
+                console.error("Error delivering reward:", e);
+                showToast('Error updating reward.', 'error');
+                playSound('error');
+            }
+        };
+        
+        // --- Setup Handlers (Add) ---
+        async function handleAddMember(e) {
+            e.preventDefault();
+            const name = document.getElementById('member-name').value;
+            const emoji = document.getElementById('member-emoji').value;
+            const color = document.getElementById('member-color').value;
+            
+            if (!name || !emoji || !color) {
+                showToast('Please fill all fields.', 'error'); return;
+            }
+            
+            try {
+                await addDoc(collection(db, F_MEMBERS_COL), {
+                    name, emoji, color, points: 0
+                });
+                showToast('Member added!', 'success');
+                playSound('success');
+                e.target.reset();
+            } catch(e) {
+                console.error("Error adding member:", e);
+                showToast('Error adding member.', 'error');
+                playSound('error');
+            }
+        }
+
+        async function handleAddChore(e) {
+            e.preventDefault();
+            const name = document.getElementById('chore-name').value;
+            const emoji = document.getElementById('chore-emoji').value;
+            const points = parseInt(document.getElementById('chore-points').value);
+            const defaultAssignee = document.getElementById('chore-default-assignee').value;
+            const schedule = Array.from(document.querySelectorAll('[name="chore-schedule"]:checked')).map(cb => cb.value);
+
+            if (!name || !emoji || isNaN(points)) {
+                showToast('Please fill all fields correctly.', 'error'); return;
+            }
+            
+            try {
+                await addDoc(collection(db, F_CHORES_COL), {
+                    name, emoji, points, defaultAssignee, schedule
+                });
+                showToast('Chore template added!', 'success');
+                playSound('success');
+                e.target.reset();
+            } catch(e) {
+                console.error("Error adding chore:", e);
+                showToast('Error adding chore.', 'error');
+                playSound('error');
+            }
+        }
+        
+        async function handleAddReward(e) {
+            e.preventDefault();
+            const name = document.getElementById('reward-name').value;
+            const emoji = document.getElementById('reward-emoji').value;
+            const cost = parseInt(document.getElementById('reward-cost').value);
+
+            if (!name || !emoji || isNaN(cost) || cost <= 0) {
+                showToast('Please fill all fields correctly.', 'error'); return;
+            }
+            
+            try {
+                await addDoc(collection(db, F_REWARDS_COL), {
+                    name, emoji, cost
+                });
+                showToast('Reward added!', 'success');
+                playSound('success');
+                e.target.reset();
+            } catch(e) {
+                console.error("Error adding reward:", e);
+                showToast('Error adding reward.', 'error');
+                playSound('error');
+            }
+        }
+        
+        // --- Setup Handlers (Admin/Edit) ---
+        async function handleAdjustPoints(e) {
+            e.preventDefault();
+            const memberId = document.getElementById('adjust-points-member').value;
+            const amount = parseInt(document.getElementById('adjust-points-amount').value);
+            const password = document.getElementById('adjust-points-password').value;
+            
+            if (!memberId || isNaN(amount)) {
+                showToast('Please select a member and enter an amount.', 'error'); return;
+            }
+            
+            if (password !== PASSWORD) {
+                showToast('Incorrect password.', 'error');
+                playSound('error');
+                return;
+            }
+
+            const member = localState.members.find(m => m.id === memberId);
+            if (!member) return;
+            
+            const newPoints = (member.points || 0) + amount;
+            
+            try {
+                await updateDoc(doc(db, F_MEMBERS_COL, memberId), {
+                    points: newPoints
+                });
+                showToast(`Points adjusted for ${member.name}.`, 'success');
+                playSound('success');
+                e.target.reset();
+            } catch(e) {
+                console.error("Error adjusting points:", e);
+                showToast('Error adjusting points.', 'error');
+                playSound('error');
+            }
+        }
+
+        // --- Setup Handlers (Edit Modals) ---
+        window.openEditMemberModal = (memberId) => {
+            const member = localState.members.find(m => m.id === memberId);
+            if (!member) return;
+            document.getElementById('edit-member-id').value = member.id;
+            document.getElementById('edit-member-name').value = member.name;
+            document.getElementById('edit-member-emoji').value = member.emoji;
+            document.getElementById('edit-member-color').value = member.color;
+            showModal('edit-member-modal');
+        };
+        
+        async function handleEditMember(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-member-id').value;
+            const name = document.getElementById('edit-member-name').value;
+            const emoji = document.getElementById('edit-member-emoji').value;
+            const color = document.getElementById('edit-member-color').value;
+            
+            try {
+                await updateDoc(doc(db, F_MEMBERS_COL, id), { name, emoji, color });
+                showToast('Member updated!', 'success');
+                playSound('success');
+                hideModal('edit-member-modal');
+            } catch(e) {
+                console.error("Error updating member:", e);
+                showToast('Error updating member.', 'error');
+                playSound('error');
+            }
+        }
+        
+        window.openEditChoreModal = (choreId) => {
+            const chore = localState.chores.find(c => c.id === choreId);
+            if (!chore) return;
+            
+            document.getElementById('edit-chore-id').value = chore.id;
+            document.getElementById('edit-chore-name').value = chore.name;
+            document.getElementById('edit-chore-emoji').value = chore.emoji;
+            document.getElementById('edit-chore-points').value = chore.points;
+            
+            // Repopulate dropdown and select
+            const assigneeSelect = document.getElementById('edit-chore-default-assignee');
+            assigneeSelect.innerHTML = `
+                <option value="unassigned">Default: Unassigned</option>
+                ${localState.members.map(m => `<option value="${m.id}">${m.emoji} ${m.name}</option>`).join('')}
+            `;
+            assigneeSelect.value = chore.defaultAssignee || 'unassigned';
+            
+            // Repopulate checkboxes
+            const scheduleContainer = document.getElementById('edit-chore-schedule-container');
+            scheduleContainer.innerHTML = DAYS_OF_WEEK.map(day => {
+                const checked = chore.schedule && chore.schedule.includes(day) ? 'checked' : '';
+                return `<label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="edit-chore-schedule" value="${day}" class="form-checkbox rounded" ${checked}> ${day.toUpperCase()}</label>`;
+            }).slice(1).concat(DAYS_OF_WEEK.slice(0,1)).map(dayHtml => dayHtml.replace('SUN', 'Sun')).join(''); // Mon-Sun order
+            
+            showModal('edit-chore-modal');
+        };
+        
+        async function handleEditChore(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-chore-id').value;
+            const name = document.getElementById('edit-chore-name').value;
+            const emoji = document.getElementById('edit-chore-emoji').value;
+            const points = parseInt(document.getElementById('edit-chore-points').value);
+            const defaultAssignee = document.getElementById('edit-chore-default-assignee').value;
+            const schedule = Array.from(document.querySelectorAll('[name="edit-chore-schedule"]:checked')).map(cb => cb.value);
+
+            try {
+                await updateDoc(doc(db, F_CHORES_COL, id), {
+                    name, emoji, points, defaultAssignee, schedule
+                });
+                showToast('Chore template updated!', 'success');
+                playSound('success');
+                hideModal('edit-chore-modal');
+            } catch(e) {
+                console.error("Error updating chore:", e);
+                showToast('Error updating chore.', 'error');
+                playSound('error');
+            }
+        }
+        
+        window.openEditRewardModal = (rewardId) => {
+            const reward = localState.rewards.find(r => r.id === rewardId);
+            if (!reward) return;
+            document.getElementById('edit-reward-id').value = reward.id;
+            document.getElementById('edit-reward-name').value = reward.name;
+            document.getElementById('edit-reward-emoji').value = reward.emoji;
+            document.getElementById('edit-reward-cost').value = reward.cost;
+            showModal('edit-reward-modal');
+        };
+        
+        async function handleEditReward(e) {
+            e.preventDefault();
+            const id = document.getElementById('edit-reward-id').value;
+            const name = document.getElementById('edit-reward-name').value;
+            const emoji = document.getElementById('edit-reward-emoji').value;
+            const cost = parseInt(document.getElementById('edit-reward-cost').value);
+            
+            try {
+                await updateDoc(doc(db, F_REWARDS_COL, id), { name, emoji, cost });
+                showToast('Reward updated!', 'success');
+                playSound('success');
+                hideModal('edit-reward-modal');
+            } catch(e) {
+                console.error("Error updating reward:", e);
+                showToast('Error updating reward.', 'error');
+                playSound('error');
+            }
+        }
+
+
+        // === App Initialization ===
         document.addEventListener('DOMContentLoaded', () => {
-             console.log("DOM fully loaded and parsed");
-             try { // Wrap DOMContentLoaded content
-                 // Populate emoji dropdowns now that elements exist
-                 populateEmojiSelect(document.getElementById('adhoc-chore-emoji'), choreEmojis);
-                 populateEmojiSelect(document.getElementById('chore-emoji'), choreEmojis);
-                 populateEmojiSelect(document.getElementById('reward-emoji'), choreEmojis, '🎉');
-                 
-                 // Attach modal listeners here AFTER elements exist
-                  if (assignmentOptionsContainer) {
-                     assignmentOptionsContainer.addEventListener('click', (e) => {
-                        const button = e.target.closest('.assign-option');
-                        if (button && currentChoreToAssign) {
-                           const newAssigneeId = button.dataset.assigneeId;
-                           handleChoreAssignment(currentChoreToAssign, newAssigneeId); 
-                           closeAssignmentModal();
-                        }
-                     });
-                 }
-                 if (cancelAssignmentButton) cancelAssignmentButton.addEventListener('click', closeAssignmentModal); 
-                 if (assignmentModal) {
-                     assignmentModal.addEventListener('click', (e) => { 
-                         if (e.target === assignmentModal) {
-                             closeAssignmentModal();
-                         }
-                     }); 
-                 }
+            // Init time
+            updateTime();
+            setInterval(updateTime, 1000); // Update time every second
+            
+            // Init sounds
+            document.body.addEventListener('click', initSounds, { once: true });
+            
+            // Init Firebase
+            initFirebase();
+            
+            // Init Icons
+            lucide.createIcons();
+            
+            // Init default views
+            showView('daily');
+            showSetupView('members');
 
+            // --- Attach Event Listeners ---
+            
+            // Navigation
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showView(e.currentTarget.dataset.view);
+                });
+            });
+            document.querySelectorAll('.setup-nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    showSetupView(e.currentTarget.dataset.setupView);
+                });
+            });
+            
+            // Daily List
+            document.getElementById('add-adhoc-chore-form').addEventListener('submit', handleAddAdHocChore);
+            document.getElementById('assign-chore-submit').addEventListener('click', handleSubmitAssignment);
+            
+            // Rewards
+            document.getElementById('redeem-member-select').addEventListener('change', handleSelectRedeemer);
 
-                 initializeFirebase(); // Initialize Firebase after populating static elements
-             } catch (e) {
-                 console.error("Error during DOMContentLoaded setup:", e);
-                 // Display a user-friendly error if critical setup fails
-                 document.body.innerHTML = '<div class="p-8 text-center text-red-600">Failed to initialize the application. Please check the console for errors.</div>';
-             }
+            // Setup Forms (Add)
+            document.getElementById('add-member-form').addEventListener('submit', handleAddMember);
+            document.getElementById('add-chore-form').addEventListener('submit', handleAddChore);
+            document.getElementById('add-reward-form').addEventListener('submit', handleAddReward);
+            
+            // Setup Forms (Edit)
+            document.getElementById('edit-member-form').addEventListener('submit', handleEditMember);
+            document.getElementById('edit-chore-form').addEventListener('submit', handleEditChore);
+            document.getElementById('edit-reward-form').addEventListener('submit', handleEditReward);
+
+            // Setup Admin
+            document.getElementById('adjust-points-form').addEventListener('submit', handleAdjustPoints);
+            
+            // Modals
+            document.getElementById('password-submit').addEventListener('click', handleSubmitPassword);
+            document.getElementById('confirm-delete-button').addEventListener('click', () => {
+                if (deleteSuccessCallback) deleteSuccessCallback();
+            });
         });
-
 
     </script>
 </body>
