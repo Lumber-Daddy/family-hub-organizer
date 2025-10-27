@@ -542,6 +542,7 @@
         let completionsUnsubscribe = () => {}; // Now listens for the whole week
         let dateTimeInterval = null; // Interval for updating time display
         let synth; // Tone.js synth
+        let paths; // Declare paths globally
         let audioContextStarted = false; // Flag for audio context
 
         let memberColors = [
@@ -738,6 +739,20 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
+                 // *** Define paths object HERE, after db is initialized ***
+                 paths = {
+                    members: () => collection(db, `artifacts/${FIREBASE_APP_ID}/public/data/members`),
+                    member: (id) => doc(db, `artifacts/${FIREBASE_APP_ID}/public/data/members`, id),
+                    chores: () => collection(db, `artifacts/${FIREBASE_APP_ID}/public/data/chores`),
+                    chore: (id) => doc(db, `artifacts/${FIREBASE_APP_ID}/public/data/chores`, id),
+                    rewards: () => collection(db, `artifacts/${FIREBASE_APP_ID}/public/data/rewards`),
+                    reward: (id) => doc(db, `artifacts/${FIREBASE_APP_ID}/public/data/rewards`, id),
+                    completions: () => collection(db, `artifacts/${FIREBASE_APP_ID}/public/data/completions`),
+                    completion: (id) => doc(db, `artifacts/${FIREBASE_APP_ID}/public/data/completions`, id),
+                };
+                 console.log("Paths object defined:", paths); // Log paths definition
+                // *** End paths definition ***
+
                 initializeSounds(); 
 
                 console.log("Setting up Auth listener..."); // Log before listener
@@ -765,8 +780,7 @@
             }
         }
 
-        // --- Firestore Data Paths ---
-        const paths = { /* ... unchanged ... */ };
+        // --- Firestore Data Paths (REMOVED - defined in initializeFirebase) ---
 
         // --- Firestore Listeners (Updated Completions Listener) ---
         function setupFirestoreListeners() {
@@ -779,6 +793,12 @@
                 if (typeof choresUnsubscribe === 'function') choresUnsubscribe();
                 if (typeof rewardsUnsubscribe === 'function') rewardsUnsubscribe();
                 if (typeof completionsUnsubscribe === 'function') completionsUnsubscribe();
+
+                // *** Defensive Check for paths object ***
+                if (typeof paths !== 'object' || paths === null || typeof paths.members !== 'function') {
+                     throw new Error("Internal Error: paths object not correctly defined before setting listeners.");
+                }
+                console.log("Paths object confirmed before listeners."); // Log confirmation
 
                 // Members
                 membersUnsubscribe = onSnapshot(paths.members(), (snapshot) => {
@@ -1141,6 +1161,13 @@
              console.log("Changing tab to:", tabId); // Log tab change
              // Wrap in try...catch
             try {
+                 // Check if the sidebar button exists before proceeding
+                 const navBtnEl = document.getElementById(`nav-${tabId}`);
+                 if (!navBtnEl) {
+                      console.error(`Nav button element not found for tab: ${tabId}`);
+                      return; // Prevent changing if button doesn't exist
+                 }
+
                 currentTab = tabId;
                 // Hide all content tabs first
                 document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
@@ -1150,17 +1177,12 @@
                      contentEl.classList.remove('hidden');
                  } else {
                      console.error(`Content element not found for tab: ${tabId}`);
-                     return; 
+                     return; // Stop if content area doesn't exist
                  }
                 
                 // Update sidebar button styles
                 document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('nav-btn-active'));
-                const navBtnEl = document.getElementById(`nav-${tabId}`);
-                if (navBtnEl) {
-                     navBtnEl.classList.add('nav-btn-active');
-                } else {
-                     console.error(`Nav button element not found for tab: ${tabId}`);
-                }
+                 navBtnEl.classList.add('nav-btn-active'); // We know it exists now
 
 
                 // Update title
