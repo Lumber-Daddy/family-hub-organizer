@@ -33,6 +33,15 @@
     <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide.min.js"></script>
 
     <!-- 5. Custom Styles -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <!-- 4. Icons (Lucide) -->
+    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide.min.js"></script>
+
+    <!-- Suppress favicon.ico 404 error -->
+    <link rel="icon" href="data:,">
+
+    <!-- 5. Custom Styles -->
     <style>
         /* Smooth transitions for UI elements */
         .transition-all {
@@ -447,14 +456,13 @@
 
     <!-- Main Application Script -->
     <script type="module">
-        // === Firebase SDK Imports (from global window object) ===
-        const {
-            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setLogLevel
-        } = window.firebase;
-        const {
-            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
-            onSnapshot, collection, query, where, getDocs, serverTimestamp
-        } = window.firebase;
+        // === Firebase SDK Imports (MOVED HERE) ===
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, 
+            onSnapshot, collection, query, where, getDocs, serverTimestamp, setLogLevel
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // === Global State ===
         let db, auth, userId, appId;
@@ -1842,4 +1850,5 @@
     </script>
 </body>
 </html>
+
 
