@@ -9,30 +9,10 @@
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- 2. Firebase JS SDKs (using modules) -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setLogLevel } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { 
-            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, 
-            onSnapshot, collection, query, where, getDocs, serverTimestamp 
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-        // Make SDK functions globally available for inline event handlers
-        window.firebase = {
-            initializeApp, getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged, setLogLevel,
-            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
-            onSnapshot, collection, query, where, getDocs, serverTimestamp
-        };
-    </script>
+    <!-- This block has been removed. Imports are handled in the main script at the bottom. -->
     
     <!-- 3. Helper Libraries: Tone.js (sound) & Confetti.js (animation) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
-    <!-- 4. Icons (Lucide) -->
-    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide.min.js"></script>
-
-    <!-- 5. Custom Styles -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
     <!-- 4. Icons (Lucide) -->
@@ -456,7 +436,7 @@
 
     <!-- Main Application Script -->
     <script type="module">
-        // === Firebase SDK Imports (MOVED HERE) ===
+        // === Firebase SDK Imports (CONSOLIDATED & FIXED) ===
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
@@ -1850,5 +1830,6 @@
     </script>
 </body>
 </html>
+
 
 
