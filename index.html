@@ -61,6 +61,15 @@
             outline: 2px dashed #3F51B5;
             background-color: #E8EAF6; /* indigo-100 */
         }
+        /* Animation for chore complete */
+        @keyframes popIn {
+            0% { transform: scale(0.5); opacity: 0; }
+            80% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop-in {
+            animation: popIn 0.3s ease-out;
+        }
     </style>
 </head>
 <body class="h-full flex overflow-hidden">
@@ -141,7 +150,7 @@
                 </details>
 
                 <!-- Chore Lists Container -->
-                <div id="daily-chores-container" class="space-y-6">
+                <div id="daily-chores-container" class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <!-- Member sections populated by JS -->
                 </div>
             </div>
@@ -439,9 +448,9 @@
     <script type="module">
         // === Firebase SDK Imports ===
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
-            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
+            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, 
             onSnapshot, collection, query, where, getDocs, serverTimestamp, setLogLevel
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -512,7 +521,11 @@
             
             try {
                 if (soundName === 'complete') {
-                    sounds.complete.triggerAttackRelease('C5', '8n', Tone.now());
+                    // Fun ascending arpeggio
+                    const now = Tone.now();
+                    sounds.redeem.triggerAttackRelease('C5', '16n', now);
+                    sounds.redeem.triggerAttackRelease('E5', '16n', now + 0.1);
+                    sounds.redeem.triggerAttackRelease('G5', '16n', now + 0.2);
                 } else if (soundName === 'uncomplete') {
                     sounds.uncomplete.triggerAttackRelease('C4', '8n', Tone.now());
                 } else if (soundName === 'redeem') {
@@ -1006,13 +1019,14 @@
                         ${dayChores.length > 0 ? dayChores.map(chore => {
                             const member = getMemberById(chore.assignedTo);
                             const color = member ? member.color : 'bg-gray-400';
+                            const borderColor = member ? member.color.replace('bg-', 'border-') : 'border-gray-200';
                             const initial = member ? (member.emoji || member.name[0]) : '?';
                             return `
-                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-md ${chore.isComplete ? 'chore-complete' : ''}">
+                                <div class="flex items-center justify-between gap-2 p-2 bg-white rounded-md border-l-4 ${borderColor} ${chore.isComplete ? 'chore-complete' : ''} shadow-sm">
+                                    <span class="text-sm truncate">${chore.emoji} ${chore.name}</span>
                                     <span class="h-6 w-6 rounded-full ${color} flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" title="${member ? member.name : 'Unassigned'}">
                                         ${initial}
                                     </span>
-                                    <span class="text-sm truncate">${chore.emoji} ${chore.name}</span>
                                 </div>
                             `;
                         }).join('') : '<p class="text-xs text-gray-400">No chores.</p>'}
@@ -1149,610 +1163,20 @@
                     select.innerHTML = memberOptions;
                 }
                 
-                // Restore previous selection if it still exists
-                if (Array.from(select.options).some(opt => opt.value === currentVal)) {
-                    select.value = currentVal;
-                }
-            });
-        }
-        
-        function renderSetupMembersList() {
-            const listContainer = document.getElementById('setup-members-list');
-            if (!listContainer) return;
-            listContainer.innerHTML = '';
-            
-            localState.members.forEach(member => {
-                const item = document.createElement('div');
-                item.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
-                item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="h-8 w-8 rounded-full ${member.color} flex items-center justify-center text-white font-bold text-sm">
-                            ${member.emoji || member.name[0]}
-                        </span>
-                        <div>
-                            <p class="font-medium text-lg">${member.name}</p>
-                            <p class="text-sm text-green-600">${member.points || 0} pts</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="edit-member-btn p-2 rounded-full hover:bg-gray-200" data-member-id="${member.id}" title="Edit Member">
-                            <span data-lucide="edit-2" class="h-5 w-5 text-blue-600"></span>
-                        </button>
-                        <button class="delete-member-btn p-2 rounded-full hover:bg-gray-200" data-member-id="${member.id}" data-member-name="${member.name}" title="Delete Member">
-                            <span data-lucide="trash-2" class="h-5 w-5 text-red-600"></span>
-                        </button>
-                    </div>
-                `;
-                listContainer.appendChild(item);
-            });
-            
-            if (localState.members.length === 0) {
-                 listContainer.innerHTML = `<p class="text-gray-500">No members added yet.</p>`;
-            }
-        }
-
-        function renderSetupChoresList() {
-            const listContainer = document.getElementById('setup-chores-list');
-            if (!listContainer) return;
-            listContainer.innerHTML = '';
-            
-            localState.chores.forEach(chore => {
-                const member = getMemberById(chore.defaultAssignee);
-                const schedule = chore.schedule ? chore.schedule.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ') : 'None';
-                
-                const item = document.createElement('div');
-                item.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
-                item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="text-3xl">${chore.emoji || '📋'}</span>
-                        <div>
-                            <p class="font-medium text-lg">${chore.name} (+${chore.points} pts)</p>
-                            <p class="text-sm text-gray-600">Schedule: ${schedule}</p>
-                            <p class="text-sm text-gray-600">Default: ${member ? member.name : 'Unassigned'}</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="edit-chore-btn p-2 rounded-full hover:bg-gray-200" data-chore-id="${chore.id}" title="Edit Chore">
-                            <span data-lucide="edit-2" class="h-5 w-5 text-blue-600"></span>
-                        </button>
-                        <button class="delete-chore-btn p-2 rounded-full hover:bg-gray-200" data-chore-id="${chore.id}" data-chore-name="${chore.name}" title="Delete Chore">
-                            <span data-lucide="trash-2" class="h-5 w-5 text-red-600"></span>
-                        </button>
-                    </div>
-                `;
-                listContainer.appendChild(item);
-            });
-            
-            if (localState.chores.length === 0) {
-                 listContainer.innerHTML = `<p class="text-gray-500">No recurring chore templates added yet.</p>`;
-            }
-        }
-        
-        function renderSetupRewardsList() {
-            const listContainer = document.getElementById('setup-rewards-list');
-            if (!listContainer) return;
-            listContainer.innerHTML = '';
-
-            localState.rewards.forEach(reward => {
-                const item = document.createElement('div');
-                item.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
-                item.innerHTML = `
-                    <div class="flex items-center gap-3">
-                        <span class="text-3xl">${reward.emoji || '🎁'}</span>
-                        <div>
-                            <p class="font-medium text-lg">${reward.name}</p>
-                            <p class="text-sm text-green-600">${reward.cost} pts</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2">
-                        <button class="edit-reward-btn p-2 rounded-full hover:bg-gray-200" data-reward-id="${reward.id}" title="Edit Reward">
-                            <span data-lucide="edit-2" class="h-5 w-5 text-blue-600"></span>
-                        </button>
-                        <button class="delete-reward-btn p-2 rounded-full hover:bg-gray-200" data-reward-id="${reward.id}" data-reward-name="${reward.name}" title="Delete Reward">
-                            <span data-lucide="trash-2" class="h-5 w-5 text-red-600"></span>
-                        </button>
-                    </div>
-                `;
-                listContainer.appendChild(item);
-            });
-            
-            if (localState.rewards.length === 0) {
-                 listContainer.innerHTML = `<p class="text-gray-500">No rewards added yet.</p>`;
-            }
-        }
-        
-        function renderEditChoreSchedule(schedule = []) {
-            const container = document.getElementById('edit-chore-schedule-container');
-            container.innerHTML = '';
-            DAYS_OF_WEEK.forEach(day => {
-                const dayLabel = day.charAt(0).toUpperCase() + day.slice(1);
-                const isChecked = schedule.includes(day);
-                container.innerHTML += `
-                    <label class="flex items-center gap-2 p-2 border rounded-lg">
-                        <input type="checkbox" name="edit-chore-schedule" value="${day}" class="form-checkbox rounded" ${isChecked ? 'checked' : ''}> ${dayLabel}
-                    </label>
-                `;
-            });
-        }
-
-
-        // === UI Helpers (Toast, Modals, Confetti) ===
-        function showToast(message, isError = false) {
-            const toast = document.getElementById('toast-message');
-            const text = document.getElementById('toast-text');
-            if (!toast || !text) return;
-
-            text.textContent = message;
-            toast.className = 'fixed bottom-6 right-6 p-4 rounded-lg shadow-xl text-white transition-all'; // Reset
-            
-            if (isError) {
-                toast.classList.add('bg-red-600');
-                playSound('error');
-            } else {
-                toast.classList.add('bg-green-600');
-                playSound('success');
-            }
-
-            toast.classList.remove('translate-x-[120%]');
-            
-            setTimeout(() => {
-                toast.classList.add('translate-x-[120%]');
-            }, 3000);
-        }
-
-        function showModal(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.remove('hidden');
-            }
-        }
-        
-        // Make hideModal globally accessible
-        window.hideModal = function(modalId) {
-            const modal = document.getElementById(modalId);
-            if (modal) {
-                modal.classList.add('hidden');
-                
-                // Clear password modal state
-                if(modalId === 'password-modal') {
-                    document.getElementById('password-input').value = '';
-                    document.getElementById('password-error').classList.add('hidden');
-                    passwordSuccessCallback = null;
-                }
-                // Clear delete modal state
-                if(modalId === 'confirm-delete-modal') {
-                    document.getElementById('delete-item-name').textContent = '';
-                    deleteSuccessCallback = null;
-                }
-            }
-        }
-
-        function showPasswordModal(callback) {
-            passwordSuccessCallback = callback;
-            showModal('password-modal');
-        }
-
-        function showDeleteModal(itemName, callback) {
-            document.getElementById('delete-item-name').textContent = itemName;
-            deleteSuccessCallback = callback;
-            showModal('confirm-delete-modal');
-        }
-
-        function runConfetti() {
-            if (!window.confetti) return;
-            
-            const duration = 3 * 1000;
-            const animationEnd = Date.now() + duration;
-            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
-
-            function randomInRange(min, max) {
-                return Math.random() * (max - min) + min;
-            }
-
-            const interval = setInterval(function() {
-                const timeLeft = animationEnd - Date.now();
-                if (timeLeft <= 0) return clearInterval(interval);
-
-                const particleCount = 50 * (timeLeft / duration);
-                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-            }, 250);
-        }
-
-        // === Event Handlers (Setup) ===
-
-        // --- Member Handlers ---
-        async function handleAddMember(e) {
-            e.preventDefault();
-            const name = document.getElementById('member-name').value.trim();
-            const emoji = document.getElementById('member-emoji').value.trim();
-            const color = document.getElementById('member-color').value;
-
-            if (!name || !emoji || !color) {
-                showToast("Please fill out all member fields.", true);
-                return;
-            }
-            
-            try {
-                await addDoc(collection(db, F_MEMBERS_COL), {
-                    name,
-                    emoji,
-                    color,
-                    points: 0,
-                    createdAt: serverTimestamp()
-                });
-                showToast("Member added successfully!");
-                e.target.reset();
-            } catch (error) {
-                console.error("Error adding member: ", error);
-                showToast("Failed to add member.", true);
-            }
-        }
-
-        function handleAdjustPoints(e) {
-            e.preventDefault();
-            const memberId = document.getElementById('adjust-points-member').value;
-            const amount = parseInt(document.getElementById('adjust-points-amount').value, 10);
-            const password = document.getElementById('adjust-points-password').value;
-
-            if (!memberId || !amount) {
-                showToast("Please select a member and enter an amount.", true);
-                return;
-            }
-            if (password !== PASSWORD) {
-                showToast("Incorrect admin password.", true);
-                return;
-            }
-            
-            const member = getMemberById(memberId);
-            if (!member) return;
-            
-            const newPoints = (member.points || 0) + amount;
-            
-            try {
-                const memberRef = doc(db, F_MEMBERS_COL, memberId);
-                updateDoc(memberRef, { points: newPoints });
-                showToast(`Points adjusted for ${member.name}. New total: ${newPoints}`);
-                e.target.reset();
-            } catch (error) {
-                console.error("Error adjusting points: ", error);
-                showToast("Failed to adjust points.", true);
-            }
-        }
-
-        function handleOpenEditMember(e) {
-            const memberId = e.target.closest('.edit-member-btn').dataset.memberId;
-            const member = getMemberById(memberId);
-            if (!member) return;
-            
-            document.getElementById('edit-member-id').value = member.id;
-            document.getElementById('edit-member-name').value = member.name;
-            document.getElementById('edit-member-emoji').value = member.emoji;
-            document.getElementById('edit-member-color').value = member.color;
-            
-            showModal('edit-member-modal');
-        }
-        
-        async function handleEditMember(e) {
-            e.preventDefault();
-            const memberId = document.getElementById('edit-member-id').value;
-            const name = document.getElementById('edit-member-name').value.trim();
-            const emoji = document.getElementById('edit-member-emoji').value.trim();
-            const color = document.getElementById('edit-member-color').value;
-            
-            if (!memberId || !name || !emoji || !color) {
-                showToast("Please fill out all fields.", true);
-                return;
-            }
-            
-            try {
-                const memberRef = doc(db, F_MEMBERS_COL, memberId);
-                await updateDoc(memberRef, { name, emoji, color });
-                showToast("Member updated successfully!");
-                hideModal('edit-member-modal');
-            } catch (error) {
-                console.error("Error updating member: ", error);
-                showToast("Failed to update member.", true);
-            }
-        }
-
-        function handleDeleteMember(e) {
-            const btn = e.target.closest('.delete-member-btn');
-            const memberId = btn.dataset.memberId;
-            const memberName = btn.dataset.memberName;
-            
-            showPasswordModal(() => {
-                showDeleteModal(memberName, async () => {
-                    try {
-                        // TODO: Handle reassignment of chores, etc.
-                        // For now, just delete the member.
-                        await deleteDoc(doc(db, F_MEMBERS_COL, memberId));
-                        showToast(`Member ${memberName} deleted.`);
-                        hideModal('confirm-delete-modal');
-                    } catch (error) {
-                        console.error("Error deleting member: ", error);
-                        showToast("Failed to delete member.", true);
-                    }
-                });
-            });
-        }
-
-        // --- Chore Handlers ---
-        async function handleAddChore(e) {
-            e.preventDefault();
-            const name = document.getElementById('chore-name').value.trim();
-            const emoji = document.getElementById('chore-emoji').value.trim();
-            const points = parseInt(document.getElementById('chore-points').value, 10);
-            const defaultAssignee = document.getElementById('chore-default-assignee').value;
-            const scheduleCheckboxes = document.querySelectorAll('input[name="chore-schedule"]:checked');
-            const schedule = Array.from(scheduleCheckboxes).map(cb => cb.value);
-
-            if (!name || !emoji || !points || points < 0) {
-                showToast("Please fill out name, emoji, and points.", true);
-                return;
-            }
-            
-            const newChoreTemplate = {
-                name,
-                emoji,
-                points,
-                defaultAssignee: defaultAssignee === 'unassigned' ? null : defaultAssignee,
-                schedule,
-                createdAt: serverTimestamp()
-            };
-            
-            try {
-                const docRef = await addDoc(collection(db, F_CHORES_COL), newChoreTemplate);
-                showToast("Chore template added!");
-                e.target.reset();
-                
-                // Now, generate the daily chores for this new template for the week
-                await generateDailyChoresForTemplate(newChoreTemplate, docRef.id);
-                
-            } catch (error) {
-                console.error("Error adding chore: ", error);
-                showToast("Failed to add chore.", true);
-            }
-        }
-        
-        function handleOpenEditChore(e) {
-            const choreId = e.target.closest('.edit-chore-btn').dataset.choreId;
-            const chore = localState.chores.find(c => c.id === choreId);
-            if (!chore) return;
-            
-            document.getElementById('edit-chore-id').value = chore.id;
-            document.getElementById('edit-chore-name').value = chore.name;
-            document.getElementById('edit-chore-emoji').value = chore.emoji;
-            document.getElementById('edit-chore-points').value = chore.points;
-            document.getElementById('edit-chore-default-assignee').value = chore.defaultAssignee || 'unassigned';
-            
-            renderEditChoreSchedule(chore.schedule);
-            
-            showModal('edit-chore-modal');
-        }
-        
-        async function handleEditChore(e) {
-            e.preventDefault();
-            const choreId = document.getElementById('edit-chore-id').value;
-            const name = document.getElementById('edit-chore-name').value.trim();
-            const emoji = document.getElementById('edit-chore-emoji').value.trim();
-            const points = parseInt(document.getElementById('edit-chore-points').value, 10);
-            const defaultAssignee = document.getElementById('edit-chore-default-assignee').value;
-            const scheduleCheckboxes = document.querySelectorAll('input[name="edit-chore-schedule"]:checked');
-            const schedule = Array.from(scheduleCheckboxes).map(cb => cb.value);
-            
-            if (!choreId || !name || !emoji || !points || points < 0) {
-                showToast("Please fill out all fields correctly.", true);
-                return;
-            }
-            
-            const updatedChoreTemplate = {
-                name,
-                emoji,
-                points,
-                schedule,
-                defaultAssignee: defaultAssignee === 'unassigned' ? null : defaultAssignee
-            };
-            
-            try {
-                const choreRef = doc(db, F_CHORES_COL, choreId);
-                await updateDoc(choreRef, updatedChoreTemplate);
-                
-                // Now, re-sync the weekly chores based on this updated template
-                await generateDailyChoresForTemplate(updatedChoreTemplate, choreId);
-                
-                showToast("Chore template updated!");
-                hideModal('edit-chore-modal');
-            } catch (error) {
-                console.error("Error updating chore: ", error);
-                showToast("Failed to update chore.", true);
-            }
-        }
-
-        function handleDeleteChore(e) {
-            const btn = e.target.closest('.delete-chore-btn');
-            const choreId = btn.dataset.choreId;
-            const choreName = btn.dataset.choreName;
-            
-            showPasswordModal(() => {
-                showDeleteModal(choreName, async () => {
-                    try {
-                        // 1. Delete the chore template
-                        await deleteDoc(doc(db, F_CHORES_COL, choreId));
-                        
-                        // 2. Delete all *future, non-completed* daily chores from this template
-                        const todayISO = new Date().toISOString().split('T')[0];
-                        const q = query(
-                            collection(db, F_DAILY_CHORES_COL),
-                            where("templateId", "==", choreId),
-                            where("date", ">=", todayISO),
-                            where("isComplete", "==", false)
-                        );
-                        const snapshot = await getDocs(q);
-                        for (const d of snapshot.docs) {
-                            await deleteDoc(doc(db, F_DAILY_CHORES_COL, d.id));
-                        }
-                        
-                        showToast(`Chore template ${choreName} and future tasks deleted.`);
-                        hideModal('confirm-delete-modal');
-                    } catch (error) {
-                        console.error("Error deleting chore: ", error);
-                        showToast("Failed to delete chore.", true);
-                    }
-                });
-            });
-        }
-
-        // --- Reward Handlers ---
-        async function handleAddReward(e) {
-            e.preventDefault();
-            const name = document.getElementById('reward-name').value.trim();
-            const emoji = document.getElementById('reward-emoji').value.trim();
-            const cost = parseInt(document.getElementById('reward-cost').value, 10);
-
-            if (!name || !emoji || !cost || cost <= 0) {
-                showToast("Please fill out all fields with a valid cost.", true);
-                return;
-            }
-            
-            try {
-                await addDoc(collection(db, F_REWARDS_COL), {
-                    name,
-                    emoji,
-                    cost,
-                    createdAt: serverTimestamp()
-                });
-                showToast("Reward added!");
-                e.target.reset();
-            } catch (error) {
-                console.error("Error adding reward: ", error);
-                showToast("Failed to add reward.", true);
-            }
-        }
-        
-        function handleOpenEditReward(e) {
-            const rewardId = e.target.closest('.edit-reward-btn').dataset.rewardId;
-            const reward = localState.rewards.find(r => r.id === rewardId);
-            if (!reward) return;
-            
-            document.getElementById('edit-reward-id').value = reward.id;
-            document.getElementById('edit-reward-name').value = reward.name;
-            document.getElementById('edit-reward-emoji').value = reward.emoji;
-            document.getElementById('edit-reward-cost').value = reward.cost;
-            
-            showModal('edit-reward-modal');
-        }
-        
-        async function handleEditReward(e) {
-            e.preventDefault();
-            const rewardId = document.getElementById('edit-reward-id').value;
-            const name = document.getElementById('edit-reward-name').value.trim();
-            const emoji = document.getElementById('edit-reward-emoji').value.trim();
-            const cost = parseInt(document.getElementById('edit-reward-cost').value, 10);
-
-            if (!rewardId || !name || !emoji || !cost || cost <= 0) {
-                showToast("Please fill out all fields with a valid cost.", true);
-                return;
-            }
-            
-            try {
-                const rewardRef = doc(db, F_REWARDS_COL, rewardId);
-                await updateDoc(rewardRef, { name, emoji, cost });
-                showToast("Reward updated!");
-                hideModal('edit-reward-modal');
-            } catch (error) {
-                console.error("Error updating reward: ", error);
-                showToast("Failed to update reward.", true);
-            }
-        }
-
-        function handleDeleteReward(e) {
-            const btn = e.target.closest('.delete-reward-btn');
-            const rewardId = btn.dataset.rewardId;
-            const rewardName = btn.dataset.rewardName;
-            
-            showPasswordModal(() => {
-                showDeleteModal(rewardName, async () => {
-                    try {
-                        await deleteDoc(doc(db, F_REWARDS_COL, rewardId));
-                        // TODO: What about claimed rewards? For now, they will just show "Deleted Reward"
-                        showToast(`Reward ${rewardName} deleted.`);
-                        hideModal('confirm-delete-modal');
-                    } catch (error) {
-                        console.error("Error deleting reward: ", error);
-                        showToast("Failed to delete reward.", true);
-                    }
-                });
-            });
-        }
-        
-        // === Event Handlers (Daily List) ===
-        
-        async function handleAddAdHocChore(e) {
-            e.preventDefault();
-            const name = document.getElementById('adhoc-name').value.trim();
-            const emoji = document.getElementById('adhoc-emoji').value.trim();
-            const points = parseInt(document.getElementById('adhoc-points').value, 10);
-            const assignedTo = document.getElementById('adhoc-assignee').value;
-            
-            if (!name || !emoji || !points || points <= 0) {
-                showToast("Please fill out name, emoji, and points.", true);
-                return;
-            }
-
-            const todayISO = new Date().toISOString().split('T')[0];
-            
-            try {
-                await addDoc(collection(db, F_DAILY_CHORES_COL), {
-                    name,
-                    emoji,
-                    points,
-                    assignedTo: assignedTo === 'unassigned' ? null : assignedTo,
-                    date: todayISO,
-                    isComplete: false,
-                    isAdHoc: true,
-                    createdAt: serverTimestamp()
-                });
-                showToast("Ad-hoc chore added!");
-                e.target.reset();
-                document.getElementById('add-adhoc-chore-form').closest('details').open = false;
-            } catch (error) {
-                console.error("Error adding ad-hoc chore: ", error);
-                showToast("Failed to add ad-hoc chore.", true);
-            }
-        }
-
-        async function handleToggleChoreComplete(e) {
-            const btn = e.target.closest('.chore-toggle-btn');
-            if (!btn) return;
-            
-            const choreId = btn.dataset.choreId;
-            const memberId = btn.dataset.memberId;
-            const points = parseInt(btn.dataset.points, 10);
-            
-            const chore = localState.dailyChores.find(c => c.id === choreId);
-            if (!chore) return;
-            
-            const newIsComplete = !chore.isComplete;
-            
-            try {
-                // 1. Update the chore
-                const choreRef = doc(db, F_DAILY_CHORES_COL, choreId);
-                await updateDoc(choreRef, { isComplete: newIsComplete });
-                
-                // 2. Update member points (if assigned)
-                if (memberId && memberId !== 'unassigned') {
-                    const member = getMemberById(memberId);
-                    if (member) {
-                        const pointsChange = newIsComplete ? points : -points;
-                        const newPoints = (member.points || 0) + pointsChange;
-                        const memberRef = doc(db, F_MEMBERS_COL, memberId);
-                        await updateDoc(memberRef, { points: newPoints });
-                    }
-                }
-                
-                // 3. Play sound
+                // 3. Play sound & Animate
                 playSound(newIsComplete ? 'complete' : 'uncomplete');
+                
+                if (newIsComplete) {
+                    const choreElement = document.getElementById(`chore-${choreId}`);
+                    if (choreElement) {
+                        const emojiButton = choreElement.querySelector('.chore-toggle-btn');
+                        emojiButton.classList.add('animate-pop-in');
+                        // Remove class after animation finishes
+                        setTimeout(() => {
+                            emojiButton.classList.remove('animate-pop-in');
+                        }, 300);
+                    }
+                }
                 
             } catch (error) {
                 console.error("Error toggling chore: ", error);
