@@ -542,6 +542,7 @@
         let completionsUnsubscribe = () => {};
         let dateTimeInterval = null; // Interval for updating time display
         let synth; // Tone.js synth
+        let audioContextStarted = false; // Flag for audio context
 
         let memberColors = [
             '#3b82f6', '#ef4444', '#10b981', '#f59e0b', '#8b5cf6', 
@@ -662,17 +663,22 @@
             } catch (e) { console.error("createConfetti failed:", e); }
         }
 
+        async function startAudioContext() {
+            if (!audioContextStarted && typeof Tone !== 'undefined' && Tone.context.state !== 'running') {
+                await Tone.start();
+                audioContextStarted = true;
+                console.log("AudioContext started.");
+            }
+        }
+
         function initializeSounds() {
             try {
                 if (typeof Tone !== 'undefined' && Tone.Synth) {
                     synth = new Tone.Synth().toDestination();
                     console.log("Tone.js synth initialized.");
-                    document.body.addEventListener('click', async () => {
-                        if (Tone.context.state !== 'running') {
-                           await Tone.start();
-                           console.log("AudioContext started.");
-                        }
-                    }, { once: true });
+                    // Add listener to start context on first interaction
+                    document.body.addEventListener('click', startAudioContext, { once: true });
+                    document.body.addEventListener('touchend', startAudioContext, { once: true }); // Also for touch
                 } else {
                     console.warn("Tone.js not loaded. Sound effects disabled.");
                 }
@@ -680,12 +686,15 @@
         }
 
         function playSound(note = 'C4', duration = '8n') {
-            if (synth && Tone.context.state === 'running') {
+             if (synth && audioContextStarted && Tone.context.state === 'running') {
                 try {
-                    synth.triggerAttackRelease(note, duration);
+                    // console.log(`Playing sound: ${note}`); // Debug log
+                    synth.triggerAttackRelease(note, duration, Tone.now()); // Use Tone.now() for better timing
                 } catch (error) {
                     console.error("Error playing sound:", error);
                 }
+            } else {
+                 console.warn("Cannot play sound - Synth not ready or AudioContext not running.", {synth, audioContextStarted, state: Tone?.context?.state});
             }
         }
 
@@ -708,7 +717,7 @@
         // --- Date/Time Header Update ---
         function updateDateTimeHeader() {
             try {
-                if (currentTab !== 'daily-list') return; 
+                if (currentTab !== 'daily-list' || !currentTimeEl || !currentDateEl) return; 
                 const now = new Date();
                 currentTimeEl.textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
                 currentDateEl.textContent = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
@@ -731,6 +740,7 @@
                         userId = user.uid;
                         console.log("Firebase Auth Success. UserID:", userId);
                         setupFirestoreListeners();
+                        // Populate emoji dropdowns once DOM is ready
                         populateEmojiSelect(document.getElementById('adhoc-chore-emoji'), choreEmojis);
                         populateEmojiSelect(document.getElementById('chore-emoji'), choreEmojis);
                         populateEmojiSelect(document.getElementById('reward-emoji'), choreEmojis, '🎉');
@@ -787,7 +797,8 @@
                 rewardsUnsubscribe = onSnapshot(paths.rewards(), (snapshot) => {
                     appData.rewards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     console.log("Rewards updated:", appData.rewards);
-                    appData.claimedRewards = appData.rewards.filter(r => r.claimed && !r.delivered);
+                    // Filter claimed rewards immediately after fetching all rewards
+                    appData.claimedRewards = appData.rewards.filter(r => r.claimed === true && r.delivered !== true);
                     renderAll();
                 }, (error) => console.error("Error listening to rewards:", error));
 
@@ -809,13 +820,15 @@
         // --- Render Functions ---
         
         function renderAll() {
-            if (!db) return; 
+            // Added check for DOM elements readiness
+            if (!db || !document.getElementById('daily-assignments-grid')) return; 
             
             try {
                 renderMemberOptions(); 
                 if (appData.members.length > 0) {
                      if (currentTab === 'daily-list') renderDailyList();
-                     else if (currentTab === 'weekly-schedule') renderWeeklySchedule(); 
+                     // Use appData.completions for weekly view now
+                     else if (currentTab === 'weekly-schedule') renderWeeklyScheduleWithCurrentData(); 
                      else if (currentTab === 'points') renderPointsAndRewards();
                      else if (currentTab === 'setup') renderSetup(); 
                      else if (currentTab === 'calendar') renderCalendar();
@@ -865,19 +878,29 @@
             try {
                 const grid = document.getElementById('daily-assignments-grid');
                 const unassignedList = document.getElementById('unassigned-chores-list');
+                // Check if elements exist before modifying
+                if (!grid || !unassignedList) {
+                    console.warn("Daily list elements not found during render.");
+                    return; 
+                }
                 grid.innerHTML = '';
                 unassignedList.innerHTML = '';
 
                 const today = new Date().getDay().toString(); 
                 const todayStr = getTodayString();
                 
-                const todaysCompletions = appData.completions.filter(c => c.date === todayStr);
+                // Use appData.completions which is kept up-to-date by the listener
+                const todaysCompletions = appData.completions.filter(c => c.date === todayStr); 
                 const recurringChores = appData.chores.filter(chore => chore.schedule.includes(today));
                 const allTasksForToday = [];
 
                 // Add recurring
                 recurringChores.forEach(chore => {
-                    const completion = todaysCompletions.find(c => c.choreDefId === chore.id);
+                    // Find the LATEST completion for this recurring chore ID today (handles potential duplicates)
+                     const completion = todaysCompletions
+                        .filter(c => c.choreDefId === chore.id)
+                        .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))[0]; // Assuming a timestamp field exists
+
                     allTasksForToday.push({
                         id: completion ? completion.id : `temp_${chore.id}`,
                         choreDefId: chore.id,
@@ -942,8 +965,12 @@
                     if (!targetList) {
                         targetList = unassignedList;
                     }
-                    
-                    targetList.insertAdjacentHTML('beforeend', choreHTML);
+                     // Ensure targetList is valid before inserting
+                     if (targetList) {
+                        targetList.insertAdjacentHTML('beforeend', choreHTML);
+                     } else {
+                         console.warn("Could not find target list for chore:", task);
+                     }
                 });
 
                 addTouchDragListeners();
@@ -951,46 +978,52 @@
         }
 
         function createChoreItemHTML(task) {
-            const completedClass = task.isComplete ? 'chore-item-completed' : '';
-            return `
-                <div class="chore-item ${completedClass} animate-fade-in-up" 
-                     draggable="true" 
-                     data-task-id="${task.id}" 
-                     data-chore-def-id="${task.choreDefId || 'null'}"
-                     data-completion-doc-id="${task.completionDocId || 'null'}"
-                     data-is-adhoc="${task.isAdhoc}"
-                     data-is-complete="${task.isComplete}"
-                     data-name="${task.name}"
-                     data-emoji="${task.emoji}"
-                     data-points="${task.points}"
-                     data-current-assignee="${task.assigneeId || 'unassigned'}">
-                    
-                    <div class="flex items-center space-x-4 flex-1">
-                        <button class="chore-complete-btn text-3xl p-2 -ml-2 rounded-full transition-transform transform hover:scale-125"
-                                data-is-complete="${task.isComplete}"
-                                data-points="${task.points}"
-                                data-assignee-id="${task.assigneeId}">
-                            ${task.isComplete ? '✅' : task.emoji}
-                        </button>
-                        <div class="flex-1">
-                            <span class="font-medium">${task.name}</span>
-                            <span class="block text-sm text-gray-500">${task.points} points</span>
+             try {
+                const completedClass = task.isComplete ? 'chore-item-completed' : '';
+                return `
+                    <div class="chore-item ${completedClass} animate-fade-in-up" 
+                         draggable="true" 
+                         data-task-id="${task.id}" 
+                         data-chore-def-id="${task.choreDefId || 'null'}"
+                         data-completion-doc-id="${task.completionDocId || 'null'}"
+                         data-is-adhoc="${task.isAdhoc}"
+                         data-is-complete="${task.isComplete}"
+                         data-name="${task.name}"
+                         data-emoji="${task.emoji}"
+                         data-points="${task.points}"
+                         data-current-assignee="${task.assigneeId || 'unassigned'}">
+                        
+                        <div class="flex items-center space-x-4 flex-1">
+                            <button class="chore-complete-btn text-3xl p-2 -ml-2 rounded-full transition-transform transform hover:scale-125"
+                                    data-is-complete="${task.isComplete}"
+                                    data-points="${task.points}"
+                                    data-assignee-id="${task.assigneeId}">
+                                ${task.isComplete ? '✅' : task.emoji}
+                            </button>
+                            <div class="flex-1">
+                                <span class="font-medium">${task.name}</span>
+                                <span class="block text-sm text-gray-500">${task.points} points</span>
+                            </div>
                         </div>
+                        
+                        <button class="assign-chore-btn p-2 text-slate-400 hover:text-indigo-600 rounded-full hover:bg-indigo-100">
+                             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
+                            </svg>
+                        </button>
                     </div>
-                    
-                    <button class="assign-chore-btn p-2 text-slate-400 hover:text-indigo-600 rounded-full hover:bg-indigo-100">
-                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632Z" />
-                        </svg>
-                    </button>
-                </div>
-            `;
+                `;
+             } catch (e) { 
+                 console.error("createChoreItemHTML failed:", e, task); 
+                 return '<div class="text-red-500">Error rendering chore</div>'; // Fallback
+             }
         }
 
-        // --- Weekly Schedule Tab ---
-        async function renderWeeklySchedule() {
-            try {
+        // --- Weekly Schedule Tab (Uses appData.completions now) ---
+        function renderWeeklyScheduleWithCurrentData() {
+             try {
                 const grid = document.getElementById('weekly-schedule-grid');
+                 if (!grid) return;
                 grid.innerHTML = '';
                 const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
                 const todayDayIndex = new Date().getDay(); 
@@ -999,23 +1032,16 @@
                 startOfWeek.setDate(startOfWeek.getDate() - todayDayIndex); 
                 startOfWeek.setHours(0, 0, 0, 0);
 
+                // Use appData.completions - filter for the current week displayed
+                const startOfWeekStr = startOfWeek.toISOString().split('T')[0];
                 const endOfWeek = new Date(startOfWeek);
-                endOfWeek.setDate(endOfWeek.getDate() + 6); 
-                endOfWeek.setHours(23, 59, 59, 999);
+                endOfWeek.setDate(endOfWeek.getDate() + 6);
+                const endOfWeekStr = endOfWeek.toISOString().split('T')[0];
 
-                // Fetch ALL completions for the whole week
-                let weeklyCompletions = [];
-                try {
-                     const q = query(paths.completions(), 
-                        where("date", ">=", startOfWeek.toISOString().split('T')[0]),
-                        where("date", "<=", endOfWeek.toISOString().split('T')[0])
-                    );
-                    const snapshot = await getDocs(q);
-                    weeklyCompletions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                    console.log("Weekly Completions fetched:", weeklyCompletions);
-                } catch (error) {
-                    console.error("Could not fetch completions for weekly view:", error);
-                }
+                // Filter completions that fall within the calculated week start/end dates
+                 const weeklyCompletionsFromAppData = appData.completions.filter(c => c.date >= startOfWeekStr && c.date <= endOfWeekStr);
+                 console.log("Weekly Completions from AppData:", weeklyCompletionsFromAppData);
+
 
                 for (let i = 0; i < 7; i++) { // Loop Sunday (0) to Saturday (6)
                     const dayIndexStr = i.toString(); 
@@ -1033,7 +1059,8 @@
                     appData.chores
                         .filter(c => c.schedule.includes(dayIndexStr))
                         .forEach(c => {
-                            const completion = weeklyCompletions.find(comp => 
+                            // Find completion in filtered weekly completions from appData
+                            const completion = weeklyCompletionsFromAppData.find(comp => 
                                 comp.date === dayDateStr && 
                                 comp.choreDefId === c.id && 
                                 comp.isComplete
@@ -1041,8 +1068,8 @@
                             choresHTML += getScheduleChoreHTML(c, false, completion); 
                         });
                     
-                    // --- Ad-hoc Chores for this day ---
-                    weeklyCompletions
+                    // --- Ad-hoc Chores for this day (from filtered weekly completions) ---
+                    weeklyCompletionsFromAppData
                         .filter(c => c.isAdhoc && c.date === dayDateStr) 
                         .forEach(c => {
                             choresHTML += getScheduleChoreHTML(c, true, c); 
@@ -1056,27 +1083,32 @@
                     `;
                     grid.appendChild(dayCard);
                 }
-            } catch (e) { console.error("renderWeeklySchedule failed:", e); }
+            } catch (e) { console.error("renderWeeklyScheduleWithCurrentData failed:", e); }
         }
 
         function getScheduleChoreHTML(choreData, isAdhoc = false, completion = null) {
-            const assigneeId = isAdhoc ? choreData.assigneeId : choreData.defaultAssignee;
-            const member = appData.members.find(m => m.id === assigneeId);
-            const color = member ? member.color : '#9ca3af';
-            const memberName = member ? member.name.split(' ')[0] : 'Un...';
-            const memberEmoji = member ? member.emoji : '👤';
-            const isComplete = completion?.isComplete; 
-            const completedClass = isComplete ? 'schedule-chore-completed' : ''; 
+            try {
+                const assigneeId = isAdhoc ? choreData.assigneeId : choreData.defaultAssignee;
+                const member = appData.members.find(m => m.id === assigneeId);
+                const color = member ? member.color : '#9ca3af';
+                const memberName = member ? member.name.split(' ')[0] : 'Un...';
+                const memberEmoji = member ? member.emoji : '👤';
+                const isComplete = completion?.isComplete; 
+                const completedClass = isComplete ? 'schedule-chore-completed' : ''; 
 
-            return `
-                <div class="rounded-md p-2 text-xs ${completedClass}" style="background-color: ${color}20; border-left: 4px solid ${color};">
-                    <div class="font-medium text-gray-800">${choreData.emoji} ${choreData.name} ${isAdhoc ? '(One-Time)' : ''}</div>
-                    <div class="text-gray-600 flex justify-end items-center" style="color: ${color};">
-                        <span class="font-semibold mr-1">${memberName}</span>
-                        ${memberEmoji}
+                return `
+                    <div class="rounded-md p-2 text-xs ${completedClass}" style="background-color: ${color}20; border-left: 4px solid ${color};">
+                        <div class="font-medium text-gray-800">${choreData.emoji} ${choreData.name} ${isAdhoc ? '(One-Time)' : ''}</div>
+                        <div class="text-gray-600 flex justify-end items-center" style="color: ${color};">
+                            <span class="font-semibold mr-1">${memberName}</span>
+                            ${memberEmoji}
+                        </div>
                     </div>
-                </div>
-            `;
+                `;
+            } catch(e) {
+                 console.error("getScheduleChoreHTML failed:", e, choreData);
+                 return '<div class="text-red-500 text-xs">Error</div>';
+            }
         }
 
 
@@ -1084,6 +1116,7 @@
         function renderPointsAndRewards() {
             try {
                 const pointsGrid = document.getElementById('point-totals-grid');
+                if (!pointsGrid || !rewardsGrid || !claimedRewardsList) return; // Add checks
                 
                 pointsGrid.innerHTML = ''; 
                 rewardsGrid.innerHTML = ''; 
@@ -1167,18 +1200,29 @@
                 const manageRewardsList = document.getElementById('manage-rewards-list');
 
                 // Sub-page Visibility
-                document.querySelectorAll('.setup-subpage').forEach(el => el.classList.remove('setup-subpage-active'));
-                document.getElementById(`setup-subpage-${currentSetupSubPage}`).classList.add('setup-subpage-active');
+                document.querySelectorAll('.setup-subpage').forEach(el => {
+                     if (el.id === `setup-subpage-${currentSetupSubPage}`) {
+                         el.classList.add('setup-subpage-active');
+                         el.classList.remove('hidden'); // Ensure it's not hidden
+                     } else {
+                         el.classList.remove('setup-subpage-active');
+                         el.classList.add('hidden'); // Ensure others are hidden
+                     }
+                });
                 
                 document.querySelectorAll('.setup-subnav-btn').forEach(el => {
-                    el.classList.remove('setup-subnav-btn-active');
-                    el.classList.add('setup-subnav-btn-inactive');
+                    if (el.id === `setup-subnav-${currentSetupSubPage}`) {
+                         el.classList.add('setup-subnav-btn-active');
+                         el.classList.remove('setup-subnav-btn-inactive');
+                    } else {
+                         el.classList.remove('setup-subnav-btn-active');
+                         el.classList.add('setup-subnav-btn-inactive');
+                    }
                 });
-                document.getElementById(`setup-subnav-${currentSetupSubPage}`).classList.add('setup-subnav-btn-active');
-                document.getElementById(`setup-subnav-${currentSetupSubPage}`).classList.remove('setup-subnav-btn-inactive');
 
                 // Render Content based on Sub-page
                 if (currentSetupSubPage === 'members') {
+                    if (!editList) return; // Add check
                     editList.innerHTML = appData.members.map(member => `
                         <div class="bg-slate-50 p-4 rounded-lg border-t-4 animate-fade-in-up" style="border-color: ${member.color};">
                             <div class="flex items-center space-x-3 mb-4">
@@ -1204,6 +1248,7 @@
                         </div>
                     `).join('');
                 } else if (currentSetupSubPage === 'chores') {
+                     if (!manageChoresList) return; // Add check
                      manageChoresList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Reusable Chores</h3>' + 
                         appData.chores.map(chore => {
                             const scheduleDays = chore.schedule.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ');
@@ -1226,6 +1271,7 @@
                         }).join('');
                      if(appData.chores.length === 0) manageChoresList.innerHTML += '<p class="text-sm text-gray-500">No reusable chores created yet.</p>';
                 } else if (currentSetupSubPage === 'rewards') {
+                    if (!manageRewardsList) return; // Add check
                     manageRewardsList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Available Rewards</h3>' + 
                         appData.rewards.filter(r => !r.claimed && !r.delivered).map(reward => `
                         <div class="flex justify-between items-center bg-slate-50 p-3 rounded shadow-sm animate-fade-in-up border-l-4 border-amber-400">
@@ -1249,6 +1295,7 @@
             try {
                 const grid = document.getElementById('calendar-grid');
                 const monthYearEl = document.getElementById('calendar-month-year');
+                if (!grid || !monthYearEl) return; // Add checks
                 
                 while (grid.children.length > 7) {
                     grid.removeChild(grid.lastChild);
@@ -1291,19 +1338,37 @@
         function changeTab(tabId, title) {
             try {
                 currentTab = tabId;
+                // Hide all content tabs first
                 document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-                document.getElementById(`content-${tabId}`).classList.remove('hidden');
+                // Show the selected one
+                const contentEl = document.getElementById(`content-${tabId}`);
+                 if (contentEl) {
+                     contentEl.classList.remove('hidden');
+                 } else {
+                     console.error(`Content element not found for tab: ${tabId}`);
+                     return; // Stop if content area doesn't exist
+                 }
                 
+                // Update sidebar button styles
                 document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('nav-btn-active'));
-                document.getElementById(`nav-${tabId}`).classList.add('nav-btn-active');
+                const navBtnEl = document.getElementById(`nav-${tabId}`);
+                if (navBtnEl) {
+                     navBtnEl.classList.add('nav-btn-active');
+                } else {
+                     console.error(`Nav button element not found for tab: ${tabId}`);
+                }
 
-                contentTitle.textContent = title;
+
+                // Update title
+                if (contentTitle) {
+                     contentTitle.textContent = title;
+                }
                 
-                // Trigger render for the newly active tab
-                renderAll(); 
+                // Trigger render for the newly active tab if necessary
+                renderAll(); // Consider if this is needed or causes loops
                 // Special case for time header
                 if (tabId === 'daily-list') updateDateTimeHeader();
-            } catch (e) { console.error("changeTab failed:", e); }
+            } catch (e) { console.error("changeTab failed:", e, tabId); }
         }
 
         // Setup Sub-Page Navigation
@@ -1311,7 +1376,7 @@
             try {
                 currentSetupSubPage = subPageId;
                 renderSetup(); // Re-render the setup tab content
-            } catch (e) { console.error("changeSetupSubPage failed:", e); }
+            } catch (e) { console.error("changeSetupSubPage failed:", e, subPageId); }
         }
 
         // Toggle Adhoc Form
@@ -1358,72 +1423,80 @@
         });
 
         // Edit/Delete/Modify Points Member
-        document.getElementById('edit-members-list').addEventListener('click', async (e) => {
-            try {
-                const memberId = e.target.dataset.memberId;
-                if (!memberId) return;
+        // Use event delegation on the parent container for better performance
+        const editMembersListContainer = document.getElementById('edit-members-list');
+        if (editMembersListContainer) {
+            editMembersListContainer.addEventListener('click', async (e) => {
+                try {
+                    const memberId = e.target.closest('[data-member-id]')?.dataset.memberId;
+                    if (!memberId) return;
 
-                // Save basic changes (name, emoji, color)
-                if (e.target.classList.contains('member-save-btn')) {
-                    showLoading('Saving...');
-                    try {
-                        const name = document.querySelector(`.member-edit-name[data-member-id="${memberId}"]`).value;
-                        const emoji = document.querySelector(`.member-edit-emoji[data-member-id="${memberId}"]`).value; // Now reads from INPUT
-                        const color = document.querySelector(`.member-edit-color[data-member-id="${memberId}"]`).value;
-                        await updateDoc(paths.member(memberId), { name, emoji, color });
-                        showSnackbar("Member updated!");
-                    } catch (error) {
-                        console.error("Error saving member:", error);
-                        showSnackbar("Failed to save member.", true);
+                    // Save basic changes (name, emoji, color)
+                    if (e.target.classList.contains('member-save-btn')) {
+                        showLoading('Saving...');
+                        try {
+                            const name = document.querySelector(`.member-edit-name[data-member-id="${memberId}"]`)?.value;
+                            const emoji = document.querySelector(`.member-edit-emoji[data-member-id="${memberId}"]`)?.value;
+                            const color = document.querySelector(`.member-edit-color[data-member-id="${memberId}"]`)?.value;
+                             if(name === undefined || emoji === undefined || color === undefined) throw new Error("Could not find edit fields");
+                            await updateDoc(paths.member(memberId), { name, emoji, color });
+                            showSnackbar("Member updated!");
+                        } catch (error) {
+                            console.error("Error saving member:", error);
+                            showSnackbar("Failed to save member.", true);
+                        }
+                        hideLoading();
                     }
-                    hideLoading();
-                }
-                
-                // Save modified points (Password Protected)
-                if (e.target.classList.contains('member-save-points-btn')) {
-                     const pointsInput = document.querySelector(`.member-edit-points[data-member-id="${memberId}"]`);
-                     const newPointsStr = pointsInput.value.trim();
-                     if (newPointsStr === '') return; 
-                     const newPoints = parseInt(newPointsStr);
-                     if (isNaN(newPoints)) {
-                         showSnackbar("Please enter a valid number for points.", true);
-                         return;
-                     }
-
-                     const enteredPassword = prompt("Enter admin password to change points:");
-                     if (enteredPassword === ADMIN_PASSWORD) {
-                         showLoading('Updating points...');
-                         try {
-                            await updateDoc(paths.member(memberId), { points: newPoints });
-                            showSnackbar("Member points updated!");
-                            pointsInput.value = ''; 
-                         } catch (error) {
-                            console.error("Error updating points:", error);
-                            showSnackbar("Failed to update points.", true);
-                         }
-                         hideLoading();
-                     } else if (enteredPassword !== null) { 
-                         showSnackbar("Incorrect password.", true);
-                     }
-                }
-
-                // Delete member
-                if (e.target.classList.contains('member-delete-btn')) {
-                    const memberToDelete = appData.members.find(m => m.id === memberId);
-                    if (!confirm(`Are you sure you want to delete ${memberToDelete?.name || 'this member'}? This cannot be undone.`)) return;
                     
-                    showLoading('Deleting...');
-                    try {
-                        await deleteDoc(paths.member(memberId));
-                        showSnackbar("Member deleted.");
-                    } catch (error) {
-                        console.error("Error deleting member:", error);
-                        showSnackbar("Failed to delete member.", true);
+                    // Save modified points (Password Protected)
+                    if (e.target.classList.contains('member-save-points-btn')) {
+                         const pointsInput = document.querySelector(`.member-edit-points[data-member-id="${memberId}"]`);
+                         const newPointsStr = pointsInput?.value.trim();
+                         if (newPointsStr === '' || newPointsStr === undefined) return; 
+                         const newPoints = parseInt(newPointsStr);
+                         if (isNaN(newPoints)) {
+                             showSnackbar("Please enter a valid number for points.", true);
+                             return;
+                         }
+
+                         const enteredPassword = prompt("Enter admin password to change points:");
+                         if (enteredPassword === ADMIN_PASSWORD) {
+                             showLoading('Updating points...');
+                             try {
+                                await updateDoc(paths.member(memberId), { points: newPoints });
+                                showSnackbar("Member points updated!");
+                                if(pointsInput) pointsInput.value = ''; 
+                                renderSetup(); // Re-render setup to show updated points
+                             } catch (error) {
+                                console.error("Error updating points:", error);
+                                showSnackbar("Failed to update points.", true);
+                             }
+                             hideLoading();
+                         } else if (enteredPassword !== null) { 
+                             showSnackbar("Incorrect password.", true);
+                         }
                     }
-                    hideLoading();
-                }
-            } catch (e) { console.error("Edit/Delete member click failed:", e); }
-        });
+
+                    // Delete member
+                    if (e.target.classList.contains('member-delete-btn')) {
+                        const memberToDelete = appData.members.find(m => m.id === memberId);
+                        if (!confirm(`Are you sure you want to delete ${memberToDelete?.name || 'this member'}? This cannot be undone.`)) return;
+                        
+                        showLoading('Deleting...');
+                        try {
+                            await deleteDoc(paths.member(memberId));
+                            showSnackbar("Member deleted.");
+                             // No need to call render manually, onSnapshot will trigger it
+                        } catch (error) {
+                            console.error("Error deleting member:", error);
+                            showSnackbar("Failed to delete member.", true);
+                        }
+                        hideLoading();
+                    }
+                } catch (e) { console.error("Edit/Delete member click failed:", e); }
+            });
+        }
+
 
         // Add Reusable Chore
         document.getElementById('add-chore-form').addEventListener('submit', async (e) => {
@@ -1470,7 +1543,8 @@
             try {
                 await addDoc(paths.completions(), {
                     name, emoji, points, assigneeId: assigneeId || 'unassigned',
-                    date: getTodayString(), isComplete: false, isAdhoc: true, choreDefId: null
+                    date: getTodayString(), isComplete: false, isAdhoc: true, choreDefId: null,
+                    timestamp: Timestamp.now() // Add timestamp for potential future sorting
                 });
                 showSnackbar("One-time chore added!");
                 e.target.reset();
@@ -1486,34 +1560,38 @@
             hideLoading();
         });
 
-        // Delete Chore/Reward
-        document.getElementById('content-setup').addEventListener('click', async (e) => {
-            try {
-                const id = e.target.closest('[data-id]')?.dataset.id; // Get ID from parent if icon is clicked
-                if (!id) return;
-
-                let path;
-                let type;
-                if (e.target.closest('.chore-delete-btn')) { 
-                    path = paths.chore(id); type = "Chore";
-                } else if (e.target.closest('.reward-delete-btn')) {
-                    path = paths.reward(id); type = "Reward";
-                } else { return; }
-                
-                const item = type === "Chore" ? appData.chores.find(c => c.id === id) : appData.rewards.find(r => r.id === id);
-                if (!confirm(`Are you sure you want to delete "${item?.name || `this ${type}`}"?`)) return;
-
-                showLoading(`Deleting ${type}...`);
+        // Delete Chore/Reward (Using delegation on Setup content)
+        const setupContent = document.getElementById('content-setup');
+         if(setupContent){
+             setupContent.addEventListener('click', async (e) => {
                 try {
-                    await deleteDoc(path);
-                    showSnackbar(`${type} deleted.`);
-                } catch (error) {
-                    console.error(`Error deleting ${type}:`, error);
-                    showSnackbar(`Failed to delete ${type}.`, true);
-                }
-                hideLoading();
-            } catch (e) { console.error("Delete Chore/Reward click failed:", e); }
-        });
+                    const id = e.target.closest('[data-id]')?.dataset.id; 
+                    if (!id) return;
+
+                    let path;
+                    let type;
+                    if (e.target.closest('.chore-delete-btn')) { 
+                        path = paths.chore(id); type = "Chore";
+                    } else if (e.target.closest('.reward-delete-btn')) {
+                        path = paths.reward(id); type = "Reward";
+                    } else { return; }
+                    
+                    const item = type === "Chore" ? appData.chores.find(c => c.id === id) : appData.rewards.find(r => r.id === id);
+                    if (!confirm(`Are you sure you want to delete "${item?.name || `this ${type}`}"?`)) return;
+
+                    showLoading(`Deleting ${type}...`);
+                    try {
+                        await deleteDoc(path);
+                        showSnackbar(`${type} deleted.`);
+                         // onSnapshot handles re-render
+                    } catch (error) {
+                        console.error(`Error deleting ${type}:`, error);
+                        showSnackbar(`Failed to delete ${type}.`, true);
+                    }
+                    hideLoading();
+                } catch (e) { console.error("Delete Chore/Reward click failed:", e); }
+            });
+         }
 
 
         // Add Reward
@@ -1530,7 +1608,7 @@
             
             showLoading('Adding reward...');
             try {
-                await addDoc(paths.rewards(), { name, emoji, cost, claimed: false, delivered: false }); // Add delivered flag
+                await addDoc(paths.rewards(), { name, emoji, cost, claimed: false, delivered: false }); 
                 showSnackbar("Reward created!");
                 e.target.reset();
                 document.getElementById('reward-emoji').value = '🎉'; 
@@ -1581,7 +1659,6 @@
                     return;
                 }
 
-
                 showLoading('Redeeming...');
                 try {
                     await runTransaction(db, async (transaction) => {
@@ -1594,9 +1671,14 @@
                         if (!memberDoc.exists() || !rewardDoc.exists()) {
                             throw new Error("Member or Reward not found.");
                         }
-                        if (rewardDoc.data().claimed) {
-                            throw new Error("This reward has already been claimed.");
+                        // Check claimed status *inside* transaction
+                        if (rewardDoc.data().claimed && !rewardDoc.data().delivered) {
+                            throw new Error("This reward has already been claimed and is pending delivery.");
                         }
+                        if (rewardDoc.data().delivered) {
+                             throw new Error("This reward has already been delivered.");
+                        }
+
                         const currentPoints = memberDoc.data().points;
                         const newPoints = currentPoints - cost;
                         if (newPoints < 0) {
@@ -1606,6 +1688,7 @@
                         transaction.update(memberRef, { points: newPoints });
                         transaction.update(rewardRef, { 
                             claimed: true, 
+                            delivered: false, // Ensure delivered is false when claiming
                             claimedBy: memberId, 
                             claimedByName: member.name,
                             claimedAt: Timestamp.now()
@@ -1647,6 +1730,7 @@
                     await updateDoc(paths.reward(rewardId), { delivered: true });
                     showSnackbar("Reward marked as delivered!");
                     playSound('G4', '8n'); 
+                    // onSnapshot handles re-render
                 } catch (error) {
                     console.error("Error marking reward delivered:", error);
                     showSnackbar("Failed to update reward.", true);
@@ -1674,14 +1758,18 @@
 
         // Updated function to handle both complete and uncomplete
         async function handleChoreCompletionToggle(button, e) {
-            try {
-                const isCurrentlyComplete = button.dataset.isComplete === 'true';
-                const points = parseInt(button.dataset.points);
-                const assigneeId = button.dataset.assigneeId;
-                
-                const choreItem = button.closest('.chore-item');
-                if (!choreItem) return; 
+             // Define newCompletionState *outside* the try block
+             let newCompletionState; 
+             const choreItem = button.closest('.chore-item'); // Get choreItem early
+             if (!choreItem) return; 
 
+             try {
+                const isCurrentlyComplete = choreItem.dataset.isComplete === 'true'; // Use choreItem data
+                newCompletionState = !isCurrentlyComplete; // Set the outer variable
+
+                const points = parseInt(choreItem.dataset.points); // Use choreItem data
+                const assigneeId = choreItem.dataset.assigneeId; // Use choreItem data
+                
                 const completionDocId = choreItem.dataset.completionDocId;
                 const isAdhoc = choreItem.dataset.isAdhoc === 'true';
                 const choreDefId = choreItem.dataset.choreDefId === 'null' ? null : choreItem.dataset.choreDefId;
@@ -1703,68 +1791,67 @@
                 const actionLabel = isCurrentlyComplete ? 'Uncompleting' : 'Completing';
                 showLoading(`${actionLabel} chore...`);
 
-                try {
-                    await runTransaction(db, async (transaction) => {
-                        let completionRef;
-                        let memberRef = paths.member(assigneeId); 
+                // Transaction logic remains largely the same...
+                await runTransaction(db, async (transaction) => {
+                    let completionRef;
+                    let memberRef = paths.member(assigneeId); 
 
-                        // --- Perform Reads FIRST ---
-                        const memberDoc = await transaction.get(memberRef); 
-                        if (!memberDoc.exists()) throw new Error("Member not found.");
-                        const currentPoints = memberDoc.data().points || 0;
+                    // --- Perform Reads FIRST ---
+                    const memberDoc = await transaction.get(memberRef); 
+                    if (!memberDoc.exists()) throw new Error("Member not found.");
+                    const currentPoints = memberDoc.data().points || 0;
 
-                        let existingCompletionDoc = null; 
-                        if (completionDocId && completionDocId !== 'null') {
-                            completionRef = paths.completion(completionDocId);
-                            existingCompletionDoc = await transaction.get(completionRef); 
-                        }
-                        // --- End Reads ---
+                    let existingCompletionDoc = null; 
+                    if (completionDocId && completionDocId !== 'null') {
+                        completionRef = paths.completion(completionDocId);
+                        existingCompletionDoc = await transaction.get(completionRef); 
+                    }
+                    // --- End Reads ---
 
-                        // --- Calculate New State and Prepare Writes ---
-                        const newCompletionState = !isCurrentlyComplete;
-                        const pointChange = newCompletionState ? points : -points; 
-                        const newPoints = currentPoints + pointChange;
-                        if (newPoints < 0 && !isCurrentlyComplete) {
-                            // This check is redundant if points are always positive, but good practice
-                            // We allow points to go negative if un-checking
-                        }
+                    // --- Calculate New State and Prepare Writes ---
+                    // newCompletionState is already defined outside
+                    const pointChange = newCompletionState ? points : -points; 
+                    const newPoints = currentPoints + pointChange;
 
-                        if (existingCompletionDoc?.exists()) {
-                            transaction.update(completionRef, { isComplete: newCompletionState });
-                        } else if (newCompletionState) { 
-                            completionRef = doc(collection(db, paths.completions().path)); 
-                            transaction.set(completionRef, {
-                                name: choreItem.dataset.name,
-                                emoji: choreItem.dataset.emoji,
-                                points: parseInt(choreItem.dataset.points),
-                                assigneeId: assigneeId,
-                                date: getTodayString(),
-                                isComplete: true, 
-                                isAdhoc: isAdhoc, 
-                                choreDefId: choreDefId
-                            });
-                        } else {
-                             console.warn("Attempted to uncomplete chore with no existing completion doc:", choreItem.dataset);
-                        }
-
-                        transaction.update(memberRef, { points: newPoints });
-                    });
-
-                    showSnackbar(`Chore ${newCompletionState ? 'completed' : 'marked incomplete'}!`);
-                    if (newCompletionState) {
-                        createConfetti(clickX, clickY, memberColor);
-                        playSound('C5', '16n'); 
+                    if (existingCompletionDoc?.exists()) {
+                        transaction.update(completionRef, { isComplete: newCompletionState });
+                    } else if (newCompletionState) { 
+                        completionRef = doc(collection(db, paths.completions().path)); 
+                        transaction.set(completionRef, {
+                            name: choreItem.dataset.name,
+                            emoji: choreItem.dataset.emoji,
+                            points: parseInt(choreItem.dataset.points),
+                            assigneeId: assigneeId,
+                            date: getTodayString(),
+                            isComplete: true, 
+                            isAdhoc: isAdhoc, 
+                            choreDefId: choreDefId,
+                            timestamp: Timestamp.now() // Add timestamp on creation
+                        });
                     } else {
-                         playSound('C4', '16n'); 
+                         console.warn("Attempted to uncomplete chore with no existing completion doc:", choreItem.dataset);
                     }
 
-                } catch (error) {
-                    console.error("Chore completion/uncompletion transaction failed:", error);
-                    showSnackbar(`${actionLabel} failed: ${error.message}`, true);
-                } finally {
-                    hideLoading();
+                    transaction.update(memberRef, { points: newPoints });
+                });
+                
+                // --- Success Actions (Moved outside transaction) ---
+                hideLoading(); // Hide loading indicator *after* transaction
+                showSnackbar(`Chore ${newCompletionState ? 'completed' : 'marked incomplete'}!`);
+                if (newCompletionState) {
+                    createConfetti(clickX, clickY, memberColor);
+                    playSound('C5', '16n'); 
+                } else {
+                     playSound('C4', '16n'); 
                 }
-            } catch (e) { console.error("handleChoreCompletionToggle failed:", e); }
+
+            } catch (error) { // Catch errors from transaction OR outer logic
+                console.error("Chore completion/uncompletion failed:", error);
+                 // Use outer newCompletionState if available, otherwise guess based on button text
+                 const failedActionLabel = newCompletionState === undefined ? (button.textContent.includes('✅') ? 'Uncompleting' : 'Completing') : (newCompletionState ? 'Completing' : 'Uncompleting');
+                showSnackbar(`${failedActionLabel} failed: ${error.message}`, true);
+                hideLoading(); // Ensure loading is hidden on error
+            } 
         }
 
 
@@ -1944,33 +2031,37 @@
                         });
                     
                     } else if (!isAdhoc && choreDefId !== 'null') {
+                        // Create a NEW completion doc when assigning a recurring chore for the first time today
                         await addDoc(paths.completions(), {
                             name: name,
                             emoji: emoji,
                             points: points,
-                            assigneeId: newAssigneeId,
+                            assigneeId: newAssigneeId, // Use the new assignee
                             date: getTodayString(),
-                            isComplete: false,
+                            isComplete: false, // Starts incomplete
                             isAdhoc: false,
-                            choreDefId: choreDefId
+                            choreDefId: choreDefId,
+                            timestamp: Timestamp.now()
                         });
                     } else if (isAdhoc && completionDocId && completionDocId !== 'null') { 
+                         // Update existing adhoc completion doc
                          await updateDoc(paths.completion(completionDocId), {
                             assigneeId: newAssigneeId
                         });
-                    }
-                    else {
-                        console.warn("Cannot reassign this item properly, creating new adhoc.", choreData);
-                         await addDoc(paths.completions(), {
-                            name: name,
-                            emoji: emoji,
-                            points: points,
-                            assigneeId: newAssigneeId, // Typo fixed
-                            date: getTodayString(),
-                            isComplete: false,
-                            isAdhoc: true, 
-                            choreDefId: null
+                    } else if (isAdhoc && (!completionDocId || completionDocId === 'null')) {
+                         // This case should ideally not happen if adhoc always creates a completion doc
+                         // But if it does, create a new completion doc
+                         console.warn("Assigning an adhoc chore without an existing completionDocId", choreData);
+                          await addDoc(paths.completions(), {
+                            name: name, emoji: emoji, points: points, assigneeId: newAssigneeId,
+                            date: getTodayString(), isComplete: false, isAdhoc: true, choreDefId: null,
+                            timestamp: Timestamp.now()
                         });
+                    }
+                     else {
+                         // Fallback / Error case
+                        console.error("Unhandled chore assignment case:", choreData, newAssigneeId);
+                        throw new Error("Could not determine how to assign this chore.");
                     }
                     showSnackbar("Chore reassigned!");
 
@@ -2002,7 +2093,10 @@
 
         window.addEventListener('error', (event) => {
             console.error('Unhandled Error:', event.error);
-            showSnackbar(`A critical error occurred: ${event.error?.message || event.message}`, true);
+            // Avoid showing generic "Script error."
+            if (event.message !== 'Script error.') { 
+                showSnackbar(`A critical error occurred: ${event.error?.message || event.message}`, true);
+            }
         });
 
         // --- App Initialization ---
@@ -2011,7 +2105,12 @@
         window.changeSetupSubPage = changeSetupSubPage; // Expose sub-page function
         
         // Start the app
-        initializeFirebase();
+        // Use DOMContentLoaded to ensure elements exist before attaching listeners/rendering
+        document.addEventListener('DOMContentLoaded', () => {
+             console.log("DOM fully loaded and parsed");
+             initializeFirebase();
+        });
+
 
     </script>
 </body>
