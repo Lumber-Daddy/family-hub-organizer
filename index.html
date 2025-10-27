@@ -709,4 +709,1229 @@
         }
         
         // === Master Render Function ===
+        function renderAll() {
+            if (!lucide) return; // Don't render if icons aren't loaded
+
+            // 1. Render main views
+            renderDailyChores();
+            renderWeeklySchedule();
+            renderPointsAndRewards();
+            renderSetup();
+            
+            // 2. Populate shared elements
+            populateMemberDropdowns();
+
+            // 3. Render icons
+            lucide.createIcons();
+        }
+
+        // === View: Daily List ===
+        function renderDailyChores() {
+            const container = document.getElementById('daily-chores-container');
+            if (!container) return;
+            container.innerHTML = ''; // Clear existing
+            
+            // Create a map for quick member lookup
+            const memberMap = new Map(localState.members.map(m => [m.id, m]));
+
+            // 1. Create sections for each member
+            localState.members.forEach(member => {
+                const memberChores = localState.dailyChores.filter(chore => chore.assignedTo === member.id);
+                const section = document.createElement('section');
+                section.id = `member-section-${member.id}`;
+                section.classList.add('member-chore-list', 'bg-white', 'p-4', 'rounded-lg', 'shadow-sm', 'border', 'border-gray-200');
+                
+                // Add drag-and-drop target attributes
+                section.dataset.memberId = member.id;
+                section.addEventListener('dragover', dragOver);
+                section.addEventListener('dragenter', dragEnter);
+                section.addEventListener('dragleave', dragLeave);
+                section.addEventListener('drop', drop);
+
+                section.innerHTML = `
+                    <h3 class="text-xl font-semibold mb-3 flex items-center">
+                        <span class="text-2xl mr-2">${member.emoji || '👤'}</span>
+                        ${member.name}'s Chores
+                    </h3>
+                    <div class="space-y-2">
+                        ${memberChores.length > 0 ? memberChores.map(chore => renderChoreItem(chore, memberMap)).join('') : '<p class="text-gray-500 text-sm">No chores assigned for today.</p>'}
+                    </div>
+                `;
+                container.appendChild(section);
+            });
+
+            // 2. Create section for Unassigned Chores
+            const unassignedChores = localState.dailyChores.filter(chore => !chore.assignedTo);
+            const unassignedSection = document.createElement('section');
+            unassignedSection.id = 'member-section-unassigned';
+            unassignedSection.classList.add('member-chore-list', 'bg-gray-50', 'p-4', 'rounded-lg', 'shadow-sm', 'border', 'border-gray-200');
+            
+            // Add drag-and-drop target attributes
+            unassignedSection.dataset.memberId = 'unassigned';
+            unassignedSection.addEventListener('dragover', dragOver);
+            unassignedSection.addEventListener('dragenter', dragEnter);
+            unassignedSection.addEventListener('dragleave', dragLeave);
+            unassignedSection.addEventListener('drop', drop);
+            
+            unassignedSection.innerHTML = `
+                <h3 class="text-xl font-semibold mb-3 flex items-center text-gray-700">
+                    <span data-lucide="list-todo" class="mr-2"></span>
+                    Unassigned Pool
+                </h3>
+                <div class="space-y-2">
+                    ${unassignedChores.length > 0 ? unassignedChores.map(chore => renderChoreItem(chore, memberMap)).join('') : '<p class="text-gray-500 text-sm">No unassigned chores for today.</p>'}
+                </div>
+            `;
+            container.appendChild(unassignedSection);
+        }
+
+        function renderChoreItem(chore, memberMap) {
+            const member = chore.assignedTo ? memberMap.get(chore.assignedTo) : null;
+            const memberColor = member ? (member.color || 'bg-gray-500') : 'bg-gray-500';
+            const memberInitial = member ? member.name[0].toUpperCase() : '?';
+
+            return `
+                <div id="chore-${chore.id}" 
+                     class="chore-item flex items-center justify-between p-3 bg-white rounded-lg border border-gray-200 shadow-sm ${chore.isComplete ? 'chore-complete' : ''}"
+                     draggable="true" 
+                     data-chore-id="${chore.id}">
+                    <div class="flex items-center">
+                        <button class="chore-toggle-btn text-3xl mr-3 cursor-pointer" data-chore-id="${chore.id}" data-member-id="${chore.assignedTo || ''}" data-points="${chore.points}">
+                            ${chore.isComplete ? '✅' : chore.emoji}
+                        </button>
+                        <div>
+                            <p class="font-medium text-lg">${chore.name}</p>
+                            <span class="text-sm font-semibold text-green-600">+${chore.points} pts</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        ${member ? 
+                            `<div class="flex items-center gap-2" title="Assigned to ${member.name}">
+                                <span class="hidden sm:block text-sm font-medium text-gray-600">${member.name}</span>
+                                <div class="h-8 w-8 rounded-full ${memberColor} flex items-center justify-center text-white font-bold text-sm">
+                                    ${member.emoji ? member.emoji : memberInitial}
+                                </div>
+                            </div>` : 
+                            `<span class="text-sm italic text-gray-500">Unassigned</span>`
+                        }
+                        <button class="assign-chore-btn p-2 rounded-full hover:bg-gray-100" data-chore-id="${chore.id}" title="Assign Chore">
+                            <span data-lucide="user-cog" class="h-5 w-5 text-gray-600"></span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function getMemberById(memberId) {
+            return localState.members.find(m => m.id === memberId);
+        }
+        
+        function getMemberColor(memberId) {
+            if (!memberId) return 'bg-gray-400';
+            const member = getMemberById(memberId);
+            return member ? member.color : 'bg-gray-400';
+        }
+
+        // === View: Weekly Schedule ===
+        async function renderWeeklySchedule() {
+            const container = document.getElementById('weekly-schedule-grid');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const today = new Date();
+            const todayISO = today.toISOString().split('T')[0];
+            const startOfWeek = new Date(today);
+            const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Get to Monday (or Sunday if week starts Sunday)
+            startOfWeek.setDate(today.getDate() + diff);
+
+            // Get all daily chores for the *entire current week*
+            const weekDatesISO = [];
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(startOfWeek);
+                day.setDate(startOfWeek.getDate() + i);
+                weekDatesISO.push(day.toISOString().split('T')[0]);
+            }
+            
+            const qWeek = query(collection(db, F_DAILY_CHORES_COL), where("date", "in", weekDatesISO));
+            let weeklyChores = [];
+            try {
+                const snapshot = await getDocs(qWeek);
+                weeklyChores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            } catch (e) {
+                console.error("Error fetching weekly chores:", e);
+                container.innerHTML = `<p class="text-red-500">Error loading weekly schedule.</p>`;
+                return;
+            }
+
+            // Group chores by date
+            const choresByDate = new Map(weekDatesISO.map(date => [date, []]));
+            weeklyChores.forEach(chore => {
+                if (choresByDate.has(chore.date)) {
+                    choresByDate.get(chore.date).push(chore);
+                }
+            });
+
+            // Render 7 day columns
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(startOfWeek);
+                day.setDate(startOfWeek.getDate() + i);
+                
+                const dayISO = day.toISOString().split('T')[0];
+                const dayName = WEEK_DAYS_FULL[day.getDay()];
+                const dayNum = day.getDate();
+                const isToday = (dayISO === todayISO);
+                
+                const dayChores = choresByDate.get(dayISO) || [];
+
+                const col = document.createElement('div');
+                col.className = `p-3 rounded-lg border ${isToday ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'} space-y-2`;
+                col.innerHTML = `
+                    <h4 class="font-bold text-lg ${isToday ? 'text-blue-700' : 'text-gray-800'}">${dayName}</h4>
+                    <p class="text-sm text-gray-500 mb-3">${day.toLocaleDateString([], { month: 'long' })} ${dayNum}</p>
+                    <div class="space-y-2">
+                        ${dayChores.length > 0 ? dayChores.map(chore => {
+                            const member = getMemberById(chore.assignedTo);
+                            const color = member ? member.color : 'bg-gray-400';
+                            const initial = member ? (member.emoji || member.name[0]) : '?';
+                            return `
+                                <div class="flex items-center gap-2 p-2 bg-gray-50 rounded-md ${chore.isComplete ? 'chore-complete' : ''}">
+                                    <span class="h-6 w-6 rounded-full ${color} flex-shrink-0 flex items-center justify-center text-white text-xs font-bold" title="${member ? member.name : 'Unassigned'}">
+                                        ${initial}
+                                    </span>
+                                    <span class="text-sm truncate">${chore.emoji} ${chore.name}</span>
+                                </div>
+                            `;
+                        }).join('') : '<p class="text-xs text-gray-400">No chores.</p>'}
+                    </div>
+                `;
+                container.appendChild(col);
+            }
+        }
+
+        // === View: Points & Rewards ===
+        function renderPointsAndRewards() {
+            const pointsGrid = document.getElementById('member-points-grid');
+            const rewardsGrid = document.getElementById('available-rewards-grid');
+            const claimedList = document.getElementById('claimed-rewards-list');
+            if (!pointsGrid || !rewardsGrid || !claimedList) return;
+
+            // 1. Render Point Totals
+            pointsGrid.innerHTML = '';
+            localState.members.forEach(member => {
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-lg shadow-md flex items-center gap-4 ${member.color} text-white`;
+                card.innerHTML = `
+                    <span class="text-4xl">${member.emoji || '👤'}</span>
+                    <div>
+                        <p class="text-xl font-bold">${member.name}</p>
+                        <p class="text-3xl font-light">${member.points || 0} <span class="text-base opacity-80">pts</span></p>
+                    </div>
+                `;
+                pointsGrid.appendChild(card);
+            });
+            if (localState.members.length === 0) {
+                pointsGrid.innerHTML = `<p class="text-gray-500 col-span-full">Add members in the Setup tab to see points.</p>`;
+            }
+
+            // 2. Render Available Rewards
+            rewardsGrid.innerHTML = '';
+            const selectedMember = getMemberById(selectedRedeemerId);
+            const memberPoints = selectedMember ? (selectedMember.points || 0) : 0;
+            
+            localState.rewards.forEach(reward => {
+                const canAfford = selectedMember && memberPoints >= reward.cost;
+                const card = document.createElement('div');
+                card.className = `p-4 rounded-lg border shadow-sm flex flex-col items-center justify-between gap-2 ${selectedMember && !canAfford ? 'opacity-40 bg-gray-100' : 'bg-white'}`;
+                card.innerHTML = `
+                    <span class="text-5xl">${reward.emoji || '🎁'}</span>
+                    <p class="font-medium text-center">${reward.name}</p>
+                    <p class="font-bold text-xl text-green-600">${reward.cost} pts</p>
+                    <button 
+                        class="redeem-reward-btn w-full py-2 px-4 rounded-lg text-white font-semibold ${canAfford ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-400 cursor-not-allowed'}"
+                        data-reward-id="${reward.id}"
+                        data-cost="${reward.cost}"
+                        ${canAfford ? '' : 'disabled'}>
+                        Redeem
+                    </button>
+                `;
+                rewardsGrid.appendChild(card);
+            });
+            if (localState.rewards.length === 0) {
+                rewardsGrid.innerHTML = `<p class="text-gray-500 col-span-full">Add rewards in the Setup tab.</p>`;
+            }
+
+            // 3. Render Claimed (Not Delivered) Rewards
+            claimedList.innerHTML = '';
+            if (localState.claimedRewards.length > 0) {
+                localState.claimedRewards.forEach(claimed => {
+                    const member = getMemberById(claimed.memberId);
+                    const reward = localState.rewards.find(r => r.id === claimed.rewardId);
+                    if (!member || !reward) return; // Data integrity check
+
+                    const item = document.createElement('div');
+                    item.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">${reward.emoji || '🎁'}</span>
+                            <div>
+                                <p class="font-medium">${reward.name}</p>
+                                <p class="text-sm text-gray-600">Claimed by <strong class="font-semibold ${member.color.replace('bg-', 'text-')}">${member.name}</strong> for ${reward.cost} pts</p>
+                            </div>
+                        </div>
+                        <button class="deliver-reward-btn py-2 px-4 rounded-lg bg-blue-600 text-white font-medium hover:bg-blue-700 text-sm" data-claimed-id="${claimed.id}">
+                            Mark Delivered
+                        </button>
+                    `;
+                    claimedList.appendChild(item);
+                });
+            } else {
+                claimedList.innerHTML = `<p class="text-gray-500">No pending rewards.</p>`;
+            }
+        }
+
+        // === View: Setup ===
+        function renderSetup() {
+            // 1. Render Member List
+            renderSetupMembersList();
+            
+            // 2. Render Chore Template List
+            renderSetupChoresList();
+            
+            // 3. Render Reward List
+            renderSetupRewardsList();
+        }
+
+        function populateMemberDropdowns() {
+            const dropdowns = [
+                document.getElementById('adhoc-assignee'),
+                document.getElementById('adjust-points-member'),
+                document.getElementById('chore-default-assignee'),
+                document.getElementById('assign-chore-select'),
+                document.getElementById('redeem-member-select'),
+                document.getElementById('edit-chore-default-assignee')
+            ];
+
+            const memberOptions = localState.members.map(member => 
+                `<option value="${member.id}">${member.emoji} ${member.name}</option>`
+            ).join('');
+
+            dropdowns.forEach(select => {
+                if (!select) return;
+                
+                let currentVal = select.value; // Preserve selection
+                
+                if (select.id === 'redeem-member-select') {
+                    select.innerHTML = '<option value="">Select a member...</option>' + memberOptions;
+                    select.value = selectedRedeemerId || "";
+                } else if (select.id === 'assign-chore-select') {
+                    select.innerHTML = '<option value="unassigned">Unassigned</option>' + memberOptions;
+                } else if (select.id === 'adhoc-assignee') {
+                    select.innerHTML = '<option value="unassigned">Unassigned</option>' + memberOptions;
+                } else if (select.id === 'chore-default-assignee' || select.id === 'edit-chore-default-assignee') {
+                    select.innerHTML = '<option value="unassigned">Default: Unassigned</option>' + memberOptions;
+                } else if (select.id === 'adjust-points-member') {
+                     select.innerHTML = '<option value="">Select Member</option>' + memberOptions;
+                } else {
+                    select.innerHTML = memberOptions;
+                }
+                
+                // Restore previous selection if it still exists
+                if (Array.from(select.options).some(opt => opt.value === currentVal)) {
+                    select.value = currentVal;
+                }
+            });
+        }
+        
+        function renderSetupMembersList() {
+            const listContainer = document.getElementById('setup-members-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            
+            localState.members.forEach(member => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="h-8 w-8 rounded-full ${member.color} flex items-center justify-center text-white font-bold text-sm">
+                            ${member.emoji || member.name[0]}
+                        </span>
+                        <div>
+                            <p class="font-medium text-lg">${member.name}</p>
+                            <p class="text-sm text-green-600">${member.points || 0} pts</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="edit-member-btn p-2 rounded-full hover:bg-gray-200" data-member-id="${member.id}" title="Edit Member">
+                            <span data-lucide="edit-2" class="h-5 w-5 text-blue-600"></span>
+                        </button>
+                        <button class="delete-member-btn p-2 rounded-full hover:bg-gray-200" data-member-id="${member.id}" data-member-name="${member.name}" title="Delete Member">
+                            <span data-lucide="trash-2" class="h-5 w-5 text-red-600"></span>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+            
+            if (localState.members.length === 0) {
+                 listContainer.innerHTML = `<p class="text-gray-500">No members added yet.</p>`;
+            }
+        }
+
+        function renderSetupChoresList() {
+            const listContainer = document.getElementById('setup-chores-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            
+            localState.chores.forEach(chore => {
+                const member = getMemberById(chore.defaultAssignee);
+                const schedule = chore.schedule ? chore.schedule.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ') : 'None';
+                
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">${chore.emoji || '📋'}</span>
+                        <div>
+                            <p class="font-medium text-lg">${chore.name} (+${chore.points} pts)</p>
+                            <p class="text-sm text-gray-600">Schedule: ${schedule}</p>
+                            <p class="text-sm text-gray-600">Default: ${member ? member.name : 'Unassigned'}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="edit-chore-btn p-2 rounded-full hover:bg-gray-200" data-chore-id="${chore.id}" title="Edit Chore">
+                            <span data-lucide="edit-2" class="h-5 w-5 text-blue-600"></span>
+                        </button>
+                        <button class="delete-chore-btn p-2 rounded-full hover:bg-gray-200" data-chore-id="${chore.id}" data-chore-name="${chore.name}" title="Delete Chore">
+                            <span data-lucide="trash-2" class="h-5 w-5 text-red-600"></span>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+            
+            if (localState.chores.length === 0) {
+                 listContainer.innerHTML = `<p class="text-gray-500">No recurring chore templates added yet.</p>`;
+            }
+        }
+        
+        function renderSetupRewardsList() {
+            const listContainer = document.getElementById('setup-rewards-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+
+            localState.rewards.forEach(reward => {
+                const item = document.createElement('div');
+                item.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg border';
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-3xl">${reward.emoji || '🎁'}</span>
+                        <div>
+                            <p class="font-medium text-lg">${reward.name}</p>
+                            <p class="text-sm text-green-600">${reward.cost} pts</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="edit-reward-btn p-2 rounded-full hover:bg-gray-200" data-reward-id="${reward.id}" title="Edit Reward">
+                            <span data-lucide="edit-2" class="h-5 w-5 text-blue-600"></span>
+                        </button>
+                        <button class="delete-reward-btn p-2 rounded-full hover:bg-gray-200" data-reward-id="${reward.id}" data-reward-name="${reward.name}" title="Delete Reward">
+                            <span data-lucide="trash-2" class="h-5 w-5 text-red-600"></span>
+                        </button>
+                    </div>
+                `;
+                listContainer.appendChild(item);
+            });
+            
+            if (localState.rewards.length === 0) {
+                 listContainer.innerHTML = `<p class="text-gray-500">No rewards added yet.</p>`;
+            }
+        }
+        
+        function renderEditChoreSchedule(schedule = []) {
+            const container = document.getElementById('edit-chore-schedule-container');
+            container.innerHTML = '';
+            DAYS_OF_WEEK.forEach(day => {
+                const dayLabel = day.charAt(0).toUpperCase() + day.slice(1);
+                const isChecked = schedule.includes(day);
+                container.innerHTML += `
+                    <label class="flex items-center gap-2 p-2 border rounded-lg">
+                        <input type="checkbox" name="edit-chore-schedule" value="${day}" class="form-checkbox rounded" ${isChecked ? 'checked' : ''}> ${dayLabel}
+                    </label>
+                `;
+            });
+        }
+
+
+        // === UI Helpers (Toast, Modals, Confetti) ===
+        function showToast(message, isError = false) {
+            const toast = document.getElementById('toast-message');
+            const text = document.getElementById('toast-text');
+            if (!toast || !text) return;
+
+            text.textContent = message;
+            toast.className = 'fixed bottom-6 right-6 p-4 rounded-lg shadow-xl text-white transition-all'; // Reset
+            
+            if (isError) {
+                toast.classList.add('bg-red-600');
+                playSound('error');
+            } else {
+                toast.classList.add('bg-green-600');
+                playSound('success');
+            }
+
+            toast.classList.remove('translate-x-[120%]');
+            
+            setTimeout(() => {
+                toast.classList.add('translate-x-[120%]');
+            }, 3000);
+        }
+
+        function showModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('hidden');
+            }
+        }
+        
+        // Make hideModal globally accessible
+        window.hideModal = function(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.add('hidden');
+                
+                // Clear password modal state
+                if(modalId === 'password-modal') {
+                    document.getElementById('password-input').value = '';
+                    document.getElementById('password-error').classList.add('hidden');
+                    passwordSuccessCallback = null;
+                }
+                // Clear delete modal state
+                if(modalId === 'confirm-delete-modal') {
+                    document.getElementById('delete-item-name').textContent = '';
+                    deleteSuccessCallback = null;
+                }
+            }
+        }
+
+        function showPasswordModal(callback) {
+            passwordSuccessCallback = callback;
+            showModal('password-modal');
+        }
+
+        function showDeleteModal(itemName, callback) {
+            document.getElementById('delete-item-name').textContent = itemName;
+            deleteSuccessCallback = callback;
+            showModal('confirm-delete-modal');
+        }
+
+        function runConfetti() {
+            if (!window.confetti) return;
+            
+            const duration = 3 * 1000;
+            const animationEnd = Date.now() + duration;
+            const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+
+            function randomInRange(min, max) {
+                return Math.random() * (max - min) + min;
+            }
+
+            const interval = setInterval(function() {
+                const timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+
+                const particleCount = 50 * (timeLeft / duration);
+                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+                confetti({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+            }, 250);
+        }
+
+        // === Event Handlers (Setup) ===
+
+        // --- Member Handlers ---
+        async function handleAddMember(e) {
+            e.preventDefault();
+            const name = document.getElementById('member-name').value.trim();
+            const emoji = document.getElementById('member-emoji').value.trim();
+            const color = document.getElementById('member-color').value;
+
+            if (!name || !emoji || !color) {
+                showToast("Please fill out all member fields.", true);
+                return;
+            }
+            
+            try {
+                await addDoc(collection(db, F_MEMBERS_COL), {
+                    name,
+                    emoji,
+                    color,
+                    points: 0,
+                    createdAt: serverTimestamp()
+                });
+                showToast("Member added successfully!");
+                e.target.reset();
+            } catch (error) {
+                console.error("Error adding member: ", error);
+                showToast("Failed to add member.", true);
+            }
+        }
+
+        function handleAdjustPoints(e) {
+            e.preventDefault();
+            const memberId = document.getElementById('adjust-points-member').value;
+            const amount = parseInt(document.getElementById('adjust-points-amount').value, 10);
+            const password = document.getElementById('adjust-points-password').value;
+
+            if (!memberId || !amount) {
+                showToast("Please select a member and enter an amount.", true);
+                return;
+            }
+            if (password !== PASSWORD) {
+                showToast("Incorrect admin password.", true);
+                return;
+            }
+            
+            const member = getMemberById(memberId);
+            if (!member) return;
+            
+            const newPoints = (member.points || 0) + amount;
+            
+            try {
+                const memberRef = doc(db, F_MEMBERS_COL, memberId);
+                updateDoc(memberRef, { points: newPoints });
+                showToast(`Points adjusted for ${member.name}. New total: ${newPoints}`);
+                e.target.reset();
+            } catch (error) {
+                console.error("Error adjusting points: ", error);
+                showToast("Failed to adjust points.", true);
+            }
+        }
+
+        function handleOpenEditMember(e) {
+            const memberId = e.target.closest('.edit-member-btn').dataset.memberId;
+            const member = getMemberById(memberId);
+            if (!member) return;
+            
+            document.getElementById('edit-member-id').value = member.id;
+            document.getElementById('edit-member-name').value = member.name;
+            document.getElementById('edit-member-emoji').value = member.emoji;
+            document.getElementById('edit-member-color').value = member.color;
+            
+            showModal('edit-member-modal');
+        }
+        
+        async function handleEditMember(e) {
+            e.preventDefault();
+            const memberId = document.getElementById('edit-member-id').value;
+            const name = document.getElementById('edit-member-name').value.trim();
+            const emoji = document.getElementById('edit-member-emoji').value.trim();
+            const color = document.getElementById('edit-member-color').value;
+            
+            if (!memberId || !name || !emoji || !color) {
+                showToast("Please fill out all fields.", true);
+                return;
+            }
+            
+            try {
+                const memberRef = doc(db, F_MEMBERS_COL, memberId);
+                await updateDoc(memberRef, { name, emoji, color });
+                showToast("Member updated successfully!");
+                hideModal('edit-member-modal');
+            } catch (error) {
+                console.error("Error updating member: ", error);
+                showToast("Failed to update member.", true);
+            }
+        }
+
+        function handleDeleteMember(e) {
+            const btn = e.target.closest('.delete-member-btn');
+            const memberId = btn.dataset.memberId;
+            const memberName = btn.dataset.memberName;
+            
+            showPasswordModal(() => {
+                showDeleteModal(memberName, async () => {
+                    try {
+                        // TODO: Handle reassignment of chores, etc.
+                        // For now, just delete the member.
+                        await deleteDoc(doc(db, F_MEMBERS_COL, memberId));
+                        showToast(`Member ${memberName} deleted.`);
+                        hideModal('confirm-delete-modal');
+                    } catch (error) {
+                        console.error("Error deleting member: ", error);
+                        showToast("Failed to delete member.", true);
+                    }
+                });
+            });
+        }
+
+        // --- Chore Handlers ---
+        async function handleAddChore(e) {
+            e.preventDefault();
+            const name = document.getElementById('chore-name').value.trim();
+            const emoji = document.getElementById('chore-emoji').value.trim();
+            const points = parseInt(document.getElementById('chore-points').value, 10);
+            const defaultAssignee = document.getElementById('chore-default-assignee').value;
+            const scheduleCheckboxes = document.querySelectorAll('input[name="chore-schedule"]:checked');
+            const schedule = Array.from(scheduleCheckboxes).map(cb => cb.value);
+
+            if (!name || !emoji || !points || points < 0) {
+                showToast("Please fill out name, emoji, and points.", true);
+                return;
+            }
+            
+            try {
+                await addDoc(collection(db, F_CHORES_COL), {
+                    name,
+                    emoji,
+                    points,
+                    defaultAssignee: defaultAssignee === 'unassigned' ? null : defaultAssignee,
+                    schedule,
+                    createdAt: serverTimestamp()
+                });
+                showToast("Chore template added!");
+                e.target.reset();
+            } catch (error) {
+                console.error("Error adding chore: ", error);
+                showToast("Failed to add chore.", true);
+            }
+        }
+        
+        function handleOpenEditChore(e) {
+            const choreId = e.target.closest('.edit-chore-btn').dataset.choreId;
+            const chore = localState.chores.find(c => c.id === choreId);
+            if (!chore) return;
+            
+            document.getElementById('edit-chore-id').value = chore.id;
+            document.getElementById('edit-chore-name').value = chore.name;
+            document.getElementById('edit-chore-emoji').value = chore.emoji;
+            document.getElementById('edit-chore-points').value = chore.points;
+            document.getElementById('edit-chore-default-assignee').value = chore.defaultAssignee || 'unassigned';
+            
+            renderEditChoreSchedule(chore.schedule);
+            
+            showModal('edit-chore-modal');
+        }
+        
+        async function handleEditChore(e) {
+            e.preventDefault();
+            const choreId = document.getElementById('edit-chore-id').value;
+            const name = document.getElementById('edit-chore-name').value.trim();
+            const emoji = document.getElementById('edit-chore-emoji').value.trim();
+            const points = parseInt(document.getElementById('edit-chore-points').value, 10);
+            const defaultAssignee = document.getElementById('edit-chore-default-assignee').value;
+            const scheduleCheckboxes = document.querySelectorAll('input[name="edit-chore-schedule"]:checked');
+            const schedule = Array.from(scheduleCheckboxes).map(cb => cb.value);
+            
+            if (!choreId || !name || !emoji || !points || points < 0) {
+                showToast("Please fill out all fields correctly.", true);
+                return;
+            }
+            
+            try {
+                const choreRef = doc(db, F_CHORES_COL, choreId);
+                await updateDoc(choreRef, {
+                    name,
+                    emoji,
+                    points,
+                    schedule,
+                    defaultAssignee: defaultAssignee === 'unassigned' ? null : defaultAssignee
+                });
+                showToast("Chore template updated!");
+                hideModal('edit-chore-modal');
+            } catch (error) {
+                console.error("Error updating chore: ", error);
+                showToast("Failed to update chore.", true);
+            }
+        }
+
+        function handleDeleteChore(e) {
+            const btn = e.target.closest('.delete-chore-btn');
+            const choreId = btn.dataset.choreId;
+            const choreName = btn.dataset.choreName;
+            
+            showPasswordModal(() => {
+                showDeleteModal(choreName, async () => {
+                    try {
+                        // TODO: Also delete associated daily chores?
+                        await deleteDoc(doc(db, F_CHORES_COL, choreId));
+                        showToast(`Chore template ${choreName} deleted.`);
+                        hideModal('confirm-delete-modal');
+                    } catch (error) {
+                        console.error("Error deleting chore: ", error);
+                        showToast("Failed to delete chore.", true);
+                    }
+                });
+            });
+        }
+
+        // --- Reward Handlers ---
+        async function handleAddReward(e) {
+            e.preventDefault();
+            const name = document.getElementById('reward-name').value.trim();
+            const emoji = document.getElementById('reward-emoji').value.trim();
+            const cost = parseInt(document.getElementById('reward-cost').value, 10);
+
+            if (!name || !emoji || !cost || cost <= 0) {
+                showToast("Please fill out all fields with a valid cost.", true);
+                return;
+            }
+            
+            try {
+                await addDoc(collection(db, F_REWARDS_COL), {
+                    name,
+                    emoji,
+                    cost,
+                    createdAt: serverTimestamp()
+                });
+                showToast("Reward added!");
+                e.target.reset();
+            } catch (error) {
+                console.error("Error adding reward: ", error);
+                showToast("Failed to add reward.", true);
+            }
+        }
+        
+        function handleOpenEditReward(e) {
+            const rewardId = e.target.closest('.edit-reward-btn').dataset.rewardId;
+            const reward = localState.rewards.find(r => r.id === rewardId);
+            if (!reward) return;
+            
+            document.getElementById('edit-reward-id').value = reward.id;
+            document.getElementById('edit-reward-name').value = reward.name;
+            document.getElementById('edit-reward-emoji').value = reward.emoji;
+            document.getElementById('edit-reward-cost').value = reward.cost;
+            
+            showModal('edit-reward-modal');
+        }
+        
+        async function handleEditReward(e) {
+            e.preventDefault();
+            const rewardId = document.getElementById('edit-reward-id').value;
+            const name = document.getElementById('edit-reward-name').value.trim();
+            const emoji = document.getElementById('edit-reward-emoji').value.trim();
+            const cost = parseInt(document.getElementById('edit-reward-cost').value, 10);
+
+            if (!rewardId || !name || !emoji || !cost || cost <= 0) {
+                showToast("Please fill out all fields with a valid cost.", true);
+                return;
+            }
+            
+            try {
+                const rewardRef = doc(db, F_REWARDS_COL, rewardId);
+                await updateDoc(rewardRef, { name, emoji, cost });
+                showToast("Reward updated!");
+                hideModal('edit-reward-modal');
+            } catch (error) {
+                console.error("Error updating reward: ", error);
+                showToast("Failed to update reward.", true);
+            }
+        }
+
+        function handleDeleteReward(e) {
+            const btn = e.target.closest('.delete-reward-btn');
+            const rewardId = btn.dataset.rewardId;
+            const rewardName = btn.dataset.rewardName;
+            
+            showPasswordModal(() => {
+                showDeleteModal(rewardName, async () => {
+                    try {
+                        await deleteDoc(doc(db, F_REWARDS_COL, rewardId));
+                        showToast(`Reward ${rewardName} deleted.`);
+                        hideModal('confirm-delete-modal');
+                    } catch (error) {
+                        console.error("Error deleting reward: ", error);
+                        showToast("Failed to delete reward.", true);
+                    }
+                });
+            });
+        }
+        
+        // === Event Handlers (Daily List) ===
+        
+        async function handleAddAdHocChore(e) {
+            e.preventDefault();
+            const name = document.getElementById('adhoc-name').value.trim();
+            const emoji = document.getElementById('adhoc-emoji').value.trim();
+            const points = parseInt(document.getElementById('adhoc-points').value, 10);
+            const assignedTo = document.getElementById('adhoc-assignee').value;
+            
+            if (!name || !emoji || !points || points <= 0) {
+                showToast("Please fill out name, emoji, and points.", true);
+                return;
+            }
+
+            const todayISO = new Date().toISOString().split('T')[0];
+            
+            try {
+                await addDoc(collection(db, F_DAILY_CHORES_COL), {
+                    name,
+                    emoji,
+                    points,
+                    assignedTo: assignedTo === 'unassigned' ? null : assignedTo,
+                    date: todayISO,
+                    isComplete: false,
+                    isAdHoc: true,
+                    createdAt: serverTimestamp()
+                });
+                showToast("Ad-hoc chore added!");
+                e.target.reset();
+                document.getElementById('add-adhoc-chore-form').closest('details').open = false;
+            } catch (error) {
+                console.error("Error adding ad-hoc chore: ", error);
+                showToast("Failed to add ad-hoc chore.", true);
+            }
+        }
+
+        async function handleToggleChoreComplete(e) {
+            const btn = e.target.closest('.chore-toggle-btn');
+            if (!btn) return;
+            
+            const choreId = btn.dataset.choreId;
+            const memberId = btn.dataset.memberId;
+            const points = parseInt(btn.dataset.points, 10);
+            
+            const chore = localState.dailyChores.find(c => c.id === choreId);
+            if (!chore) return;
+            
+            const newIsComplete = !chore.isComplete;
+            
+            try {
+                // 1. Update the chore
+                const choreRef = doc(db, F_DAILY_CHORES_COL, choreId);
+                await updateDoc(choreRef, { isComplete: newIsComplete });
+                
+                // 2. Update member points (if assigned)
+                if (memberId && memberId !== 'unassigned') {
+                    const member = getMemberById(memberId);
+                    if (member) {
+                        const pointsChange = newIsComplete ? points : -points;
+                        const newPoints = (member.points || 0) + pointsChange;
+                        const memberRef = doc(db, F_MEMBERS_COL, memberId);
+                        await updateDoc(memberRef, { points: newPoints });
+                    }
+                }
+                
+                // 3. Play sound
+                playSound(newIsComplete ? 'complete' : 'uncomplete');
+                
+            } catch (error) {
+                console.error("Error toggling chore: ", error);
+                showToast("Failed to update chore.", true);
+            }
+        }
+        
+        function handleOpenAssignChoreModal(e) {
+            const btn = e.target.closest('.assign-chore-btn');
+            if (!btn) return;
+            
+            const choreId = btn.dataset.choreId;
+            const chore = localState.dailyChores.find(c => c.id === choreId);
+            if (!chore) return;
+            
+            selectedChoreForAssignment = chore;
+            
+            document.getElementById('assign-chore-name').textContent = chore.name;
+            document.getElementById('assign-chore-select').value = chore.assignedTo || 'unassigned';
+            
+            showModal('assign-chore-modal');
+        }
+        
+        async function handleAssignChore() {
+            if (!selectedChoreForAssignment) return;
+            
+            const newAssigneeId = document.getElementById('assign-chore-select').value;
+            const choreRef = doc(db, F_DAILY_CHORES_COL, selectedChoreForAssignment.id);
+            
+            try {
+                await updateDoc(choreRef, {
+                    assignedTo: newAssigneeId === 'unassigned' ? null : newAssigneeId
+                });
+                showToast("Chore reassigned!");
+                hideModal('assign-chore-modal');
+                selectedChoreForAssignment = null;
+            } catch (error) {
+                console.error("Error assigning chore: ", error);
+                showToast("Failed to assign chore.", true);
+            }
+        }
+        
+        // === Event Handlers (Rewards) ===
+        
+        function handleRedeemerChange(e) {
+            selectedRedeemerId = e.target.value;
+            renderPointsAndRewards(); // Re-render to update card states
+        }
+        
+        async function handleRedeemReward(e) {
+            const btn = e.target.closest('.redeem-reward-btn');
+            if (!btn || !selectedRedeemerId) return;
+            
+            const rewardId = btn.dataset.rewardId;
+            const cost = parseInt(btn.dataset.cost, 10);
+            
+            const member = getMemberById(selectedRedeemerId);
+            const reward = localState.rewards.find(r => r.id === rewardId);
+            
+            if (!member || !reward) {
+                showToast("Error finding member or reward.", true);
+                return;
+            }
+            
+            if (member.points < cost) {
+                showToast("Not enough points!", true);
+                return;
+            }
+            
+            try {
+                // 1. Deduct points
+                const newPoints = member.points - cost;
+                const memberRef = doc(db, F_MEMBERS_COL, member.id);
+                await updateDoc(memberRef, { points: newPoints });
+                
+                // 2. Create a "claimed reward" record
+                await addDoc(collection(db, F_CLAIMED_REWARDS_COL), {
+                    memberId: member.id,
+                    rewardId: reward.id,
+                    cost: cost,
+                    delivered: false,
+                    claimedAt: serverTimestamp()
+                });
+                
+                showToast(`${reward.name} redeemed by ${member.name}!`);
+                playSound('redeem');
+                runConfetti();
+                
+            } catch (error) {
+                console.error("Error redeeming reward: ", error);
+                showToast("Failed to redeem reward.", true);
+            }
+        }
+        
+        async function handleDeliverReward(e) {
+            const btn = e.target.closest('.deliver-reward-btn');
+            if (!btn) return;
+            
+            const claimedId = btn.dataset.claimedId;
+            
+            try {
+                const claimedRef = doc(db, F_CLAIMED_REWARDS_COL, claimedId);
+                await updateDoc(claimedRef, { delivered: true });
+                showToast("Reward marked as delivered!");
+            } catch (error) {
+                console.error("Error delivering reward: ", error);
+                showToast("Failed to mark as delivered.", true);
+            }
+        }
+
+        // === Drag & Drop Handlers ===
+        let draggedChoreId = null;
+
+        function initDragAndDrop() {
+            // Listen on the document for drag start/end
+            document.addEventListener('dragstart', dragStart);
+            document.addEventListener('dragend', dragEnd);
+        }
+
+        function dragStart(e) {
+            const choreItem = e.target.closest('.chore-item');
+            if (!choreItem) {
+                e.preventDefault();
+                return;
+            }
+            draggedChoreId = choreItem.dataset.choreId;
+            setTimeout(() => choreItem.classList.add('chore-dragging'), 0);
+        }
+
+        function dragEnd(e) {
+            const choreItem = document.getElementById(`chore-${draggedChoreId}`);
+            if (choreItem) {
+                choreItem.classList.remove('chore-dragging');
+            }
+            // Remove all drop target highlights
+            document.querySelectorAll('.drag-over-target').forEach(el => el.classList.remove('drag-over-target'));
+            draggedChoreId = null;
+        }
+        
+        function dragOver(e) {
+            e.preventDefault(); // Necessary to allow dropping
+            const targetList = e.target.closest('.member-chore-list');
+            if (targetList) {
+                e.dataTransfer.dropEffect = 'move';
+            }
+        }
+        
+        function dragEnter(e) {
+            e.preventDefault();
+            const targetList = e.target.closest('.member-chore-list');
+            if (targetList) {
+                targetList.classList.add('drag-over-target');
+            }
+        }
+        
+        function dragLeave(e) {
+            const targetList = e.target.closest('.member-chore-list');
+            if (targetList) {
+                targetList.classList.remove('drag-over-target');
+            }
+        }
+
+        async function drop(e) {
+            e.preventDefault();
+            const targetList = e.target.closest('.member-chore-list');
+            if (!targetList || !draggedChoreId) return;
+            
+            targetList.classList.remove('drag-over-target');
+            const newMemberId = targetList.dataset.memberId;
+            const chore = localState.dailyChores.find(c => c.id === draggedChoreId);
+            
+            // Only update if the assignment is different
+            if (chore && (chore.assignedTo || 'unassigned') !== newMemberId) {
+                console.log(`Dropping chore ${draggedChoreId} onto ${newMemberId}`);
+                const choreRef = doc(db, F_DAILY_CHORES_COL, draggedChoreId);
+                try {
+                    await updateDoc(choreRef, {
+                        assignedTo: newMemberId === 'unassigned' ? null : newMemberId
+                    });
+                    showToast("Chore assigned!");
+                    playSound('success');
+                } catch (error) {
+                    console.error("Error assigning chore via drop: ", error);
+                    showToast("Failed to assign chore.", true);
+                }
+            }
+            draggedChoreId = null;
+        }
+
+        // === App Initialization ===
+        document.addEventListener('DOMContentLoaded', () => {
+            // 1. Initialize Firebase (which handles auth and data load)
+            initFirebase();
+            
+            // 2. Start clock
+            updateTime();
+            setInterval(updateTime, 1000); // Update time every second
+            
+            // 3. Initialize Sounds (on first user interaction)
+            document.body.addEventListener('click', initSounds, { once: true });
+            
+            // 4. Initialize Icons
+            if (window.lucide) {
+                lucide.createIcons();
+            } else {
+                console.error("Lucide icons failed to load.");
+            }
+
+            // 5. Setup Navigation
+            const navLinks = document.querySelectorAll('.nav-link');
+            const views = document.querySelectorAll('.view-content');
+            const viewTitle = document.getElementById('view-title');
+            
+            navLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const view = link.dataset.view;
+                    
+                    // Update content
+                    views.forEach(v => v.classList.add('hidden'));
+                    document.getElementById(`view-${view}`).classList.remove('hidden');
+                    
+                    // Update title
+                    viewTitle.textContent = link.querySelector('.hidden').textContent;
+                    
+                    // Update active link
+                    navLinks.forEach(l => l.classList.remove('bg-gray-700', 'text-white'));
+                    link.classList.add('bg-gray-700', 'text-white');
+                    
+                    currentView = view;
+                    
+                    // Re-fetch weekly data if switching to that view
+                    if (currentView === 'weekly') {
+                        renderWeeklySchedule();
+                    }
+                });
+            });
+            // Set initial view
+            document.querySelector('.nav-link[data-view="daily"]').classList.add('bg-gray-700', 'text-white');
+            document.getElementById('view-daily').classList.remove('hidden');
+
+            // 6. Setup Tab (Sub-navigation)
+            const setupNavLinks = document.querySelectorAll('.setup-nav-link');
+            const setupViews = document.querySelectorAll('.setup-view-content');
+            
+            setupNavLinks.forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const view = link.dataset.setupView;
+                    
+                    // Update content panes
+                    setupViews.forEach(v => v.classList.add('hidden'));
+                    document.getElementById(`setup-view-${view}`).classList.remove('hidden');
+                    document.getElementById(`${view}-list-container`).classList.remove('hidden');
+                    
+                    // Update active link
+                    setupNavLinks.forEach(l => l.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600'));
+                    link.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+                    
+                    currentSetupView = view;
+                });
+            });
+            // Set initial setup view
+            document.querySelector('.setup-nav-link[data-setup-view="members"]').click();
+            
+            // 7. Attach Global Event Listeners (using delegation)
+            document.body.addEventListener('click', (e) => {
+                // Daily List
+                if (e.target.closest('.chore-toggle-btn')) handleToggleChoreComplete(e);
+                if (e.target.closest('.assign-chore-btn')) handleOpenAssignChoreModal(e);
+                
+                // Rewards
+                if (e.target.closest('.redeem-reward-btn')) handleRedeemReward(e);
+                if (e.target.closest('.deliver-reward-btn')) handleDeliverReward(e);
+
+                // Setup: Edit/Delete
+                if (e.target.closest('.edit-member-btn')) handleOpenEditMember(e);
+                if (e.target.closest('.delete-member-btn')) handleDeleteMember(e);
+                if (e.target.closest('.edit-chore-btn')) handleOpenEditChore(e);
+                if (e.target.closest('.delete-chore-btn')) handleDeleteChore(e);
+                if (e.target.closest('.edit-reward-btn')) handleOpenEditReward(e);
+                if (e.target.closest('.delete-reward-btn')) handleDeleteReward(e);
+            });
+            
+            // 8. Attach Form Submit Handlers
+            document.getElementById('add-member-form').addEventListener('submit', handleAddMember);
+            document.getElementById('adjust-points-form').addEventListener('submit', handleAdjustPoints);
+            document.getElementById('add-chore-form').addEventListener('submit', handleAddChore);
+            document.getElementById('add-reward-form').addEventListener('submit', handleAddReward);
+            document.getElementById('add-adhoc-chore-form').addEventListener('submit', handleAddAdHocChore);
+            
+            // Modals
+            document.getElementById('assign-chore-submit').addEventListener('click', handleAssignChore);
+            document.getElementById('password-submit').addEventListener('click', () => {
+                const password = document.getElementById('password-input').value;
+                if (password === PASSWORD) {
+                    if (passwordSuccessCallback) passwordSuccessCallback();
+                    hideModal('password-modal');
+                } else {
+                    document.getElementById('password-error').classList.remove('hidden');
+                }
+            });
+            document.getElementById('confirm-delete-button').addEventListener('click', () => {
+                if (deleteSuccessCallback) deleteSuccessCallback();
+                // hideModal is called by the callback on success
+            });
+            
+            // Edit Modals
+            document.getElementById('edit-member-form').addEventListener('submit', handleEditMember);
+            document.getElementById('edit-chore-form').addEventListener('submit', handleEditChore);
+            document.getElementById('edit-reward-form').addEventListener('submit', handleEditReward);
+            
+            // 9. Other Listeners
+            document.getElementById('redeem-member-select').addEventListener('change', handleRedeemerChange);
+
+            // 10. Init Drag and Drop
+            initDragAndDrop();
+        });
+    </script>
+</body>
+</html>
 
