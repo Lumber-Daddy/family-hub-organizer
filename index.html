@@ -22,7 +22,7 @@
                 }
             }
         }
-    </Gscript>
+    </script>
 
     <!-- 2. Firebase -->
     <!-- All imports are now in the main module script -->
@@ -439,9 +439,9 @@
     <script type="module">
         // === Firebase SDK Imports ===
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
-            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, 
+            getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc,
             onSnapshot, collection, query, where, getDocs, serverTimestamp, setLogLevel
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
@@ -2074,4 +2074,5 @@
     </script>
 </body>
 </html>
+
 
