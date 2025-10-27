@@ -1,21 +1,39 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-gray-100">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Family Hub Organizer</title>
-    
+
     <!-- 1. Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- 2. Firebase JS SDKs (using modules) -->
-    <!-- This block has been removed. Imports are handled in the main script at the bottom. -->
-    
-    <!-- 3. Helper Libraries: Tone.js (sound) & Confetti.js (animation) -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        'hub-navy': '#1A237E',
+                        'hub-blue': '#283593',
+                        'hub-light-blue': '#3F51B5',
+                    }
+                }
+            }
+        }
+    </Gscript>
+
+    <!-- 2. Firebase -->
+    <!-- All imports are now in the main module script -->
+
+    <!-- 3. Helper Libraries -->
+    <!-- Tone.js (Sound Effects) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
+    <!-- canvas-confetti (Reward Animation) -->
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     
-    <!-- 4. Icons (Lucide) - FIXED SCRIPT URL -->
+    <!-- 4. Icons (Lucide) -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
     <!-- Suppress favicon.ico 404 error -->
@@ -23,422 +41,405 @@
 
     <!-- 5. Custom Styles -->
     <style>
-        /* Smooth transitions for UI elements */
-        .transition-all {
-            transition: all 0.3s ease-in-out;
+        body {
+            font-family: 'Inter', sans-serif;
         }
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 6px;
-            height: 6px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f1f1;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #c4c4c4;
-            border-radius: 10px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #a1a1a1;
-        }
-        /* Style for completed chore */
-        .chore-complete {
+        /* Custom styles for chore completion */
+        .chore-complete p {
             text-decoration: line-through;
             opacity: 0.6;
         }
-        /* Simple rotate animation for loading icon */
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
+        .chore-complete {
+            background-color: #f8fafc; /* bg-cool-gray-50 */
         }
-        .animate-spin {
-            animation: spin 1s linear infinite;
-        }
-        /* Hide number input arrows */
-        input[type=number]::-webkit-inner-spin-button,
-        input[type=number]::-webkit-outer-spin-button {
-            -webkit-appearance: none;
-            margin: 0;
-        }
-        input[type=number] {
-            -moz-appearance: textfield;
-        }
-        /* Draggable style */
+        /* Custom style for dragging */
         .chore-dragging {
             opacity: 0.5;
-            border: 2px dashed #0ea5e9;
+            border: 2px dashed #3F51B5;
         }
         .drag-over-target {
-            background-color: #f0f9ff; /* light-blue-50 */
-            border: 2px dashed #0ea5e9;
+            outline: 2px dashed #3F51B5;
+            background-color: #E8EAF6; /* indigo-100 */
         }
     </style>
 </head>
-<body class="bg-gray-100 font-sans text-gray-800 h-screen overflow-hidden">
-
-    <!-- Loading Overlay -->
-    <div id="loading-overlay" class="fixed inset-0 bg-white/70 backdrop-blur-sm z-[999] flex flex-col items-center justify-center">
-        <div data-lucide="loader-circle" class="animate-spin text-blue-600 h-16 w-16"></div>
-        <p class="mt-4 text-lg font-medium text-gray-700">Connecting to Family Hub...</p>
-        <p id="loading-error" class="mt-2 text-red-600 hidden"></p>
+<body class="h-full flex overflow-hidden">
+    <!-- Static Sidebar -->
+    <div class="flex-shrink-0 w-64 bg-hub-navy text-gray-200 flex flex-col">
+        <!-- Logo -->
+        <div class="h-16 flex-shrink-0 flex items-center justify-center px-4 bg-hub-blue">
+            <span data-lucide="home" class="h-8 w-8 text-white"></span>
+            <span class="ml-3 text-2xl font-bold text-white">Family Hub</span>
+        </div>
+        <!-- Navigation -->
+        <nav class="flex-1 overflow-y-auto p-4 space-y-2">
+            <a href="#" class="nav-link flex items-center px-3 py-3 rounded-lg text-lg font-medium text-gray-200 hover:bg-hub-blue hover:text-white" data-view="daily">
+                <span data-lucide="sun" class="h-6 w-6 mr-3"></span>
+                <span class="hidden sm:inline">Daily List</span>
+            </a>
+            <a href="#" class="nav-link flex items-center px-3 py-3 rounded-lg text-lg font-medium text-gray-200 hover:bg-hub-blue hover:text-white" data-view="weekly">
+                <span data-lucide="calendar-days" class="h-6 w-6 mr-3"></span>
+                <span class="hidden sm:inline">Weekly Schedule</span>
+            </a>
+            <a href="#" class="nav-link flex items-center px-3 py-3 rounded-lg text-lg font-medium text-gray-200 hover:bg-hub-blue hover:text-white" data-view="rewards">
+                <span data-lucide="star" class="h-6 w-6 mr-3"></span>
+                <span class="hidden sm:inline">Points & Rewards</span>
+            </a>
+            <a href="#" class="nav-link flex items-center px-3 py-3 rounded-lg text-lg font-medium text-gray-200 hover:bg-hub-blue hover:text-white" data-view="setup">
+                <span data-lucide="settings" class="h-6 w-6 mr-3"></span>
+                <span class="hidden sm:inline">Setup</span>
+            </a>
+        </nav>
     </div>
 
-    <div class="flex h-full">
-        <!-- ==== Sidebar Navigation ==== -->
-        <nav class="w-20 md:w-64 bg-gray-800 text-white flex flex-col shadow-lg">
-            <div class="flex items-center justify-center md:justify-start md:pl-6 h-20 border-b border-gray-700">
-                <span data-lucide="home" class="h-8 w-8 text-blue-400"></span>
-                <span class="hidden md:block ml-3 text-2xl font-bold">Family Hub</span>
-            </div>
-            
-            <ul class="flex flex-col py-4 space-y-2">
-                <!-- Navigation Links -->
-                <li>
-                    <a href="#" class="nav-link flex items-center justify-center md:justify-start py-3 px-6 text-gray-300 hover:bg-gray-700 hover:text-white transition-all" data-view="daily">
-                        <span data-lucide="clipboard-list"></span>
-                        <span class="hidden md:block ml-4">Daily List</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="nav-link flex items-center justify-center md:justify-start py-3 px-6 text-gray-300 hover:bg-gray-700 hover:text-white transition-all" data-view="weekly">
-                        <span data-lucide="calendar-days"></span>
-                        <span class="hidden md:block ml-4">Weekly Schedule</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="nav-link flex items-center justify-center md:justify-start py-3 px-6 text-gray-300 hover:bg-gray-700 hover:text-white transition-all" data-view="rewards">
-                        <span data-lucide="star"></span>
-                        <span class="hidden md:block ml-4">Points & Rewards</span>
-                    </a>
-                </li>
-                <li>
-                    <a href="#" class="nav-link flex items-center justify-center md:justify-start py-3 px-6 text-gray-300 hover:bg-gray-700 hover:text-white transition-all" data-view="setup">
-                        <span data-lucide="settings"></span>
-                        <span class="hidden md:block ml-4">Setup</span>
-                    </a>
-                </li>
-            </ul>
-        </nav>
-
-        <!-- ==== Main Content Area ==== -->
-        <main class="flex-1 flex flex-col h-screen">
-            <!-- Header Bar -->
-            <header class="flex items-center justify-between h-20 bg-white shadow-md px-6 z-10">
-                <h2 id="view-title" class="text-3xl font-bold text-gray-800">Daily List</h2>
+    <!-- Main Content Area -->
+    <div class="flex-1 flex flex-col overflow-hidden">
+        <!-- Top Header -->
+        <header class="h-16 bg-white shadow-sm border-b border-gray-200 flex-shrink-0">
+            <div class="h-full px-6 flex items-center justify-between">
+                <!-- View Title -->
+                <h1 id="view-title" class="text-2xl font-bold text-gray-800">Daily List</h1>
+                <!-- Live Date/Time -->
                 <div class="text-right">
-                    <div id="current-time" class="text-2xl font-semibold text-gray-700"></div>
-                    <div id="current-date" class="text-sm text-gray-500"></div>
+                    <p id="live-time" class="text-xl font-medium text-gray-700">12:00:00 PM</p>
+                    <p id="live-date" class="text-sm text-gray-500">Monday, January 1, 2024</p>
                 </div>
-            </header>
+            </div>
+        </header>
 
-            <!-- Content Views (overflow-y-auto is key) -->
-            <div class="flex-1 p-6 md:p-8 overflow-y-auto">
-                
-                <!-- ==== 1. Daily List View ==== -->
-                <div id="view-daily" class="view-content space-y-6">
-                    <!-- Ad-Hoc Chore Collapsible -->
-                    <details class="bg-white rounded-lg shadow-sm border border-gray-200">
-                        <summary class="p-4 cursor-pointer font-medium text-lg text-blue-600 flex items-center justify-between">
-                            <span>Add Ad-Hoc Chore</span>
-                            <span data-lucide="plus-circle" class="h-5 w-5"></span>
-                        </summary>
-                        <form id="add-adhoc-chore-form" class="p-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-5 gap-4">
-                            <input type="text" id="adhoc-name" placeholder="Chore Name" class="md:col-span-2 form-input px-4 py-2 border border-gray-300 rounded-lg" required>
-                            <input type="text" id="adhoc-emoji" placeholder="Emoji (e.g., ✨)" class="form-input px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
-                            <input type="number" id="adhoc-points" placeholder="Points" class="form-input px-4 py-2 border border-gray-300 rounded-lg" required>
-                            <select id="adhoc-assignee" class="form-select px-4 py-2 border border-gray-300 rounded-lg">
+        <!-- Main Scrolling Content -->
+        <main class="flex-1 overflow-y-auto p-6">
+            
+            <!-- Loading Screen -->
+            <div id="loading-screen" class="w-full h-full flex flex-col items-center justify-center">
+                <span data-lucide="loader-2" class="h-12 w-12 text-blue-600 animate-spin"></span>
+                <p class="mt-4 text-xl font-medium text-gray-600">Connecting to Family Hub...</p>
+            </div>
+
+            <!-- ===== View: Daily List ===== -->
+            <div id="view-daily" class="view-content space-y-6 hidden">
+                <!-- Ad-Hoc Chore Form -->
+                <details class="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+                    <summary class="cursor-pointer text-lg font-medium text-blue-600 flex items-center">
+                        <span data-lucide="plus-circle" class="mr-2 h-5 w-5"></span>
+                        Add One-Time Chore
+                    </summary>
+                    <form id="add-adhoc-chore-form" class="mt-4 space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                            <input type="text" id="adhoc-name" placeholder="Chore Name" class="col-span-1 md:col-span-2 form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <input type="text" id="adhoc-emoji" placeholder="Emoji (e.g., 🗑️)" maxlength="2" class="col-span-1 form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <input type="number" id="adhoc-points" placeholder="Points" min="0" class="col-span-1 form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                             <select id="adhoc-assignee" class="form-select px-4 py-2 border border-gray-300 rounded-lg">
                                 <option value="unassigned">Unassigned</option>
-                                <!-- Member options will be populated by JS -->
+                                <!-- Members populated by JS -->
                             </select>
-                            <button type="submit" class="md:col-span-5 w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
-                                <span data-lucide="plus"></span> Add Chore
-                            </button>
-                        </form>
-                    </details>
-                    
-                    <!-- Chore Lists Container -->
-                    <div id="daily-chores-container" class="space-y-6">
-                        <!-- Content generated by JS -->
-                    </div>
+                            <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Add Chore</button>
+                        </div>
+                    </form>
+                </details>
+
+                <!-- Chore Lists Container -->
+                <div id="daily-chores-container" class="space-y-6">
+                    <!-- Member sections populated by JS -->
                 </div>
+            </div>
 
-                <!-- ==== 2. Weekly Schedule View ==== -->
-                <div id="view-weekly" class="view-content hidden">
-                    <div id="weekly-schedule-grid" class="grid grid-cols-1 md:grid-cols-7 gap-4">
-                        <!-- Day columns generated by JS -->
-                    </div>
+            <!-- ===== View: Weekly Schedule ===== -->
+            <div id="view-weekly" class="view-content hidden">
+                <div id="weekly-schedule-grid" class="grid grid-cols-1 md:grid-cols-7 gap-4">
+                    <!-- Day columns populated by JS -->
                 </div>
+            </div>
 
-                <!-- ==== 3. Points & Rewards View ==== -->
-                <div id="view-rewards" class="view-content hidden space-y-6">
-                    <!-- Member Point Totals -->
-                    <div>
-                        <h3 class="text-2xl font-semibold mb-4">Point Totals</h3>
-                        <div id="member-points-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            <!-- Member point cards generated by JS -->
-                        </div>
+            <!-- ===== View: Points & Rewards ===== -->
+            <div id="view-rewards" class="view-content space-y-6 hidden">
+                <!-- Member Points -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Member Points</h2>
+                    <div id="member-points-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Member point cards populated by JS -->
                     </div>
-                    
-                    <!-- Reward Redemption -->
-                    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                        <h3 class="text-2xl font-semibold mb-4">Redeem Rewards</h3>
-                        <div class="flex items-center gap-4 mb-6">
-                            <label for="redeem-member-select" class="text-lg font-medium">I am:</label>
-                            <select id="redeem-member-select" class="form-select px-4 py-2 border border-gray-300 rounded-lg w-full md:w-1/3">
-                                <option value="">Select a member...</option>
-                                <!-- Member options populated by JS -->
-                            </select>
-                        </div>
-                        <div id="available-rewards-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                            <!-- Reward cards generated by JS -->
-                        </div>
+                </section>
+                
+                <!-- Redeem Rewards -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Redeem Rewards</h2>
+                    <div class="mb-4 max-w-sm">
+                        <label for="redeem-member-select" class="block text-sm font-medium text-gray-700 mb-1">Who is redeeming?</label>
+                        <select id="redeem-member-select" class="w-full form-select px-4 py-2 border border-gray-300 rounded-lg">
+                            <option value="">Select a member...</option>
+                            <!-- Members populated by JS -->
+                        </select>
                     </div>
+                    <div id="available-rewards-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4">
+                        <!-- Reward cards populated by JS -->
+                    </div>
+                </section>
+                
+                <!-- Claimed (Pending) Rewards -->
+                <section>
+                    <h2 class="text-2xl font-bold text-gray-800 mb-4">Pending Rewards</h2>
+                    <div id="claimed-rewards-list" class="space-y-2">
+                        <!-- Claimed rewards populated by JS -->
+                    </div>
+                </section>
+            </div>
 
-                    <!-- Claimed (Not Delivered) Rewards -->
-                    <div class="bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                        <h3 class="text-2xl font-semibold mb-4">Pending Rewards</h3>
-                        <div id="claimed-rewards-list" class="space-y-3">
-                            <!-- Claimed rewards list generated by JS -->
-                        </div>
-                    </div>
-                </div>
+            <!-- ===== View: Setup ===== -->
+            <div id="view-setup" class="view-content space-y-6 hidden">
+                <!-- Setup Sub-Navigation -->
+                <nav class="flex border-b border-gray-300">
+                    <a href="#" class="setup-nav-link -mb-px py-3 px-6 text-lg font-medium text-gray-500 hover:text-blue-600" data-setup-view="members">
+                        <span data-lucide="users" class="h-5 w-5 mr-2 inline-block"></span> Members
+                    </a>
+                    <a href="#" class="setup-nav-link -mb-px py-3 px-6 text-lg font-medium text-gray-500 hover:text-blue-600" data-setup-view="chores">
+                        <span data-lucide="clipboard-list" class="h-5 w-5 mr-2 inline-block"></span> Chores
+                    </a>
+                    <a href="#" class="setup-nav-link -mb-px py-3 px-6 text-lg font-medium text-gray-500 hover:text-blue-600" data-setup-view="rewards">
+                        <span data-lucide="gift" class="h-5 w-5 mr-2 inline-block"></span> Rewards
+                    </a>
+                </nav>
 
-                <!-- ==== 4. Setup View ==== -->
-                <div id="view-setup" class="view-content hidden">
-                    <!-- Setup Sub-Navigation -->
-                    <div class="mb-6 flex space-x-2 border-b border-gray-300">
-                        <button class="setup-nav-link py-3 px-5 font-medium text-gray-500 hover:text-gray-800" data-setup-view="members">Members</button>
-                        <button class="setup-nav-link py-3 px-5 font-medium text-gray-500 hover:text-gray-800" data-setup-view="chores">Chores</button>
-                        <button class="setup-nav-link py-3 px-5 font-medium text-gray-500 hover:text-gray-800" data-setup-view="rewards">Rewards</button>
-                    </div>
-
-                    <!-- Setup Content Panes -->
-                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                        
-                        <!-- ==== Setup: Members ==== -->
-                        <div id="setup-view-members" class="setup-view-content lg:col-span-1 space-y-6">
-                            <!-- Add Member -->
-                            <form id="add-member-form" class="bg-white p-6 rounded-lg shadow-md border border-gray-200 space-y-4">
-                                <h4 class="text-xl font-semibold">Add New Member</h4>
-                                <input type="text" id="member-name" placeholder="Member Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                                <input type="text" id="member-emoji" placeholder="Emoji (e.g., 👨‍👩‍👧)" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
-                                <select id="member-color" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                                    <option value="">Select Color</option>
+                <!-- Setup View: Members -->
+                <div id="setup-view-members" class="setup-view-content hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left Column: Add & Adjust -->
+                    <div class="space-y-6">
+                        <!-- Add Member Form -->
+                        <section class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Add New Member</h3>
+                            <form id="add-member-form" class="space-y-4">
+                                <input type="text" id="member-name" placeholder="Member Name" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <input type="text" id="member-emoji" placeholder="Emoji (e.g., 👩)" maxlength="2" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <select id="member-color" class="w-full form-select px-4 py-2 border border-gray-300 rounded-lg" required>
+                                    <option value="">Select a color...</option>
                                     <option value="bg-red-500">Red</option>
+                                    <option value="bg-pink-500">Pink</option>
+                                    <option value="bg-purple-500">Purple</option>
                                     <option value="bg-blue-500">Blue</option>
                                     <option value="bg-green-500">Green</option>
                                     <option value="bg-yellow-500">Yellow</option>
-                                    <option value="bg-purple-500">Purple</option>
-                                    <option value="bg-pink-500">Pink</option>
-                                    <option value="bg-indigo-500">Indigo</option>
-                                    <option value="bg-teal-500">Teal</option>
+                                    <option value="bg-orange-500">Orange</option>
                                 </select>
-                                <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
-                                    <span data-lucide="user-plus"></span> Add Member
-                                </button>
+                                <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Add Member</button>
                             </form>
-                            
-                            <!-- Adjust Points -->
-                            <form id="adjust-points-form" class="bg-white p-6 rounded-lg shadow-md border border-gray-200 space-y-4">
-                                <h4 class="text-xl font-semibold">Adjust Points (Admin)</h4>
-                                <select id="adjust-points-member" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg" required>
+                        </section>
+                        
+                        <!-- Adjust Points Form -->
+                        <section class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                            <h3 class="text-xl font-semibold text-gray-800 mb-4">Adjust Points (Admin)</h3>
+                            <form id="adjust-points-form" class="space-y-4">
+                                <select id="adjust-points-member" class="w-full form-select px-4 py-2 border border-gray-300 rounded-lg" required>
                                     <option value="">Select Member</option>
+                                    <!-- Members populated by JS -->
                                 </select>
-                                <input type="number" id="adjust-points-amount" placeholder="Points to Add/Subtract" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                                <input type="password" id="adjust-points-password" placeholder="Admin Password" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                                <button type="submit" class="w-full bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600 transition-all flex items-center justify-center gap-2">
-                                    <span data-lucide="edit"></span> Adjust Points
-                                </button>
+                                <input type="number" id="adjust-points-amount" placeholder="Amount (e.g., 50 or -10)" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <input type="password" id="adjust-points-password" placeholder="Admin Password" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                                <button type="submit" class="w-full bg-yellow-500 text-white font-semibold py-2 px-4 rounded-lg hover:bg-yellow-600">Adjust Points</button>
                             </form>
-                        </div>
-                        <div id="member-list-container" class="setup-view-content lg:col-span-2 bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                            <h4 class="text-xl font-semibold mb-4">Existing Members</h4>
-                            <div id="setup-members-list" class="space-y-3">
-                                <!-- Member list generated by JS -->
-                            </div>
-                        </div>
-
-                        <!-- ==== Setup: Chores ==== -->
-                        <div id="setup-view-chores" class="setup-view-content hidden lg:col-span-1 space-y-6">
-                            <form id="add-chore-form" class="bg-white p-6 rounded-lg shadow-md border border-gray-200 space-y-4">
-                                <h4 class="text-xl font-semibold">Add Recurring Chore</h4>
-                                <input type="text" id="chore-name" placeholder="Chore Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                                <input type="text" id="chore-emoji" placeholder="Emoji" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
-                                <input type="number" id="chore-points" placeholder="Points" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                                <select id="chore-default-assignee" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg">
-                                    <option value="unassigned">Default: Unassigned</option>
-                                </select>
-                                <div class="space-y-2">
-                                    <label class="font-medium">Schedule (Recurring Days):</label>
-                                    <div class="grid grid-cols-4 gap-2 text-sm">
-                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="mon" class="form-checkbox rounded"> Mon</label>
-                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="tue" class="form-checkbox rounded"> Tue</label>
-                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="wed" class="form-checkbox rounded"> Wed</label>
-                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="thu" class="form-checkbox rounded"> Thu</label>
-                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="fri" class="form-checkbox rounded"> Fri</label>
-                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="sat" class="form-checkbox rounded"> Sat</label>
-                                        <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="sun" class="form-checkbox rounded"> Sun</label>
-                                    </div>
-                                </div>
-                                <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
-                                    <span data-lucide="plus-circle"></span> Add Chore Template
-                                </button>
-                            </form>
-                        </div>
-                        <div id="chore-list-container" class="setup-view-content hidden lg:col-span-2 bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                            <h4 class="text-xl font-semibold mb-4">Existing Chore Templates</h4>
-                            <div id="setup-chores-list" class="space-y-3">
-                                <!-- Chore list generated by JS -->
-                            </div>
-                        </div>
-
-                        <!-- ==== Setup: Rewards ==== -->
-                        <div id="setup-view-rewards" class="setup-view-content hidden lg:col-span-1 space-y-6">
-                            <form id="add-reward-form" class="bg-white p-6 rounded-lg shadow-md border border-gray-200 space-y-4">
-                                <h4 class="text-xl font-semibold">Add New Reward</h4>
-                                <input type="text" id="reward-name" placeholder="Reward Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                                <input type="text" id="reward-emoji" placeholder="Emoji (e.g., 🍦)" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
-                                <input type="number" id="reward-cost" placeholder="Point Cost" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                                <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
-                                    <span data-lucide="award"></span> Add Reward
-                                </button>
-                            </form>
-                        </div>
-                        <div id="reward-list-container" class="setup-view-content hidden lg:col-span-2 bg-white p-6 rounded-lg shadow-md border border-gray-200">
-                            <h4 class="text-xl font-semibold mb-4">Available Rewards</h4>
-                            <div id="setup-rewards-list" class="space-y-3">
-                                <!-- Reward list generated by JS -->
-                            </div>
+                        </section>
+                    </div>
+                    <!-- Right Column: List -->
+                    <div id="members-list-container" class="setup-list-container bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Current Members</h3>
+                        <div id="setup-members-list" class="space-y-3">
+                            <!-- Member list populated by JS -->
                         </div>
                     </div>
-                </div> <!-- End Setup View -->
-            </div> <!-- End Content Views Container -->
+                </div>
+                
+                <!-- Setup View: Chores -->
+                <div id="setup-view-chores" class="setup-view-content hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left Column: Add -->
+                    <section class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Add Reusable Chore</h3>
+                        <form id="add-chore-form" class="space-y-4">
+                            <input type="text" id="chore-name" placeholder="Chore Name" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <input type="text" id="chore-emoji" placeholder="Emoji (e.g., 🧹)" maxlength="2" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <input type="number" id="chore-points" placeholder="Points" min="0" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-2">Schedule (optional)</label>
+                                <div class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                                    <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="mon" class="form-checkbox rounded"> Mon</label>
+                                    <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="tue" class="form-checkbox rounded"> Tue</label>
+                                    <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="wed" class="form-checkbox rounded"> Wed</label>
+                                    <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="thu" class="form-checkbox rounded"> Thu</label>
+                                    <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="fri" class="form-checkbox rounded"> Fri</label>
+                                    <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="sat" class="form-checkbox rounded"> Sat</label>
+                                    <label class="flex items-center gap-2 p-2 border rounded-lg"><input type="checkbox" name="chore-schedule" value="sun" class="form-checkbox rounded"> Sun</label>
+                                </div>
+                            </div>
+                            
+                            <select id="chore-default-assignee" class="w-full form-select px-4 py-2 border border-gray-300 rounded-lg">
+                                <option value="unassigned">Default: Unassigned</option>
+                                <!-- Members populated by JS -->
+                            </select>
+                            
+                            <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Add Chore</button>
+                        </form>
+                    </section>
+                    <!-- Right Column: List -->
+                    <div id="chores-list-container" class="setup-list-container bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Current Chore Templates</h3>
+                        <div id="setup-chores-list" class="space-y-3">
+                            <!-- Chore list populated by JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Setup View: Rewards -->
+                <div id="setup-view-rewards" class="setup-view-content hidden grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <!-- Left Column: Add -->
+                    <section class="bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Add New Reward</h3>
+                        <form id="add-reward-form" class="space-y-4">
+                            <input type="text" id="reward-name" placeholder="Reward Name" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <input type="text" id="reward-emoji" placeholder="Emoji (e.g., 🍦)" maxlength="2" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <input type="number" id="reward-cost" placeholder="Point Cost" min="1" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                            <button type="submit" class="w-full bg-blue-600 text-white font-semibold py-2 px-4 rounded-lg hover:bg-blue-700">Add Reward</button>
+                        </form>
+                    </section>
+                    <!-- Right Column: List -->
+                    <div id="rewards-list-container" class="setup-list-container bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <h3 class="text-xl font-semibold text-gray-800 mb-4">Available Rewards</h3>
+                        <div id="setup-rewards-list" class="space-y-3">
+                            <!-- Reward list populated by JS -->
+                        </div>
+                    </div>
+                </div>
+            </div>
         </main>
-    </div> <!-- End Main Flex Container -->
-
-
-    <!-- ==== Modals ==== -->
-
-    <!-- Global Message/Toast -->
-    <div id="toast-message" class="fixed bottom-6 right-6 p-4 rounded-lg shadow-xl text-white transition-all translate-x-[120%]" role="alert">
-        <span id="toast-text"></span>
     </div>
 
+    <!-- ===== Modals ===== -->
+    
     <!-- Assign Chore Modal -->
-    <div id="assign-chore-modal" class_ ="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md">
-            <h3 class="text-2xl font-semibold mb-4">Assign Chore</h3>
-            <p class="mb-4">Assign "<span id="assign-chore-name" class="font-medium"></span>" to:</p>
-            <select id="assign-chore-select" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg mb-6">
-                <!-- Options populated by JS -->
+    <div id="assign-chore-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Assign Chore: <span id="assign-chore-name" class="font-bold"></span></h3>
+            <label for="assign-chore-select" class="block text-sm font-medium text-gray-700 mb-2">Assign to:</label>
+            <select id="assign-chore-select" class="w-full form-select px-4 py-2 border border-gray-300 rounded-lg">
+                <option value="unassigned">Unassigned</option>
+                <!-- Members populated by JS -->
             </select>
-            <div class="flex justify-end gap-3">
-                <button onclick="hideModal('assign-chore-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
-                <button id="assign-chore-submit" class="py-2 px-5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all">Save Assignment</button>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="hideModal('assign-chore-modal')" class="py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button id="assign-chore-submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save</button>
             </div>
+        </div>
+    </div>
+    
+    <!-- Edit Member Modal -->
+    <div id="edit-member-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Edit Member</h3>
+            <form id="edit-member-form" class="space-y-4">
+                <input type="hidden" id="edit-member-id">
+                <input type="text" id="edit-member-name" placeholder="Member Name" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="text" id="edit-member-emoji" placeholder="Emoji (e.g., 👩)" maxlength="2" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                <select id="edit-member-color" class="w-full form-select px-4 py-2 border border-gray-300 rounded-lg" required>
+                    <option value="">Select a color...</option>
+                    <option value="bg-red-500">Red</option>
+                    <option value="bg-pink-500">Pink</option>
+                    <option value="bg-purple-500">Purple</option>
+                    <option value="bg-blue-500">Blue</option>
+                    <option value="bg-green-500">Green</option>
+                    <option value="bg-yellow-500">Yellow</option>
+                    <option value="bg-orange-500">Orange</option>
+                </select>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" onclick="hideModal('edit-member-modal')" class="py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Edit Chore Modal -->
+    <div id="edit-chore-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Edit Chore Template</h3>
+            <form id="edit-chore-form" class="space-y-4">
+                <input type="hidden" id="edit-chore-id">
+                <input type="text" id="edit-chore-name" placeholder="Chore Name" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="text" id="edit-chore-emoji" placeholder="Emoji (e.g., 🧹)" maxlength="2" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="number" id="edit-chore-points" placeholder="Points" min="0" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Schedule</label>
+                    <div id="edit-chore-schedule-container" class="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                        <!-- Schedule checkboxes populated by JS -->
+                    </div>
+                </div>
+                
+                <select id="edit- chore-default-assignee" class="w-full form-select px-4 py-2 border border-gray-300 rounded-lg">
+                    <option value="unassigned">Default: Unassigned</option>
+                    <!-- Members populated by JS -->
+                </select>
+                
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" onclick="hideModal('edit-chore-modal')" class="py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <!-- Edit Reward Modal -->
+    <div id="edit-reward-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-md">
+            <h3 class="text-xl font-semibold mb-4">Edit Reward</h3>
+            <form id="edit-reward-form" class="space-y-4">
+                <input type="hidden" id="edit-reward-id">
+                <input type="text" id="edit-reward-name" placeholder="Reward Name" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="text" id="edit-reward-emoji" placeholder="Emoji (e.g., 🍦)" maxlength="2" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                <input type="number" id="edit-reward-cost" placeholder="Point Cost" min="1" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg" required>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" onclick="hideModal('edit-reward-modal')" class="py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Save Changes</button>
+                </div>
+            </form>
         </div>
     </div>
 
     <!-- Password Modal -->
-    <div id="password-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm">
-            <h3 class="text-2xl font-semibold mb-4">Admin Access</h3>
-            <p class="mb-4 text-gray-600">Please enter the admin password to continue.</p>
-            <input type="password" id="password-input" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg mb-4" placeholder="Password">
-            <p id="password-error" class="text-red-500 text-sm mb-4 hidden">Incorrect password. Please try again.</p>
-            <div class="flex justify-end gap-3">
-                <button onclick="hideModal('password-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
-                <button id="password-submit" class="py-2 px-5 bg-yellow-500 text-white font-medium rounded-lg hover:bg-yellow-600 transition-all">Submit</button>
+    <div id="password-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
+            <h3 class="text-xl font-semibold mb-4">Admin Access Required</h3>
+            <p class="text-gray-600 mb-4">Please enter the admin password to continue.</p>
+            <input type="password" id="password-input" class="w-full form-input px-4 py-2 border border-gray-300 rounded-lg">
+            <p id="password-error" class="text-red-500 text-sm mt-2 hidden">Incorrect password.</p>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="hideModal('password-modal')" class="py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button id="password-submit" class="py-2 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700">Submit</button>
             </div>
         </div>
     </div>
 
     <!-- Confirm Delete Modal -->
-    <div id="confirm-delete-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
-        <div class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-sm">
-            <div class="flex items-center justify-center w-16 h-16 rounded-full bg-red-100 mx-auto mb-4">
-                <span data-lucide="trash-2" class="h-8 w-8 text-red-600"></span>
-            </div>
-            <h3 class="text-2xl font-semibold mb-2 text-center">Are you sure?</h3>
-            <p class="mb-6 text-gray-600 text-center">This action cannot be undone. This will permanently delete <strong id="delete-item-name"></strong>.</p>
-            <div class="flex justify-center gap-3">
-                <button onclick="hideModal('confirm-delete-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
-                <button id="confirm-delete-button" class="py-2 px-5 bg-red-600 text-white font-medium rounded-lg hover:bg-red-700 transition-all">Delete</button>
+    <div id="confirm-delete-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 hidden">
+        <div class="bg-white p-6 rounded-lg shadow-xl w-full max-w-sm">
+            <h3 class="text-xl font-semibold mb-4 text-red-600">Confirm Deletion</h3>
+            <p class="text-gray-600 mb-4">Are you sure you want to permanently delete <strong id="delete-item-name" class="font-bold"></strong>? This action cannot be undone.</p>
+            <div class="mt-6 flex justify-end gap-3">
+                <button onclick="hideModal('confirm-delete-modal')" class="py-2 px-4 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300">Cancel</button>
+                <button id="confirm-delete-button" class="py-2 px-4 bg-red-600 text-white rounded-lg hover:bg-red-700">Delete</button>
             </div>
         </div>
     </div>
 
-    <!-- Edit Modals (for Setup) -->
-    <!-- Edit Member Modal -->
-    <div id="edit-member-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
-        <form id="edit-member-form" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md space-y-4">
-            <h3 class="text-2xl font-semibold">Edit Member</h3>
-            <input type="hidden" id="edit-member-id">
-            <input type="text" id="edit-member-name" placeholder="Member Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-            <input type="text" id="edit-member-emoji" placeholder="Emoji" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
-            <select id="edit-member-color" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-                <option value="bg-red-500">Red</option>
-                <option value="bg-blue-500">Blue</option>
-                <option value="bg-green-500">Green</option>
-                <option value="bg-yellow-500">Yellow</option>
-                <option value="bg-purple-500">Purple</option>
-                <option value="bg-pink-500">Pink</option>
-                <option value="bg-indigo-500">Indigo</option>
-                <option value="bg-teal-500">Teal</option>
-            </select>
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="hideModal('edit-member-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
-                <button type="submit" class="py-2 px-5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all">Save Changes</button>
-            </div>
-        </form>
-    </div>
-    
-    <!-- Edit Chore Modal -->
-    <div id="edit-chore-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
-        <form id="edit-chore-form" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-lg space-y-4">
-            <h3 class="text-2xl font-semibold">Edit Chore Template</h3>
-            <input type="hidden" id="edit-chore-id">
-            <input type="text" id="edit-chore-name" placeholder="Chore Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-            <input type="text" id="edit-chore-emoji" placeholder="Emoji" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
-            <input type="number" id="edit-chore-points" placeholder="Points" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-            <select id="edit-chore-default-assignee" class="form-select w-full px-4 py-2 border border-gray-300 rounded-lg">
-                <!-- options populated by JS -->
-            </select>
-            <div class="space-y-2">
-                <label class="font-medium">Schedule (Recurring Days):</label>
-                <div id="edit-chore-schedule-container" class="grid grid-cols-4 gap-2 text-sm">
-                    <!-- checkboxes populated by JS -->
-                </div>
-            </div>
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="hideModal('edit-chore-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
-                <button type="submit" class="py-2 px-5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all">Save Changes</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Edit Reward Modal -->
-    <div id="edit-reward-modal" class="fixed inset-0 bg-gray-900/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 hidden">
-        <form id="edit-reward-form" class="bg-white rounded-lg shadow-2xl p-6 w-full max-w-md space-y-4">
-            <h3 class="text-2xl font-semibold">Edit Reward</h3>
-            <input type="hidden" id="edit-reward-id">
-            <input type="text" id="edit-reward-name" placeholder="Reward Name" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-            <input type="text" id="edit-reward-emoji" placeholder="Emoji" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" maxlength="2" required>
-            <input type="number" id="edit-reward-cost" placeholder="Point Cost" class="form-input w-full px-4 py-2 border border-gray-300 rounded-lg" required>
-            <div class="flex justify-end gap-3">
-                <button type="button" onclick="hideModal('edit-reward-modal')" class="py-2 px-5 bg-gray-200 text-gray-700 font-medium rounded-lg hover:bg-gray-300 transition-all">Cancel</button>
-                <button type="submit" class="py-2 px-5 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 transition-all">Save Changes</button>
-            </div>
-        </form>
+    <!-- Toast Notification -->
+    <div id="toast-message" class="fixed bottom-6 right-6 p-4 rounded-lg shadow-xl text-white transition-all transform translate-x-[120%]">
+        <p id="toast-text">Success!</p>
     </div>
 
     <!-- Main Application Script -->
     <script type="module">
-        // === Firebase SDK Imports (CONSOLIDATED & FIXED) ===
+        // === Firebase SDK Imports ===
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
             getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, 
             onSnapshot, collection, query, where, getDocs, serverTimestamp, setLogLevel
@@ -446,17 +447,24 @@
 
         // === Global State ===
         let db, auth, userId, appId;
+        let F_MEMBERS_COL, F_CHORES_COL, F_REWARDS_COL, F_DAILY_CHORES_COL, F_CLAIMED_REWARDS_COL;
+        
+        let sounds = {};
+        let isAudioReady = false;
+        
+        const WEEK_DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        let selectedRedeemerId = null;
+
         let localState = {
             members: [],
-            chores: [], // Reusable chore templates
+            chores: [],
             rewards: [],
-            dailyChores: [], // Instances of chores for specific days
+            dailyChores: [],
             claimedRewards: []
         };
         let currentView = 'daily';
         let currentSetupView = 'members';
         let selectedChoreForAssignment = null;
-        let selectedRedeemerId = null;
         let passwordSuccessCallback = null;
         let deleteSuccessCallback = null;
         let hasCheckedDailyChores = false; // Flag to prevent re-generation
@@ -472,60 +480,66 @@
         
         const PASSWORD = '3281555';
         const DAYS_OF_WEEK = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
-        const WEEK_DAYS_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const DAY_TO_NUM = { 'sun': 0, 'mon': 1, 'tue': 2, 'wed': 3, 'thu': 4, 'fri': 5, 'sat': 6 };
         
-        // === Sound Effects ===
-        let sounds;
+        // === Sound Feedback ===
         function initSounds() {
-            if (window.Tone) {
-                sounds = {
-                    complete: new Tone.Synth().toDestination(),
-                    uncomplete: new Tone.Synth().toDestination(),
-                    redeem: new Tone.PluckSynth().toDestination(),
-                    error: new Tone.MembraneSynth().toDestination(),
-                    success: new Tone.Synth().toDestination(),
-                };
-                // Pre-connect to avoid audio context issues
-                Tone.start();
-            }
+            if (isAudioReady) return;
+            Tone.start();
+            sounds.complete = new Tone.Synth({
+                oscillator: { type: 'triangle' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 }
+            }).toDestination();
+            sounds.uncomplete = new Tone.Synth({
+                oscillator: { type: 'sine' },
+                envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 }
+            }).toDestination();
+            sounds.redeem = new Tone.PolySynth(Tone.Synth, {
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.2 }
+            }).toDestination();
+            sounds.success = sounds.complete; // Alias
+            sounds.error = new Tone.Synth({
+                oscillator: { type: 'square' },
+                envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.2 }
+            }).toDestination();
+            
+            isAudioReady = true;
+            console.log("Audio context started.");
         }
+
         function playSound(soundName) {
-            if (!sounds) return;
+            if (!isAudioReady || !sounds[soundName]) return;
+            
             try {
                 if (soundName === 'complete') {
-                    sounds.complete.triggerAttackRelease("C5", "8n", Tone.now());
+                    sounds.complete.triggerAttackRelease('C5', '8n', Tone.now());
                 } else if (soundName === 'uncomplete') {
-                    sounds.uncomplete.triggerAttackRelease("C4", "8n", Tone.now());
+                    sounds.uncomplete.triggerAttackRelease('C4', '8n', Tone.now());
                 } else if (soundName === 'redeem') {
-                    // Fanfare
                     const now = Tone.now();
-                    sounds.redeem.triggerAttackRelease("C5", "8n", now);
-                    sounds.redeem.triggerAttackRelease("E5", "8n", now + 0.2);
-                    sounds.redeem.triggerAttackRelease("G5", "8n", now + 0.4);
-                } else if (soundName === 'success') {
-                    sounds.success.triggerAttackRelease("G5", "8n", Tone.now());
+                    sounds.redeem.triggerAttackRelease(['C4', 'E4', 'G4', 'C5'], '4n', now);
+                    sounds.redeem.triggerAttackRelease(['E4', 'G4', 'C5', 'E5'], '4n', now + 0.2);
+                    sounds.redeem.triggerAttackRelease(['G4', 'C5', 'E5', 'G5'], '4n', now + 0.4);
                 } else if (soundName === 'error') {
-                    sounds.error.triggerAttackRelease("C3", "4n", Tone.now());
+                    sounds.error.triggerAttackRelease('F#3', '8n', Tone.now());
                 }
             } catch (e) {
-                console.error("Sound error:", e);
+                console.warn("Tone.js error:", e);
             }
         }
 
-        // === Date & Time ===
+        // === UI: Live Time ===
         function updateTime() {
             const now = new Date();
-            const timeEl = document.getElementById('current-time');
-            const dateEl = document.getElementById('current-date');
-            if(timeEl) timeEl.textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            if(dateEl) dateEl.textContent = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+            document.getElementById('live-time').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            document.getElementById('live-date').textContent = now.toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
         }
-
+        
         // === Firebase Initialization ===
         async function initFirebase() {
             try {
-                // 1. Get App ID and Config from USER
-                appId = 'family-hub-organizer';
+                // Manually set config from user
+                appId = 'family-hub-organizer'; 
                 const firebaseConfig = {
                     apiKey: "AIzaSyD_piA_kA7WZFN7GgxCDPpNNxyjrVRTj3M",
                     authDomain: "family-hub-organizer.firebaseapp.com",
@@ -536,62 +550,55 @@
                 };
 
                 if (!firebaseConfig.apiKey) {
-                    throw new Error("Firebase config is missing.");
+                    console.error("Firebase config is missing!");
+                    document.getElementById('loading-screen').innerHTML = '<p class="text-red-500">Error: Firebase configuration is missing.</p>';
+                    return;
                 }
 
-                // 2. Initialize Firebase
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                setLogLevel('debug'); // Enable Firestore logs
+                setLogLevel('Debug');
 
-                // 3. Handle Authentication
+                // Define collection paths
+                const F_BASE_PATH = `artifacts/${appId}/public/data`;
+                F_MEMBERS_COL = `${F_BASE_PATH}/members`;
+                F_CHORES_COL = `${F_BASE_PATH}/chores`;
+                F_REWARDS_COL = `${F_BASE_PATH}/rewards`;
+                F_DAILY_CHORES_COL = `${F_BASE_PATH}/daily_chores`;
+                F_CLAIMED_REWARDS_COL = `${F_BASE_PATH}/claimed_rewards`;
+
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        // User is signed in
+                        console.log("User is signed in:", user.uid);
                         userId = user.uid;
-                        console.log('Firebase Authenticated. User ID:', userId);
-                        // User is authenticated, now load data
+                        // User is authenticated, load data
                         await loadData();
-                        // Hide loading overlay
-                        document.getElementById('loading-overlay').classList.add('hidden');
+                        document.getElementById('loading-screen').classList.add('hidden');
                     } else {
-                        // User is signed out, try to sign in
-                        console.log('No user. Attempting sign-in...');
+                        console.log("User is not signed in, attempting anonymous sign-in...");
                         try {
-                            // Use Anonymous sign-in directly
+                            // Use anonymous sign-in directly
                             await signInAnonymously(auth);
-                        } catch (authError) {
-                            console.error('Firebase sign-in error:', authError);
-                            showLoadingError('Could not sign in. Please refresh.');
+                        } catch (error) {
+                            console.error("Anonymous sign-in failed:", error);
+                            document.getElementById('loading-screen').innerHTML = '<p class="text-red-500">Error: Could not connect to the database.</p>';
                         }
                     }
                 });
-            } catch (e) {
-                console.error("Firebase Init Error:", e);
-                showLoadingError('Failed to initialize. Check console.');
+
+            } catch (error) {
+                console.error("Firebase initialization error:", error);
+                document.getElementById('loading-screen').innerHTML = '<p class="text-red-500">Fatal Error: Could not initialize app.</p>';
             }
         }
         
-        function showLoadingError(message) {
-            const errorEl = document.getElementById('loading-error');
-            errorEl.textContent = message;
-            errorEl.classList.remove('hidden');
-            document.getElementById('loading-overlay').querySelector('[data-lucide="loader-circle"]').classList.add('hidden');
-        }
-
-        // === Firestore Data Loading (Real-time) ===
+        // === Data: Load & Listen ===
         async function loadData() {
             if (!db || !userId) return;
 
-            const F_BASE_PATH = `/artifacts/${appId}/public/data`;
-            const F_MEMBERS_COL = `${F_BASE_PATH}/members`;
-            const F_CHORES_COL = `${F_BASE_PATH}/chores`;
-            const F_REWARDS_COL = `${F_BASE_PATH}/rewards`;
-            const F_DAILY_CHORES_COL = `${F_BASE_PATH}/dailyChores`;
-            const F_CLAIMED_REWARDS_COL = `${F_BASE_PATH}/claimedRewards`;
-
-            // Expose collection paths for handlers
+            // Log collection paths for debugging
+            console.log("Listening to collections at base path:", `artifacts/${appId}/public/data`);
             window.F_MEMBERS_COL = F_MEMBERS_COL;
             window.F_CHORES_COL = F_CHORES_COL;
             window.F_REWARDS_COL = F_REWARDS_COL;
@@ -630,7 +637,6 @@
             onSnapshot(qDaily, (snapshot) => {
                 localState.dailyChores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 hasLoaded.dailyChores = true;
-                // Removed hasCheckedDailyChores = false; and checkAndGenerateDailyChores() to fix loop
                 checkInitialLoad();
                 renderAll();
             }, (error) => console.error("Error listening to daily chores:", error));
@@ -656,43 +662,46 @@
             }
         }
         
-        // === Core Logic: Daily Chore Generation ===
+        // === Core Logic: Daily Chore Generation (for Today) ===
         async function checkAndGenerateDailyChores() {
-            // Only run if we have chore templates
-            if (localState.chores.length === 0) {
-                hasCheckedDailyChores = true; // Mark as "checked" even if no chores
+            // This function checks ONCE on load if *today's* chores are generated.
+            if (hasCheckedDailyChores || localState.chores.length === 0) {
+                if (localState.chores.length === 0) hasCheckedDailyChores = true;
                 return;
             }
             
-            console.log("Checking if daily chores need generation...");
+            console.log("Checking if daily chores need generation for *today*...");
             
             const today = new Date();
             const todayISO = today.toISOString().split('T')[0];
-            const todayDayString = DAYS_OF_WEEK[today.getDay()];
-            
-            // Find which template chores *should* exist today
-            const choresToGenerate = localState.chores.filter(chore =>
-                chore.schedule && chore.schedule.includes(todayDayString)
-            );
-            
-            // Find which template chores *already exist* for today
-            const existingTemplateChoreIds = new Set(
-                localState.dailyChores
-                    .filter(dc => !dc.isAdHoc && dc.choreTemplateId)
-                    .map(dc => dc.choreTemplateId)
+            const todayDay = DAYS_OF_WEEK[today.getDay()]; // e.g., 'mon'
+
+            // Find chores scheduled for today
+            const choresForToday = localState.chores.filter(chore => 
+                chore.schedule && chore.schedule.includes(todayDay)
             );
 
-            // Generate the ones that are missing
-            for (const choreTemplate of choresToGenerate) {
-                if (!existingTemplateChoreIds.has(choreTemplate.id)) {
-                    console.log(`Generating daily chore for: ${choreTemplate.name}`);
+            if (choresForToday.length === 0) {
+                 hasCheckedDailyChores = true; // Mark as "checked"
+                 return;
+            }
+
+            // Check which of these are *already* in dailyChores
+            const existingTemplateIds = new Set(
+                localState.dailyChores.map(dc => dc.templateId)
+            );
+
+            for (const chore of choresForToday) {
+                if (!existingTemplateIds.has(chore.id)) {
+                    // This chore is missing for today. Create it.
+                    console.log(`Generating chore "${chore.name}" for today.`);
                     try {
                         await addDoc(collection(db, F_DAILY_CHORES_COL), {
-                            choreTemplateId: choreTemplate.id,
-                            name: choreTemplate.name,
-                            emoji: choreTemplate.emoji,
-                            points: choreTemplate.points,
-                            assignedTo: choreTemplate.defaultAssignee === 'unassigned' ? null : (choreTemplate.defaultAssignee || null),
+                            templateId: chore.id,
+                            name: chore.name,
+                            emoji: chore.emoji,
+                            points: chore.points,
+                            assignedTo: chore.defaultAssignee || null,
                             date: todayISO,
                             isComplete: false,
                             isAdHoc: false,
@@ -707,6 +716,109 @@
             // Mark as checked *after* successful run
             hasCheckedDailyChores = true;
         }
+
+        /**
+         * Populates daily chores for a given template for the entire current week.
+         * Also cleans up chores if a day is removed from the schedule.
+         * @param {object} choreTemplate - The chore template object.
+         * @param {string} choreId - The ID of the chore template.
+         */
+        async function generateDailyChoresForTemplate(choreTemplate, choreId) {
+            console.log(`Syncing weekly schedule for chore: ${choreTemplate.name}`);
+            
+            // 1. Get start of the current week (Monday)
+            const today = new Date();
+            const startOfWeek = new Date(today);
+            const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Get to Monday
+            startOfWeek.setDate(today.getDate() + diff);
+            startOfWeek.setHours(0, 0, 0, 0);
+            
+            const weekDates = [];
+            const weekDatesISO = [];
+            
+            for (let i = 0; i < 7; i++) {
+                const day = new Date(startOfWeek);
+                day.setDate(startOfWeek.getDate() + i);
+                weekDates.push(day);
+                weekDatesISO.push(day.toISOString().split('T')[0]);
+            }
+            
+            // 2. Get all existing daily chores for this template for this week
+            const q = query(
+                collection(db, F_DAILY_CHORES_COL),
+                where("templateId", "==", choreId),
+                where("date", "in", weekDatesISO)
+            );
+            
+            const snapshot = await getDocs(q);
+            const existingChores = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            const existingChoresMap = new Map(existingChores.map(chore => [chore.date, chore]));
+
+            // 3. Loop through the week and sync
+            for (const date of weekDates) {
+                const dateISO = date.toISOString().split('T')[0];
+                const dayName = DAYS_OF_WEEK[date.getDay()];
+                
+                const shouldExist = choreTemplate.schedule && choreTemplate.schedule.includes(dayName);
+                const doesExist = existingChoresMap.has(dateISO);
+                const existingChore = existingChoresMap.get(dateISO);
+
+                if (shouldExist && !doesExist) {
+                    // A. Create missing chore
+                    console.log(`  -> Creating "${choreTemplate.name}" for ${dayName} (${dateISO})`);
+                    try {
+                        await addDoc(collection(db, F_DAILY_CHORES_COL), {
+                            templateId: choreId,
+                            name: choreTemplate.name,
+                            emoji: choreTemplate.emoji,
+                            points: choreTemplate.points,
+                            assignedTo: choreTemplate.defaultAssignee || null,
+                            date: dateISO,
+                            isComplete: false,
+                            isAdHoc: false,
+                            createdAt: serverTimestamp()
+                        });
+                    } catch (e) {
+                        console.error("Error creating daily chore:", e);
+                    }
+                } else if (!shouldExist && doesExist) {
+                    // B. Delete chore that shouldn't exist
+                    // Only delete if it's not completed (don't delete history)
+                    if (!existingChore.isComplete) {
+                        console.log(`  -> Deleting "${choreTemplate.name}" for ${dayName} (${dateISO})`);
+                        try {
+                            await deleteDoc(doc(db, F_DAILY_CHORES_COL, existingChore.id));
+                        } catch (e) {
+                            console.error("Error deleting daily chore:", e);
+                        }
+                    }
+                } else if (shouldExist && doesExist) {
+                    // C. Update existing chore if details (name, points, etc.) changed
+                    // This also handles re-assigning to default if it's currently unassigned
+                    const choreRef = doc(db, F_DAILY_CHORES_COL, existingChore.id);
+                    const updates = {};
+                    if (existingChore.name !== choreTemplate.name) updates.name = choreTemplate.name;
+                    if (existingChore.emoji !== choreTemplate.emoji) updates.emoji = choreTemplate.emoji;
+                    if (existingChore.points !== choreTemplate.points) updates.points = choreTemplate.points;
+                    
+                    // Only reset assignment if it's currently unassigned OR if the chore is not yet done
+                    const newDefault = choreTemplate.defaultAssignee || null;
+                    if (!existingChore.isComplete && existingChore.assignedTo !== newDefault) {
+                         updates.assignedTo = newDefault;
+                    }
+                    
+                    if (Object.keys(updates).length > 0) {
+                        console.log(`  -> Updating "${choreTemplate.name}" for ${dayName} (${dateISO})`);
+                        try {
+                            await updateDoc(choreRef, updates);
+                        } catch (e) {
+                            console.error("Error updating daily chore:", e);
+                        }
+                    }
+                }
+            }
+        }
         
         // === Master Render Function ===
         function renderAll() {
@@ -714,7 +826,7 @@
 
             // 1. Render main views
             renderDailyChores();
-            renderWeeklySchedule();
+            renderWeeklySchedule(); // Note: This is async and fetches its own data
             renderPointsAndRewards();
             renderSetup();
             
@@ -836,14 +948,15 @@
         async function renderWeeklySchedule() {
             const container = document.getElementById('weekly-schedule-grid');
             if (!container) return;
-            container.innerHTML = '';
+            container.innerHTML = ''; // Clear for loading
 
             const today = new Date();
             const todayISO = today.toISOString().split('T')[0];
             const startOfWeek = new Date(today);
             const dayOfWeek = today.getDay(); // 0 = Sun, 1 = Mon
-            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Get to Monday (or Sunday if week starts Sunday)
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek; // Get to Monday
             startOfWeek.setDate(today.getDate() + diff);
+            startOfWeek.setHours(0, 0, 0, 0);
 
             // Get all daily chores for the *entire current week*
             const weekDatesISO = [];
@@ -1379,17 +1492,23 @@
                 return;
             }
             
+            const newChoreTemplate = {
+                name,
+                emoji,
+                points,
+                defaultAssignee: defaultAssignee === 'unassigned' ? null : defaultAssignee,
+                schedule,
+                createdAt: serverTimestamp()
+            };
+            
             try {
-                await addDoc(collection(db, F_CHORES_COL), {
-                    name,
-                    emoji,
-                    points,
-                    defaultAssignee: defaultAssignee === 'unassigned' ? null : defaultAssignee,
-                    schedule,
-                    createdAt: serverTimestamp()
-                });
+                const docRef = await addDoc(collection(db, F_CHORES_COL), newChoreTemplate);
                 showToast("Chore template added!");
                 e.target.reset();
+                
+                // Now, generate the daily chores for this new template for the week
+                await generateDailyChoresForTemplate(newChoreTemplate, docRef.id);
+                
             } catch (error) {
                 console.error("Error adding chore: ", error);
                 showToast("Failed to add chore.", true);
@@ -1427,15 +1546,21 @@
                 return;
             }
             
+            const updatedChoreTemplate = {
+                name,
+                emoji,
+                points,
+                schedule,
+                defaultAssignee: defaultAssignee === 'unassigned' ? null : defaultAssignee
+            };
+            
             try {
                 const choreRef = doc(db, F_CHORES_COL, choreId);
-                await updateDoc(choreRef, {
-                    name,
-                    emoji,
-                    points,
-                    schedule,
-                    defaultAssignee: defaultAssignee === 'unassigned' ? null : defaultAssignee
-                });
+                await updateDoc(choreRef, updatedChoreTemplate);
+                
+                // Now, re-sync the weekly chores based on this updated template
+                await generateDailyChoresForTemplate(updatedChoreTemplate, choreId);
+                
                 showToast("Chore template updated!");
                 hideModal('edit-chore-modal');
             } catch (error) {
@@ -1452,9 +1577,23 @@
             showPasswordModal(() => {
                 showDeleteModal(choreName, async () => {
                     try {
-                        // TODO: Also delete associated daily chores?
+                        // 1. Delete the chore template
                         await deleteDoc(doc(db, F_CHORES_COL, choreId));
-                        showToast(`Chore template ${choreName} deleted.`);
+                        
+                        // 2. Delete all *future, non-completed* daily chores from this template
+                        const todayISO = new Date().toISOString().split('T')[0];
+                        const q = query(
+                            collection(db, F_DAILY_CHORES_COL),
+                            where("templateId", "==", choreId),
+                            where("date", ">=", todayISO),
+                            where("isComplete", "==", false)
+                        );
+                        const snapshot = await getDocs(q);
+                        for (const d of snapshot.docs) {
+                            await deleteDoc(doc(db, F_DAILY_CHORES_COL, d.id));
+                        }
+                        
+                        showToast(`Chore template ${choreName} and future tasks deleted.`);
                         hideModal('confirm-delete-modal');
                     } catch (error) {
                         console.error("Error deleting chore: ", error);
@@ -1536,6 +1675,7 @@
                 showDeleteModal(rewardName, async () => {
                     try {
                         await deleteDoc(doc(db, F_REWARDS_COL, rewardId));
+                        // TODO: What about claimed rewards? For now, they will just show "Deleted Reward"
                         showToast(`Reward ${rewardName} deleted.`);
                         hideModal('confirm-delete-modal');
                     } catch (error) {
