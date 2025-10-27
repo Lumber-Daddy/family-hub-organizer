@@ -106,7 +106,7 @@
 
         /* Modals */
         .modal {
-            @apply fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4 hidden;
+            @apply fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4 hidden; /* Ensure hidden initially */
         }
         .modal-content {
             @apply bg-white rounded-lg shadow-xl p-6 max-w-sm w-full;
@@ -124,16 +124,17 @@
 
          /* Setup Sub-Navigation */
         .setup-subnav-btn {
-            @apply px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150;
+            /* Added border for better button appearance */
+            @apply px-4 py-2 rounded-md text-sm font-medium transition-colors duration-150 border border-transparent; 
         }
         .setup-subnav-btn-active {
-            @apply bg-indigo-600 text-white;
+            @apply bg-indigo-600 text-white border-indigo-700 shadow-sm;
         }
         .setup-subnav-btn-inactive {
-            @apply text-gray-600 hover:bg-gray-200;
+            @apply text-gray-600 hover:bg-gray-200 border-gray-300;
         }
         .setup-subpage { @apply hidden; }
-        .setup-subpage-active { @apply block; }
+        .setup-subpage-active { @apply block; } /* Use block instead of removing hidden */
 
         /* Claimed Rewards */
         .claimed-reward-item {
@@ -276,7 +277,7 @@
                 <div>
                     <h2 class="text-2xl font-bold text-slate-700 mb-4">Point Totals</h2>
                     <div id="point-totals-grid" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                        <!-- Member point cards -->
+                        <!-- Member point cards will be injected here -->
                     </div>
                 </div>
 
@@ -291,7 +292,7 @@
                         </select>
                     </div>
                     <div id="rewards-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-                        <!-- Reward cards -->
+                        <!-- Reward cards will be dynamically inserted here -->
                         <p id="no-rewards-msg" class="hidden col-span-full text-center text-gray-500">No rewards available.</p>
                     </div>
                     <div id="redeem-feedback" class="mt-6 text-center font-medium"></div>
@@ -630,15 +631,18 @@
             } catch (e) { console.error("showFatalError failed:", e); }
         }
 
+        // More robust date string function (YYYY-MM-DD)
         function getDateString(date) {
-             try {
-                 // 'en-CA' gives YYYY-MM-DD format reliably
-                 return date.toLocaleDateString('en-CA'); 
-             } catch (e) {
+            try {
+                const year = date.getFullYear();
+                const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed
+                const day = date.getDate().toString().padStart(2, '0');
+                return `${year}-${month}-${day}`;
+            } catch (e) {
                  console.error("getDateString failed:", e);
                  // Fallback to basic ISO string if locale fails
                  return new Date().toISOString().split('T')[0]; 
-             }
+            }
         }
         function getTodayString() {
              return getDateString(new Date());
@@ -1145,10 +1149,194 @@
 
 
        // --- Points & Rewards Tab ---
-        function renderPointsAndRewards() { /* ... unchanged ... */ }
+        function renderPointsAndRewards() { 
+             console.log("Rendering Points & Rewards..."); // Log start
+             try {
+                const pointsGrid = document.getElementById('point-totals-grid');
+                // Check elements before proceeding
+                if (!pointsGrid || !rewardsGrid || !claimedRewardsList || !noRewardsMsg || !noClaimedRewardsMsg) {
+                    console.warn("Points & Rewards elements not found.");
+                    return;
+                }
+                
+                pointsGrid.innerHTML = ''; 
+                rewardsGrid.innerHTML = ''; 
+                if(redeemFeedbackEl) redeemFeedbackEl.textContent = ''; 
+                claimedRewardsList.innerHTML = ''; 
+
+                // Render Member Point Totals
+                [...appData.members].sort((a,b) => b.points - a.points).forEach(member => {
+                    pointsGrid.innerHTML += `
+                        <div class="rounded-lg p-4 shadow-sm text-center animate-fade-in-up bg-white border-t-4" style="border-color: ${member.color};">
+                            <div class="text-3xl mb-2">${member.emoji || '👤'}</div>
+                            <div class="font-semibold text-lg text-slate-700">${member.name}</div>
+                            <div class="font-bold text-3xl" style="color: ${member.color};">${member.points}</div>
+                            <div class="text-sm text-gray-500">points</div>
+                        </div>
+                    `;
+                });
+
+                // Render Redeemable Reward Cards
+                const availableRewards = appData.rewards.filter(r => !r.claimed && !r.delivered); 
+                const selectedMemberId = redeemMemberSelector?.value; // Null check
+                const selectedMember = appData.members.find(m => m.id === selectedMemberId);
+                const memberPoints = selectedMember ? selectedMember.points : -1;
+
+                if (availableRewards.length === 0) {
+                    noRewardsMsg.classList.remove('hidden');
+                } else {
+                    noRewardsMsg.classList.add('hidden');
+                    availableRewards.forEach(reward => {
+                        const canAfford = selectedMember && memberPoints >= reward.cost;
+                        const cardClass = canAfford ? 'reward-item-affordable' : 'reward-item-unaffordable';
+                        
+                        rewardsGrid.innerHTML += `
+                            <div class="reward-item ${cardClass} animate-fade-in-up" data-reward-id="${reward.id}" data-cost="${reward.cost}">
+                                <div class="text-4xl mb-2">${reward.emoji}</div>
+                                <div class="font-medium text-sm text-slate-700 mb-1">${reward.name}</div>
+                                <div class="font-bold text-amber-600 mb-3">${reward.cost} pts</div>
+                                <button class="redeem-btn text-xs py-1 px-3 rounded-full ${canAfford ? 'bg-green-500 hover:bg-green-600 text-white cursor-pointer' : 'bg-gray-300 text-gray-500 cursor-not-allowed'}" 
+                                        ${!canAfford ? 'disabled' : ''}
+                                        data-reward-id="${reward.id}"
+                                        data-cost="${reward.cost}">
+                                    Redeem
+                                </button>
+                            </div>
+                        `;
+                    });
+                }
+                 if(rewardsGrid) attachRedeemButtonListeners(); // Attach only if grid exists
+
+                // Render Claimed (but not delivered) Rewards List
+                 // Use the filtered appData.claimedRewards
+                if (appData.claimedRewards.length === 0) {
+                     noClaimedRewardsMsg.classList.remove('hidden');
+                 } else {
+                     noClaimedRewardsMsg.classList.add('hidden');
+                     const sortedClaimed = [...appData.claimedRewards].sort((a, b) => (b.claimedAt?.seconds || 0) - (a.claimedAt?.seconds || 0));
+                     sortedClaimed.forEach(reward => {
+                         const claimedByMember = appData.members.find(m => m.id === reward.claimedBy);
+                         claimedRewardsList.innerHTML += `
+                             <div class="claimed-reward-item">
+                                 <div>
+                                     <span class="text-xl mr-2">${reward.emoji}</span>
+                                     <span class="font-medium">${reward.name}</span>
+                                     <span class="text-sm text-gray-600 ml-2">(Claimed by: ${claimedByMember?.name || 'Unknown'})</span>
+                                 </div>
+                                 <button class="mark-delivered-btn text-xs py-1 px-3 rounded-full bg-blue-500 hover:bg-blue-600 text-white" 
+                                         data-reward-id="${reward.id}">
+                                     Mark Delivered
+                                 </button>
+                             </div>
+                         `;
+                     });
+                 }
+                 if (claimedRewardsList) attachDeliveredButtonListeners(); // Attach only if list exists
+                  console.log("Points & Rewards rendering finished."); // Log end
+            } catch (e) { console.error("renderPointsAndRewards failed:", e); }
+        }
 
         // --- Setup Tab ---
-        function renderSetup() { /* ... unchanged ... */ }
+        function renderSetup() { 
+             console.log("Rendering Setup Tab for subpage:", currentSetupSubPage); // Log start
+             try {
+                const editList = document.getElementById('edit-members-list');
+                const manageChoresList = document.getElementById('manage-chores-list');
+                const manageRewardsList = document.getElementById('manage-rewards-list');
+
+                // Sub-page Visibility 
+                 // Ensure elements exist before modifying classes
+                 const pages = ['members', 'chores', 'rewards'];
+                 pages.forEach(pageId => {
+                     const pageEl = document.getElementById(`setup-subpage-${pageId}`);
+                     const navBtnEl = document.getElementById(`setup-subnav-${pageId}`);
+                     if (pageEl && navBtnEl) {
+                         if (pageId === currentSetupSubPage) {
+                             pageEl.classList.add('setup-subpage-active');
+                             pageEl.classList.remove('hidden');
+                             navBtnEl.classList.add('setup-subnav-btn-active');
+                             navBtnEl.classList.remove('setup-subnav-btn-inactive');
+                         } else {
+                             pageEl.classList.remove('setup-subpage-active');
+                             pageEl.classList.add('hidden');
+                             navBtnEl.classList.remove('setup-subnav-btn-active');
+                             navBtnEl.classList.add('setup-subnav-btn-inactive');
+                         }
+                     } else {
+                          console.warn(`Missing elements for setup subpage or nav button: ${pageId}`);
+                     }
+                 });
+
+                // Render Content based on Sub-page
+                if (currentSetupSubPage === 'members') {
+                    if (!editList) return; 
+                    editList.innerHTML = appData.members.map(member => `
+                        <div class="bg-slate-50 p-4 rounded-lg border-t-4 animate-fade-in-up" style="border-color: ${member.color};">
+                            <div class="flex items-center space-x-3 mb-4">
+                                <input type="text" value="${member.emoji || '👤'}" class="member-edit-emoji emoji-select w-16" data-member-id="${member.id}">
+                                <input type="text" value="${member.name}" class="member-edit-name flex-1 p-1 border rounded" data-member-id="${member.id}">
+                                <select class="member-edit-color p-1 border rounded" data-member-id="${member.id}">
+                                    ${memberColors.map(color => `<option value="${color}" ${member.color === color ? 'selected' : ''} style="background: ${color}; color: ${color};">Color</option>`).join('')}
+                                    <option value="#888888" ${!memberColors.includes(member.color) ? 'selected' : ''}>Default</option>
+                                </select>
+                            </div>
+                             <!-- Points Modification (Password Protected) -->
+                             <div class="mt-4 pt-4 border-t border-gray-200">
+                                 <label class="block text-sm font-medium text-gray-700">Current Points: ${member.points}</label>
+                                 <div class="flex items-center space-x-2 mt-1">
+                                    <input type="number" placeholder="New points" class="member-edit-points p-1 border rounded w-24" data-member-id="${member.id}">
+                                    <button class="member-save-points-btn text-xs py-1 px-2 rounded bg-orange-500 text-white hover:bg-orange-600" data-member-id="${member.id}">Set Points (Admin)</button>
+                                 </div>
+                             </div>
+                            <div class="flex space-x-2 mt-4">
+                                <button class="member-save-btn flex-1 text-sm py-1 px-2 rounded bg-green-500 text-white hover:bg-green-600" data-member-id="${member.id}">Save Changes</button>
+                                <button class="member-delete-btn flex-1 text-sm py-1 px-2 rounded bg-red-500 text-white hover:bg-red-600" data-member-id="${member.id}">Delete Member</button>
+                            </div>
+                        </div>
+                    `).join('');
+                } else if (currentSetupSubPage === 'chores') {
+                     if (!manageChoresList) return; 
+                     manageChoresList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Reusable Chores</h3>' + 
+                        appData.chores.map(chore => {
+                            const scheduleDays = chore.schedule.map(d => ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'][d]).join(', ');
+                            const assignee = appData.members.find(m => m.id === chore.defaultAssignee);
+                            const assigneeText = assignee ? `${assignee.emoji} ${assignee.name}` : 'Unassigned';
+                            return `
+                                <div class="flex justify-between items-center bg-slate-50 p-3 rounded shadow-sm animate-fade-in-up border-l-4 border-gray-300">
+                                    <div>
+                                        <span class="text-xl mr-2">${chore.emoji}</span>
+                                        <span class="font-medium">${chore.name}</span>
+                                        <span class="block text-xs text-gray-500 ml-8">
+                                            ${chore.points} pts | ${scheduleDays || 'Not scheduled'} | Default: ${assigneeText}
+                                        </span>
+                                    </div>
+                                    <button class="chore-delete-btn text-red-500 hover:text-red-700 p-1" data-id="${chore.id}">
+                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                                    </button>
+                                </div>
+                            `;
+                        }).join('');
+                     if(appData.chores.length === 0) manageChoresList.innerHTML += '<p class="text-sm text-gray-500">No reusable chores created yet.</p>';
+                } else if (currentSetupSubPage === 'rewards') {
+                    if (!manageRewardsList) return; 
+                    manageRewardsList.innerHTML = '<h3 class="text-lg font-medium text-gray-700 mb-2">Available Rewards</h3>' + 
+                        appData.rewards.filter(r => !r.claimed && !r.delivered).map(reward => `
+                        <div class="flex justify-between items-center bg-slate-50 p-3 rounded shadow-sm animate-fade-in-up border-l-4 border-amber-400">
+                            <div>
+                                <span class="text-xl mr-2">${reward.emoji}</span>
+                                <span class="font-medium">${reward.name}</span>
+                                <span class="block text-xs text-amber-600 font-semibold ml-8">${reward.cost} points</span>
+                            </div>
+                            <button class="reward-delete-btn text-red-500 hover:text-red-700 p-1" data-id="${reward.id}">
+                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" /></svg>
+                            </button>
+                        </div>
+                    `).join('');
+                    if(appData.rewards.filter(r => !r.claimed && !r.delivered).length === 0) manageRewardsList.innerHTML += '<p class="text-sm text-gray-500">No rewards created yet.</p>';
+                }
+                 console.log("Setup tab rendering finished."); // Log end
+            } catch (e) { console.error("renderSetup failed:", e); }
+        }
 
         // --- Calendar Tab ---
         function renderCalendar() { /* ... unchanged ... */ }
@@ -1191,22 +1379,48 @@
                 }
                 
                 // Trigger render for the newly active tab if necessary
-                renderAll(); // Re-render content after changing tab
-                
+                 // Avoid calling renderAll if already rendering to prevent potential loops
+                 // renderAll(); // Removed from here, let listeners trigger renders
+
                 // Special case for time header
                 if (tabId === 'daily-list') updateDateTimeHeader();
             } catch (e) { console.error("changeTab failed:", e, tabId); }
         }
 
         // Setup Sub-Page Navigation
-        function changeSetupSubPage(subPageId) { /* ... unchanged ... */ }
+        function changeSetupSubPage(subPageId) { 
+             console.log("Changing setup subpage to:", subPageId); // Log
+             try {
+                currentSetupSubPage = subPageId;
+                renderSetup(); // Re-render the setup tab content
+            } catch (e) { console.error("changeSetupSubPage failed:", e, subPageId); }
+        }
 
         // Toggle Adhoc Form
-        document.getElementById('toggle-adhoc-form')?.addEventListener('click', (e) => { /* ... unchanged ... */ }); // Add null check
+        const toggleAdhocBtn = document.getElementById('toggle-adhoc-form');
+         if (toggleAdhocBtn) {
+             toggleAdhocBtn.addEventListener('click', (e) => {
+                try {
+                    const form = document.getElementById('adhoc-chore-form');
+                    const button = e.currentTarget; 
+                    const icon = button.querySelector('span');
+                    if (!form || !icon) return; // Add checks
+                    form.classList.toggle('form-open');
+                    if (form.classList.contains('form-open')) {
+                        icon.textContent = '✕'; 
+                        button.classList.add('rotate-180'); 
+                    } else {
+                        icon.textContent = '＋';
+                        button.classList.remove('rotate-180');
+                    }
+                } catch (e) { console.error("toggle-adhoc-form click failed:", e); }
+            });
+         }
 
 
         // Add Member
-        document.getElementById('add-member-form')?.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); // Add null check
+        const addMemberForm = document.getElementById('add-member-form');
+         if (addMemberForm) addMemberForm.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); 
 
         // Edit/Delete/Modify Points Member (with delegation)
         const editMembersListContainer = document.getElementById('edit-members-list');
@@ -1214,10 +1428,12 @@
 
 
         // Add Reusable Chore
-        document.getElementById('add-chore-form')?.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); // Add null check
+         const addChoreForm = document.getElementById('add-chore-form');
+         if (addChoreForm) addChoreForm.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); 
 
         // Add One-Time (Adhoc) Chore
-        document.getElementById('adhoc-chore-form')?.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); // Add null check
+         const adhocChoreForm = document.getElementById('adhoc-chore-form');
+         if (adhocChoreForm) adhocChoreForm.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); 
 
         // Delete Chore/Reward (Using delegation on Setup content)
         const setupContent = document.getElementById('content-setup');
@@ -1225,7 +1441,8 @@
 
 
         // Add Reward
-        document.getElementById('add-reward-form')?.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); // Add null check
+         const addRewardForm = document.getElementById('add-reward-form');
+         if (addRewardForm) addRewardForm.addEventListener('submit', async (e) => { /* ... unchanged ... */ }); 
 
         // --- Redeem Reward Logic ---
         if (redeemMemberSelector) redeemMemberSelector.addEventListener('change', () => { /* ... unchanged ... */ }); // Add null check
@@ -1394,10 +1611,12 @@
         document.addEventListener('DOMContentLoaded', () => {
              console.log("DOM fully loaded and parsed");
              try { // Wrap DOMContentLoaded content
+                 // Populate emoji dropdowns now that elements exist
                  populateEmojiSelect(document.getElementById('adhoc-chore-emoji'), choreEmojis);
                  populateEmojiSelect(document.getElementById('chore-emoji'), choreEmojis);
                  populateEmojiSelect(document.getElementById('reward-emoji'), choreEmojis, '🎉');
-                 initializeFirebase();
+                 
+                 initializeFirebase(); // Initialize Firebase after populating static elements
              } catch (e) {
                  console.error("Error during DOMContentLoaded setup:", e);
                  // Display a user-friendly error if critical setup fails
