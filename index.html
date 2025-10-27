@@ -25,10 +25,11 @@
             @apply hover:bg-slate-700 hover:text-white transition-colors duration-150;
         }
         .nav-btn svg {
+             /* Make icons white and slightly transparent when inactive */
             @apply w-6 h-6 text-white opacity-75 transition-colors duration-150; 
         }
         .nav-btn:hover svg, .nav-btn-active svg {
-            @apply opacity-100;
+            @apply opacity-100; /* Fully opaque on hover/active */
         }
         .nav-btn-active {
             @apply bg-indigo-600 text-white shadow-inner;
@@ -131,8 +132,12 @@
             @apply bg-indigo-600 text-white border-indigo-700 shadow-sm;
         }
         .setup-subnav-btn-inactive {
-            @apply text-gray-600 hover:bg-gray-200 border-gray-300;
+             /* Added explicit border color for inactive */
+            @apply text-gray-600 hover:bg-gray-200 border border-gray-300;
         }
+         .setup-subnav-btn-inactive:hover {
+             @apply border-gray-400; /* Darker border on hover */
+         }
         .setup-subpage { @apply hidden; }
         .setup-subpage-active { @apply block; } /* Use block instead of removing hidden */
 
@@ -178,10 +183,7 @@
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6h9.75M10.5 6a1.5 1.5 0 1 1-3 0m3 0a1.5 1.5 0 1 0-3 0M3.75 6H7.5m3 12h9.75m-9.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-3.75 0H7.5m9-6h3.75m-3.75 0a1.5 1.5 0 0 1-3 0m3 0a1.5 1.5 0 0 0-3 0m-9.75 0h9.75" /></svg>
             <span>Setup</span>
         </button>
-        <button id="nav-calendar" class="nav-btn" onclick="changeTab('calendar', 'Family Calendar')">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 0 1 2.25-2.25h13.5A2.25 2.25 0 0 1 21 7.5v11.25m-18 0A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75m-18 0v-7.5A2.25 2.25 0 0 1 5.25 9h13.5A2.25 2.25 0 0 1 21 11.25v7.5m-9-3.75h.008v.008H12v-.008Z" /></svg>
-            <span>Calendar</span>
-        </button>
+        <!-- Calendar Button Removed -->
 
         <!-- Loading Indicator -->
         <div id="loading-indicator" class="hidden items-center space-x-2 mt-auto p-4">
@@ -428,31 +430,7 @@
                 </div>
             </div>
 
-            <!-- Calendar Tab -->
-            <div id="content-calendar" class="tab-content hidden">
-                <div class="bg-white rounded-xl shadow-lg p-4 md:p-6">
-                    <div class="flex items-center justify-between mb-6">
-                        <button id="calendar-prev-month" class="p-2 rounded-full hover:bg-gray-100">
-                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                        </button>
-                        <h2 id="calendar-month-year" class="text-2xl font-bold text-gray-800"></h2>
-                        <button id="calendar-next-month" class="p-2 rounded-full hover:bg-gray-100">
-                            <svg class="w-6 h-6 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
-                        </button>
-                    </div>
-                    <div id="calendar-grid" class="grid grid-cols-7 gap-1">
-                        <!-- Calendar header -->
-                        <div class="text-center font-semibold text-gray-600 text-sm py-2">Mon</div>
-                        <div class="text-center font-semibold text-gray-600 text-sm py-2">Tue</div>
-                        <div class="text-center font-semibold text-gray-600 text-sm py-2">Wed</div>
-                        <div class="text-center font-semibold text-gray-600 text-sm py-2">Thu</div>
-                        <div class="text-center font-semibold text-gray-600 text-sm py-2">Fri</div>
-                        <div class="text-center font-semibold text-gray-600 text-sm py-2">Sat</div>
-                        <div class="text-center font-semibold text-gray-600 text-sm py-2">Sun</div>
-                        <!-- Calendar days will be injected here -->
-                    </div>
-                </div>
-            </div>
+             <!-- Calendar Tab Content Removed -->
         </div>
     </main>
 
@@ -475,7 +453,7 @@
     </div>
 
     <!-- Assignment Modal -->
-    <div id="assignment-modal" class="modal">
+    <div id="assignment-modal" class="modal"> <!-- Added hidden class back -->
         <div class="modal-content">
             <h3 class="text-lg font-medium leading-6 text-gray-900 mb-4">Assign Chore To:</h3>
             <div id="assignment-options" class="space-y-1">
@@ -569,7 +547,7 @@
             completions: [], // Will now hold completions for the current week
             claimedRewards: [] // Store claimed rewards
         };
-        let calendarDate = new Date();
+        // calendarDate removed
         let touchListenersAdded = false; 
         let currentChoreToAssign = null; 
 
@@ -634,14 +612,19 @@
         // More robust date string function (YYYY-MM-DD)
         function getDateString(date) {
             try {
-                const year = date.getFullYear();
-                const month = (date.getMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed
-                const day = date.getDate().toString().padStart(2, '0');
+                // Use UTC methods to avoid timezone shifts affecting the date itself
+                const year = date.getUTCFullYear();
+                const month = (date.getUTCMonth() + 1).toString().padStart(2, '0'); // Months are 0-indexed
+                const day = date.getUTCDate().toString().padStart(2, '0');
                 return `${year}-${month}-${day}`;
             } catch (e) {
                  console.error("getDateString failed:", e);
-                 // Fallback to basic ISO string if locale fails
-                 return new Date().toISOString().split('T')[0]; 
+                 // Fallback using current local date if UTC fails
+                 const localDate = new Date();
+                 const year = localDate.getFullYear();
+                 const month = (localDate.getMonth() + 1).toString().padStart(2, '0');
+                 const day = localDate.getDate().toString().padStart(2, '0');
+                 return `${year}-${month}-${day}`;
             }
         }
         function getTodayString() {
@@ -704,7 +687,7 @@
         function populateEmojiSelect(selectElement, emojis, defaultEmoji = '❓') {
              try {
                 if (!selectElement) {
-                     console.warn("populateEmojiSelect: Element not found.");
+                     // console.warn("populateEmojiSelect: Element not found."); // Reduce noise
                      return;
                 }
                 let optionsList = emojis.includes(defaultEmoji) ? [...emojis] : [defaultEmoji, ...emojis];
@@ -830,13 +813,13 @@
                 // Completions (Listen for the CURRENT WEEK)
                  const todayJsDayIndex = new Date().getDay(); // 0 for Sunday
                  const startOfWeek = new Date();
-                 startOfWeek.setDate(startOfWeek.getDate() - todayJsDayIndex); 
-                 startOfWeek.setHours(0, 0, 0, 0);
+                 startOfWeek.setUTCDate(startOfWeek.getUTCDate() - todayJsDayIndex); // Use UTC days
+                 startOfWeek.setUTCHours(0, 0, 0, 0); // Use UTC hours
                  const startOfWeekStr = getDateString(startOfWeek); 
 
                  const endOfWeek = new Date(startOfWeek);
-                 endOfWeek.setDate(endOfWeek.getDate() + 6);
-                 endOfWeek.setHours(23, 59, 59, 999);
+                 endOfWeek.setUTCDate(endOfWeek.getUTCDate() + 6); // Use UTC days
+                 endOfWeek.setUTCHours(23, 59, 59, 999); // Use UTC hours
                  const endOfWeekStr = getDateString(endOfWeek); 
 
                  console.log(`Listening for completions between ${startOfWeekStr} and ${endOfWeekStr}`); 
@@ -876,7 +859,7 @@
                      else if (currentTab === 'weekly-schedule') renderWeeklyScheduleWithCurrentData(); 
                      else if (currentTab === 'points') renderPointsAndRewards();
                      else if (currentTab === 'setup') renderSetup(); 
-                     else if (currentTab === 'calendar') renderCalendar();
+                     // Calendar rendering removed
                 } else if (currentTab !== 'setup') {
                     console.log("No members, forcing setup tab.");
                     changeTab('setup', 'App Setup & Management'); 
@@ -1072,8 +1055,8 @@
                  const todayJsDayIndex = new Date().getDay(); // 0 for Sunday
                 
                 const startOfWeek = new Date();
-                startOfWeek.setDate(startOfWeek.getDate() - todayJsDayIndex); 
-                startOfWeek.setHours(0, 0, 0, 0);
+                 startOfWeek.setUTCDate(startOfWeek.getUTCDate() - todayJsDayIndex); // Use UTC days
+                 startOfWeek.setUTCHours(0, 0, 0, 0); // Use UTC hours
 
                 // Use the appData.completions array which now holds the whole week's data
                 const weeklyCompletionsFromAppData = appData.completions; 
@@ -1082,8 +1065,8 @@
                 for (let i = 0; i < 7; i++) { // Loop Sunday (0) to Saturday (6)
                     const dayIndexStr = i.toString(); // Day index for schedule check (0-6)
                     const dayDate = new Date(startOfWeek);
-                    dayDate.setDate(startOfWeek.getDate() + i);
-                     const dayDateStr = getDateString(dayDate); // Local YYYY-MM-DD
+                    dayDate.setUTCDate(startOfWeek.getUTCDate() + i); // Use UTC days
+                     const dayDateStr = getDateString(dayDate); // UTC YYYY-MM-DD
                     
                     const dayCard = document.createElement('div');
                     const isToday = i === todayJsDayIndex;
@@ -1091,6 +1074,7 @@
                     
                     let choresHTML = '';
                     const completionsForThisDay = weeklyCompletionsFromAppData.filter(c => c.date === dayDateStr) || []; 
+                    console.log(`Rendering Day ${i} (${days[i]}, ${dayDateStr}), Completions:`, completionsForThisDay.length); // Log day rendering
 
                     // --- Recurring Chores for this day ---
                     appData.chores
@@ -1099,6 +1083,7 @@
                             const completion = completionsForThisDay
                                 .filter(comp => comp.choreDefId === c.id)
                                 .sort((a, b) => (b.timestamp?.seconds || 0) - (a.timestamp?.seconds || 0))[0]; 
+                             console.log(` - Recurring: ${c.name}, Completion found:`, !!completion); // Log recurring check
                             choresHTML += getScheduleChoreHTML(c, false, completion); 
                         });
                     
@@ -1106,6 +1091,7 @@
                     completionsForThisDay
                         .filter(c => c.isAdhoc) 
                         .forEach(c => {
+                             console.log(` - Adhoc: ${c.name}, Date: ${c.date}`); // Log adhoc check
                             choresHTML += getScheduleChoreHTML(c, true, c); 
                         });
 
@@ -1244,8 +1230,7 @@
                 const manageChoresList = document.getElementById('manage-chores-list');
                 const manageRewardsList = document.getElementById('manage-rewards-list');
 
-                // Sub-page Visibility 
-                 // Ensure elements exist before modifying classes
+                // Sub-page Visibility (Corrected Logic)
                  const pages = ['members', 'chores', 'rewards'];
                  pages.forEach(pageId => {
                      const pageEl = document.getElementById(`setup-subpage-${pageId}`);
@@ -1253,12 +1238,12 @@
                      if (pageEl && navBtnEl) {
                          if (pageId === currentSetupSubPage) {
                              pageEl.classList.add('setup-subpage-active');
-                             pageEl.classList.remove('hidden');
+                             pageEl.classList.remove('hidden'); 
                              navBtnEl.classList.add('setup-subnav-btn-active');
                              navBtnEl.classList.remove('setup-subnav-btn-inactive');
                          } else {
                              pageEl.classList.remove('setup-subpage-active');
-                             pageEl.classList.add('hidden');
+                             pageEl.classList.add('hidden'); 
                              navBtnEl.classList.remove('setup-subnav-btn-active');
                              navBtnEl.classList.add('setup-subnav-btn-inactive');
                          }
@@ -1338,8 +1323,7 @@
             } catch (e) { console.error("renderSetup failed:", e); }
         }
 
-        // --- Calendar Tab ---
-        function renderCalendar() { /* ... unchanged ... */ }
+        // --- Calendar Tab Function Removed ---
 
 
         // --- Event Handlers ---
@@ -1379,9 +1363,8 @@
                 }
                 
                 // Trigger render for the newly active tab if necessary
-                 // Avoid calling renderAll if already rendering to prevent potential loops
-                 // renderAll(); // Removed from here, let listeners trigger renders
-
+                renderAll(); // Re-render content after changing tab
+                
                 // Special case for time header
                 if (tabId === 'daily-list') updateDateTimeHeader();
             } catch (e) { console.error("changeTab failed:", e, tabId); }
@@ -1577,12 +1560,61 @@
 
 
        // --- Assignment Modal Logic ---
-        function openAssignmentModal(choreItem) { /* ... unchanged ... */ }
-        function closeAssignmentModal() { /* ... unchanged ... */ }
-        if (assignmentOptionsContainer) assignmentOptionsContainer.addEventListener('click', (e) => { /* ... unchanged ... */ }); // Add null check
-        if (cancelAssignmentButton) cancelAssignmentButton.addEventListener('click', closeAssignmentModal); // Add null check
-        if (assignmentModal) assignmentModal.addEventListener('click', (e) => { /* ... unchanged ... */ }); // Add null check
+        function openAssignmentModal(choreItem) {
+             console.log("Opening assignment modal for:", choreItem?.dataset); // Log opening
+            try {
+                if (!choreItem) {
+                     console.warn("openAssignmentModal called without choreItem");
+                     return;
+                }
+                currentChoreToAssign = {
+                    completionDocId: choreItem.dataset.completionDocId,
+                    choreDefId: choreItem.dataset.choreDefId,
+                    currentAssigneeId: choreItem.dataset.currentAssignee,
+                    isAdhoc: choreItem.dataset.isAdhoc === 'true',
+                    name: choreItem.dataset.name,
+                    emoji: choreItem.dataset.emoji,
+                    points: parseInt(choreItem.dataset.points)
+                };
 
+                 if (!assignmentOptionsContainer || !assignmentModal) {
+                     console.error("Assignment modal elements not found.");
+                     return;
+                 }
+
+                assignmentOptionsContainer.innerHTML = ''; 
+
+                const unassignedButton = document.createElement('button');
+                unassignedButton.className = 'assign-option';
+                unassignedButton.textContent = '⚪ Unassigned';
+                unassignedButton.dataset.assigneeId = 'unassigned';
+                assignmentOptionsContainer.appendChild(unassignedButton);
+
+                appData.members.forEach(member => {
+                    const button = document.createElement('button');
+                    button.className = 'assign-option';
+                    button.innerHTML = `
+                        <span class="inline-block w-3 h-3 rounded-full mr-2" style="background-color: ${member.color};"></span>
+                        ${member.emoji || ''} ${member.name}
+                    `;
+                    button.dataset.assigneeId = member.id;
+                    assignmentOptionsContainer.appendChild(button);
+                });
+
+                assignmentModal.classList.remove('hidden'); // Show the modal
+            } catch (e) { console.error("openAssignmentModal failed:", e); }
+        }
+
+        function closeAssignmentModal() {
+            try {
+                if(assignmentModal) assignmentModal.classList.add('hidden'); // Hide the modal
+                currentChoreToAssign = null; 
+            } catch (e) { console.error("closeAssignmentModal failed:", e); }
+        }
+
+        // Attach listeners using event delegation *once* in DOMContentLoaded
+        
+       
 
         // --- Touch Drag and Drop Logic ---
         let dragElement = null;
@@ -1593,12 +1625,73 @@
         function handleTouchEnd(e) { /* ... unchanged ... */ }
         
         // Handle Chore Assignment (called from modal)
-        async function handleChoreAssignment(choreData, newAssigneeId) { /* ... unchanged ... */ }
+        async function handleChoreAssignment(choreData, newAssigneeId) { 
+             console.log("Handling chore assignment:", choreData, newAssigneeId); // Log assignment start
+             try {
+                const { 
+                    completionDocId, 
+                    choreDefId, 
+                    currentAssigneeId, 
+                    isAdhoc, 
+                    name, 
+                    emoji, 
+                    points 
+                } = choreData;
+
+                if (newAssigneeId === currentAssigneeId) {
+                    console.log("Assignment skipped: Assignee is the same.");
+                    return; 
+                }
+
+                showLoading('Reassigning...');
+                try {
+                    if (completionDocId && completionDocId !== 'null') {
+                        console.log(`Updating existing completion doc ${completionDocId} for ${isAdhoc ? 'adhoc' : 'recurring'} chore.`);
+                        await updateDoc(paths.completion(completionDocId), {
+                            assigneeId: newAssigneeId
+                        });
+                    
+                    } else if (!isAdhoc && choreDefId && choreDefId !== 'null') {
+                        // Create a NEW completion doc when assigning a recurring chore for the first time today
+                         console.log(`Creating new completion doc for recurring chore ${choreDefId}.`);
+                        await addDoc(paths.completions(), {
+                            name: name,
+                            emoji: emoji,
+                            points: points,
+                            assigneeId: newAssigneeId, // Use the new assignee
+                            date: getTodayString(),
+                            isComplete: false, // Starts incomplete
+                            isAdhoc: false,
+                            choreDefId: choreDefId,
+                            timestamp: Timestamp.now()
+                        });
+                    } else if (isAdhoc && (!completionDocId || completionDocId === 'null')) {
+                         // Create a NEW completion doc for an adhoc chore being assigned for the first time
+                         console.log(`Creating new completion doc for new adhoc chore ${name}.`);
+                          await addDoc(paths.completions(), {
+                            name: name, emoji: emoji, points: points, assigneeId: newAssigneeId,
+                            date: getTodayString(), isComplete: false, isAdhoc: true, choreDefId: null,
+                            timestamp: Timestamp.now()
+                        });
+                    }
+                     else {
+                        console.error("Unhandled chore assignment case:", choreData, newAssigneeId);
+                        throw new Error("Could not determine how to assign this chore.");
+                    }
+                    showSnackbar("Chore reassigned!");
+                     console.log("Chore reassignment successful."); // Log success
+
+                } catch (error) {
+                    console.error("Failed to reassign chore in Firestore:", error);
+                    showSnackbar("Failed to reassign chore.", true);
+                } finally { 
+                    hideLoading();
+                }
+            } catch (e) { console.error("handleChoreAssignment failed:", e); }
+        }
 
 
-        // Calendar Navigation
-        document.getElementById('calendar-prev-month')?.addEventListener('click', () => { /* ... */ }); // Add null check
-        document.getElementById('calendar-next-month')?.addEventListener('click', () => { /* ... */ }); // Add null check
+        // Calendar Navigation Removed
 
         // --- Global Error Handlers ---
         window.addEventListener('unhandledrejection', (event) => { /* ... */ });
@@ -1616,6 +1709,27 @@
                  populateEmojiSelect(document.getElementById('chore-emoji'), choreEmojis);
                  populateEmojiSelect(document.getElementById('reward-emoji'), choreEmojis, '🎉');
                  
+                 // Attach modal listeners here AFTER elements exist
+                  if (assignmentOptionsContainer) {
+                     assignmentOptionsContainer.addEventListener('click', (e) => {
+                        const button = e.target.closest('.assign-option');
+                        if (button && currentChoreToAssign) {
+                           const newAssigneeId = button.dataset.assigneeId;
+                           handleChoreAssignment(currentChoreToAssign, newAssigneeId); 
+                           closeAssignmentModal();
+                        }
+                     });
+                 }
+                 if (cancelAssignmentButton) cancelAssignmentButton.addEventListener('click', closeAssignmentModal); 
+                 if (assignmentModal) {
+                     assignmentModal.addEventListener('click', (e) => { 
+                         if (e.target === assignmentModal) {
+                             closeAssignmentModal();
+                         }
+                     }); 
+                 }
+
+
                  initializeFirebase(); // Initialize Firebase after populating static elements
              } catch (e) {
                  console.error("Error during DOMContentLoaded setup:", e);
