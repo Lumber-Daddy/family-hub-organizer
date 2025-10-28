@@ -508,9 +508,18 @@
         
         const PASSWORD = '3281555';
         const DAYS_OF_WEEK = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'];
+        // Expanded Emoji List
         const EMOJI_LIST = [
+            // Chores
             '🧹', '🧼', '🧺', '🛏️', '🍽️', '🗑️', '♻️', '🐾', '🌱', '🥦', 
-            '🛒', '🐶', '🐱', '🧑‍🍳', '🚽', '🛁', '🧽', '📚', '🎒', '👟'
+            '🛒', '🐶', '🐱', '🧑‍🍳', '🚽', '🛁', '🧽', '📚', '🎒', '👟', 
+            '👔', '🚗', '🛠️', '📦', '📬', '💰', '🧾', '💻', '🪴', '🍁', 
+            '🍃', '🍂', '💪', '🧑‍🌾', '🔧', '⚙️', '📁', '🗄️', '📌', '📎',
+            // Rewards
+            '🎉', '🎈', '🎁', '🍦', '🍕', '🍔', '🎮', '📱', '💻', '💵', 
+            '💰', '🪙', '💳', '🚲', '🛴', '🛹', '🍿', '🎬', '🎭', '🎨', 
+            '🎯', '🚀', '🌟', '🏆', '🏅', '🥇', '🍓', '🍩', '🍪', '🍰', 
+            '🧁', '🍭', '🍫', '🍬'
         ];
         // Added hex values
         const COLOR_LIST = [
@@ -626,8 +635,7 @@
                     // since particles fall down, start a bit higher than random
                     confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.9), y: Math.random() - 0.2 } });
                 }, 250);
-            } else {
-                // Default redeem
+            } else { // Default or reward redeem
                 confettiEffect({
                     particleCount: 150,
                     spread: 90,
@@ -724,7 +732,7 @@
             }, (error) => console.error("Error listening to rewards:", error));
 
             // 4. Listen for Daily Chores (for today)
-            const todayISO = new Date().toISOString().split('T')[0];
+            const todayISO = getLocalISODate(); // TIMEZONE FIX
             const qDaily = query(collection(db, F_DAILY_CHORES_COL), where("date", "==", todayISO));
             
             onSnapshot(qDaily, (snapshot) => {
@@ -768,7 +776,7 @@
             
             const today = new Date();
             const todayDay = DAYS_OF_WEEK[today.getDay()]; // 'mon', 'tue', etc.
-            const todayISO = today.toISOString().split('T')[0];
+            const todayISO = getLocalISODate(today); // TIMEZONE FIX
             
             // Find chores scheduled for today
             const choresForToday = localState.chores.filter(chore => chore.schedule.includes(todayDay));
@@ -877,9 +885,13 @@
             
             // 4. Delete chores that are no longer scheduled
             // (Only delete if they are in the future and not completed)
-            const todayISO = new Date().toISOString().split('T')[0];
+            const todayISO = getLocalISODate(); // TIMEZONE FIX
             for (const existing of existingChores) {
-                const isStillScheduled = scheduledDays.includes(DAYS_OF_WEEK[new Date(existing.date + 'T12:00:00').getDay()]);
+                // Must parse date with timezone context to get correct day
+                const [year, month, day] = existing.date.split('-').map(Number);
+                const existingDate = new Date(year, month - 1, day); // Local date
+                const isStillScheduled = scheduledDays.includes(DAYS_OF_WEEK[existingDate.getDay()]);
+                
                 if (!isStillScheduled && !existing.isComplete && existing.date >= todayISO) {
                     console.log(`Deleting chore for date: ${existing.date}`);
                     const docRef = doc(db, F_DAILY_CHORES_COL, existing.id);
@@ -990,10 +1002,13 @@
                         </button>
                         <span class="font-medium ${chore.isComplete ? 'chore-complete' : ''}">${chore.name}</span>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-1"> <!-- Reduced gap -->
                         <span class="text-sm font-bold text-green-600">+${chore.points}</span>
                         <button class="assign-chore-btn p-1 text-gray-400 hover:text-blue-600" data-chore-id="${chore.id}">
                             <i data-lucide="user-plus" class="h-5 w-5"></i>
+                        </button>
+                        <button class="duplicate-chore-btn p-1 text-gray-400 hover:text-green-600" data-chore-id="${chore.id}">
+                             <i data-lucide="copy" class="h-5 w-5"></i>
                         </button>
                     </div>
                 </div>
@@ -1009,7 +1024,7 @@
             
             const weekDates = getWeekDates(); // Get ISO dates for Mon-Sun
             const weekISODates = weekDates.map(d => d.date);
-            const todayISO = new Date().toISOString().split('T')[0];
+            const todayISO = getLocalISODate(); // TIMEZONE FIX
 
             // Query all chores for the *entire* current week
             const q = query(
@@ -1034,8 +1049,11 @@
                 });
                 
                 const isToday = (date === todayISO);
+                // Must parse date with timezone context to get correct day
+                const [year, month, dayNum] = date.split('-').map(Number);
+                const dateObj = new Date(year, month - 1, dayNum); // Local date
+                
                 const dayName = day.charAt(0).toUpperCase() + day.slice(1);
-                const dayNum = new Date(date + 'T12:00:00').getDate(); // Use T12:00 to avoid timezone issues
                 
                 const col = document.createElement('div');
                 col.className = 'bg-gray-50 p-3 rounded-lg min-h-[200px] weekly-day-droppable';
@@ -1044,7 +1062,7 @@
                 
                 col.innerHTML = `
                     <h4 class="font-bold text-lg ${isToday ? 'text-blue-700' : 'text-gray-800'}">${dayName}</h4>
-                    <p class="text-sm text-gray-500 mb-3">${new Date(date + 'T12:00:00').toLocaleDateString([], { month: 'long' })} ${dayNum}</p>
+                    <p class="text-sm text-gray-500 mb-3">${dateObj.toLocaleDateString([], { month: 'long' })} ${dateObj.getDate()}</p>
                     <div class="space-y-2">
                         ${dayChores.length > 0 ? dayChores.map(chore => {
                             const member = getMemberById(chore.assignedTo);
@@ -1090,15 +1108,18 @@
             const memberPoints = selectedMember ? selectedMember.points : 0;
 
             // 1. Render Member Point Totals
-            pointsContainer.innerHTML = localState.members.map(member => `
-                <div class="p-4 rounded-lg shadow-sm flex items-center" style="background-color: ${COLOR_LIST.find(c=>c.bg === member.color)?.hex + '20' || '#FFFFFF'}">
+            pointsContainer.innerHTML = localState.members.map(member => {
+                const colorInfo = COLOR_LIST.find(c => c.bg === member.color);
+                const bgColor = colorInfo ? colorInfo.hex + '20' : '#FFFFFF';
+                return `
+                <div class="p-4 rounded-lg shadow-sm flex items-center" style="background-color: ${bgColor}">
                     <span class="h-12 w-12 rounded-full ${member.color} flex items-center justify-center text-white text-2xl font-bold mr-4">${member.emoji || member.name[0]}</span>
                     <div>
                         <p class="text-lg font-semibold text-gray-800">${member.name}</p>
                         <p class="text-3xl font-bold text-green-600">${member.points || 0}</p>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
             
             // 2. Render Available Rewards
             rewardsContainer.innerHTML = localState.rewards.map(reward => {
@@ -1473,7 +1494,7 @@
                 name,
                 emoji,
                 points,
-                date: new Date().toISOString().split('T')[0],
+                date: getLocalISODate(), // TIMEZONE FIX
                 isComplete: false,
                 isAdHoc: true,
                 assignedTo: assignedTo || 'unassigned',
@@ -1492,6 +1513,43 @@
             }
         }
         
+         // === Event Handler: Duplicate Chore ===
+        async function handleDuplicateChore(e) {
+            const btn = e.target.closest('.duplicate-chore-btn');
+            if (!btn) return;
+
+            const choreId = btn.dataset.choreId;
+            const originalChore = localState.dailyChores.find(c => c.id === choreId);
+
+            if (!originalChore) {
+                console.error("Could not find chore to duplicate:", choreId);
+                return;
+            }
+
+            // Create a copy, reset status, make adhoc
+            const newChoreData = {
+                templateId: null, // Duplicates are always ad-hoc
+                name: originalChore.name,
+                emoji: originalChore.emoji,
+                points: originalChore.points,
+                date: getLocalISODate(), // Ensure it's for today
+                isComplete: false,
+                isAdHoc: true,
+                assignedTo: 'unassigned', // Start as unassigned
+                completedBy: null
+            };
+
+            try {
+                const F_DAILY_CHORES_COL = `/artifacts/${appId}/public/data/dailyChores`;
+                await addDoc(collection(db, F_DAILY_CHORES_COL), newChoreData);
+                playSound('click'); // Simple click sound for duplication
+                console.log("Duplicated chore:", originalChore.name);
+                // No need to manually render, onSnapshot will handle it.
+            } catch (error) {
+                console.error("Error duplicating chore:", error);
+            }
+        }
+
         // === Event Handlers: Drag & Drop (Daily) ===
         let draggedChoreId = null;
         
@@ -1667,8 +1725,8 @@
             
             if (!reward || !member || member.points < reward.cost) return;
             
-            playSound('redeem');
-            triggerConfetti('default'); // Use default confetti for redeem
+            playSound('redeem'); // Play fanfare
+            triggerConfetti('fireworks'); // Trigger fireworks!
             
             const newPoints = member.points - reward.cost;
             
@@ -2021,7 +2079,7 @@
                         
                         // 2. Delete future daily chores
                         const F_DAILY_CHORES_COL = `/artifacts/${appId}/public/data/dailyChores`;
-                        const todayISO = new Date().toISOString().split('T')[0];
+                        const todayISO = getLocalISODate(); // TIMEZONE FIX
                         const q = query(
                             collection(db, F_DAILY_CHORES_COL),
                             where("templateId", "==", choreId),
@@ -2198,6 +2256,18 @@
         }
 
         // === Utility Functions ===
+
+        /**
+         * TIMEZONE FIX: Gets the local date in 'YYYY-MM-DD' format.
+         * @param {Date} [date=new Date()] - The date to format.
+         * @returns {string} The date string in YYYY-MM-DD format.
+         */
+        function getLocalISODate(date = new Date()) {
+            const offset = date.getTimezoneOffset();
+            const localDate = new Date(date.getTime() - (offset * 60 * 1000));
+            return localDate.toISOString().split('T')[0];
+        }
+
         function updateClock() {
             const now = new Date();
             document.getElementById('current-time').textContent = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -2216,20 +2286,28 @@
             return localState.rewards.find(r => r.id === id);
         }
         
+        /**
+         * TIMEZONE FIX: Gets the dates for the current week (Mon-Sun)
+         * using local timezone.
+         * @returns {Array<Object>} Array of {day: 'mon', date: 'YYYY-MM-DD'}
+         */
         function getWeekDates() {
             const dates = [];
-            const today = new Date();
+            const today = new Date(); // Local 'today'
             const currentDay = today.getDay(); // 0 (Sun) - 6 (Sat)
+            
             // Adjust to get to Monday (1). If today is Sunday (0), go back 6 days.
             const diffToMonday = currentDay === 0 ? -6 : 1 - currentDay;
-            const monday = new Date(today.setDate(today.getDate() + diffToMonday));
+            
+            // Create a new Date object for Monday, safely
+            const monday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + diffToMonday);
             
             for (let i = 0; i < 7; i++) {
-                const date = new Date(monday);
-                date.setDate(monday.getDate() + i);
+                // Create a new date for each day of the week
+                const date = new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i);
                 dates.push({
                     day: DAYS_OF_WEEK[date.getDay()],
-                    date: date.toISOString().split('T')[0]
+                    date: getLocalISODate(date) // Use local ISO date
                 });
             }
             return dates;
@@ -2251,8 +2329,13 @@
             
             // 4. Attach persistent event listeners
             document.querySelector('nav').addEventListener('click', handleNavClick);
-            document.getElementById('view-daily').addEventListener('click', handleToggleChore);
-            document.getElementById('view-daily').addEventListener('click', handleOpenAssignModal);
+            
+            // Daily View Listeners (using delegation)
+            document.getElementById('view-daily').addEventListener('click', (e) => {
+                 if (e.target.closest('.chore-toggle-btn')) handleToggleChore(e);
+                 if (e.target.closest('.assign-chore-btn')) handleOpenAssignModal(e);
+                 if (e.target.closest('.duplicate-chore-btn')) handleDuplicateChore(e); // Added listener
+            });
             document.getElementById('adhoc-chore-form').addEventListener('submit', handleAddAdhocChore);
             
             // Assignment Modal
