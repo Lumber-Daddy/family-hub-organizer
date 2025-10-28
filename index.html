@@ -20,9 +20,16 @@
                         sans: ['Inter', 'sans-serif'],
                     },
                     keyframes: {
+                        // Keep popIn for general use if needed elsewhere, add bounceIn
                         popIn: {
                             '0%': { transform: 'scale(0.5)', opacity: '0' },
                             '80%': { transform: 'scale(1.1)', opacity: '1' },
+                            '100%': { transform: 'scale(1)', opacity: '1' },
+                        },
+                        bounceIn: { // New animation for checkmark
+                            '0%': { transform: 'scale(0.3)', opacity: '0' },
+                            '50%': { transform: 'scale(1.1)', opacity: '1' },
+                            '70%': { transform: 'scale(0.9)' },
                             '100%': { transform: 'scale(1)', opacity: '1' },
                         },
                         pulseError: {
@@ -32,6 +39,7 @@
                     },
                     animation: {
                         'pop-in': 'popIn 0.3s ease-out',
+                        'bounce-in': 'bounceIn 0.4s ease-out', // Added bounce-in animation
                         'pulse-error': 'pulseError 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
                     }
                 }
@@ -97,14 +105,14 @@
             outline: 2px dashed #3F51B5;
             background-color: #E8EAF6; /* indigo-100 */
         }
-        /* Animation for chore complete */
-        @keyframes popIn {
-            0% { transform: scale(0.5); opacity: 0; }
-            80% { transform: scale(1.1); opacity: 1; }
-            100% { transform: scale(1); opacity: 1; }
+        
+        /* Animation class for checkmark */
+        .animate-bounce-in {
+             animation: bounceIn 0.4s ease-out;
         }
+        /* Keep pop-in if needed elsewhere, maybe rename */
         .animate-pop-in {
-            animation: popIn 0.3s ease-out;
+             animation: popIn 0.3s ease-out;
         }
     </style>
 </head>
@@ -544,11 +552,10 @@
             // Resume audio context on first user gesture
             Tone.start();
 
-            sounds.complete = new Tone.PolySynth(Tone.Synth, {
-                oscillator: { type: "sine" },
-                envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 },
-                volume: -10
-            }).toDestination();
+            // Chore Completion Sounds (Variety)
+            sounds.complete1 = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.05, release: 0.1 }, volume: -12 }).toDestination();
+            sounds.complete2 = new Tone.Synth({ oscillator: { type: "triangle" }, envelope: { attack: 0.01, decay: 0.15, sustain: 0.08, release: 0.15 }, volume: -10 }).toDestination();
+            sounds.complete3 = new Tone.FMSynth({ harmonicity: 3, modulationIndex: 10, modulationEnvelope: { attack: 0.01, decay: 0.2 }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }, volume: -15 }).toDestination();
             
             sounds.uncomplete = new Tone.Synth({
                 oscillator: { type: "square" },
@@ -556,11 +563,18 @@
                 volume: -15
             }).toDestination();
             
+            // Reward Redemption Sounds
             sounds.redeem = new Tone.Synth({
                 oscillator: { type: "triangle" },
                 envelope: { attack: 0.01, decay: 0.2, sustain: 0.3, release: 0.3 },
                 volume: -8
             }).toDestination();
+             sounds.sparkle = new Tone.Synth({ // Added sparkle sound
+                 oscillator: { type: "sine" },
+                 envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.1 },
+                 volume: -18
+             }).toDestination();
+
 
             sounds.click = new Tone.MembraneSynth({
                 pitchDecay: 0.01,
@@ -575,24 +589,33 @@
         }
 
         function playSound(soundName) {
+             // Handle sound variety for 'complete'
+             if (soundName === 'complete') {
+                 const variations = ['complete1', 'complete2', 'complete3'];
+                 soundName = variations[Math.floor(Math.random() * variations.length)];
+             }
+
             if (sounds[soundName] && Tone.context.state === 'running') {
                 try {
-                    if (soundName === 'complete') {
-                        // Fun ascending arpeggio
-                        const now = Tone.now();
-                        sounds.complete.triggerAttackRelease('C5', '16n', now);
-                        sounds.complete.triggerAttackRelease('E5', '16n', now + 0.1);
-                        sounds.complete.triggerAttackRelease('G5', '16n', now + 0.2);
-                    } else if (soundName === 'uncomplete') {
-                        sounds.uncomplete.triggerAttackRelease('C4', '8n', Tone.now());
-                    } else if (soundName === 'redeem') {
-                        // Fanfare
-                        const now = Tone.now();
-                        sounds.redeem.triggerAttackRelease('C5', '8n', now);
-                        sounds.redeem.triggerAttackRelease('G5', '8n', now + 0.2);
-                        sounds.redeem.triggerAttackRelease('C6', '4n', now + 0.4);
+                     const now = Tone.now();
+                     if (soundName.startsWith('complete')) {
+                         // Play simple notes for completion sounds
+                         if (soundName === 'complete1') sounds.complete1.triggerAttackRelease('C5', '16n', now);
+                         else if (soundName === 'complete2') sounds.complete2.triggerAttackRelease('E5', '16n', now);
+                         else if (soundName === 'complete3') sounds.complete3.triggerAttackRelease('G5', '16n', now);
+                     } else if (soundName === 'uncomplete') {
+                         sounds.uncomplete.triggerAttackRelease('C4', '8n', now);
+                     } else if (soundName === 'redeem') {
+                         // Fanfare + Sparkle
+                         sounds.redeem.triggerAttackRelease('C5', '8n', now);
+                         sounds.redeem.triggerAttackRelease('G5', '8n', now + 0.2);
+                         sounds.redeem.triggerAttackRelease('C6', '4n', now + 0.4);
+                         // Play sparkle slightly offset
+                         sounds.sparkle.triggerAttackRelease('C7', '32n', now + 0.05);
+                         sounds.sparkle.triggerAttackRelease('E7', '32n', now + 0.15);
+                         sounds.sparkle.triggerAttackRelease('G7', '32n', now + 0.25);
                     } else if (soundName === 'click') {
-                        sounds.click.triggerAttackRelease("C2", "8n", Tone.now());
+                        sounds.click.triggerAttackRelease("C2", "8n", now);
                     }
                 } catch (e) {
                     console.error("Error playing sound:", e);
@@ -614,35 +637,54 @@
             confettiEffect = confetti.create(canvas, { resize: true });
         }
 
-        function triggerConfetti(type = 'default') {
-            if (!confettiEffect) return;
-            
-            if (type === 'fireworks') {
-                const duration = 2 * 1000;
-                const animationEnd = Date.now() + duration;
-                const defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 100 };
+        function triggerConfetti(type = 'default', origin = { y: 0.6 }) {
+             if (!confettiEffect) return;
 
-                function randomInRange(min, max) {
-                    return Math.random() * (max - min) + min;
-                }
+             // Map origin coords if provided (e.g., from click event)
+             const originCoords = origin.x !== undefined && origin.y !== undefined
+                 ? { x: origin.x / window.innerWidth, y: origin.y / window.innerHeight }
+                 : { y: 0.6 }; // Default origin
 
-                const interval = setInterval(function() {
-                    const timeLeft = animationEnd - Date.now();
-                    if (timeLeft <= 0) {
-                        return clearInterval(interval);
-                    }
-                    const particleCount = 50 * (timeLeft / duration);
-                    // since particles fall down, start a bit higher than random
-                    confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.9), y: Math.random() - 0.2 } });
-                }, 250);
-            } else { // Default or reward redeem
-                confettiEffect({
-                    particleCount: 150,
-                    spread: 90,
-                    origin: { y: 0.6 }
-                });
-            }
+             if (type === 'fireworks') {
+                 // Increased duration slightly
+                 const duration = 2.5 * 1000;
+                 const animationEnd = Date.now() + duration;
+                 // Slightly more intense defaults
+                 const defaults = { startVelocity: 35, spread: 360, ticks: 70, zIndex: 100, particleCount: 60 };
+
+                 function randomInRange(min, max) {
+                     return Math.random() * (max - min) + min;
+                 }
+
+                 const interval = setInterval(function() {
+                     const timeLeft = animationEnd - Date.now();
+                     if (timeLeft <= 0) {
+                         return clearInterval(interval);
+                     }
+                     const particleCount = defaults.particleCount * (timeLeft / duration);
+                     // Fire from multiple points for bigger effect
+                     confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+                     confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+                 }, 250);
+             } else if (type === 'burst') {
+                 // Small burst for chore completion
+                 confettiEffect({
+                     particleCount: 30, // Fewer particles
+                     spread: 60,       // Narrower spread
+                     origin: originCoords,
+                     startVelocity: 20, // Less velocity
+                     scalar: 0.6,       // Smaller particles
+                     ticks: 40         // Shorter life
+                 });
+             } else { // Default (used to be reward redeem, now separate)
+                 confettiEffect({
+                     particleCount: 150,
+                     spread: 90,
+                     origin: originCoords // Use calculated origin or default
+                 });
+             }
         }
+
 
         // === Firebase Initialization ===
         async function initFirebase() {
@@ -960,7 +1002,7 @@
                             <span class="h-8 w-8 rounded-full ${member.color} flex items-center justify-center text-white text-lg font-bold mr-3">${member.emoji || member.name[0]}</span>
                             <span>${member.name}</span>
                         </div>
-                        <span class="text-2xl font-bold text-green-600">${member.points || 0}</span>
+                        <span id="member-points-${member.id}" class="text-2xl font-bold text-green-600">${member.points || 0}</span>
                     </h2>
                     <div class="space-y-3">
                         ${memberChores.length > 0 ? memberChores.map(chore => renderChoreItem(chore)).join('') : '<p class="text-sm text-gray-400">No chores assigned.</p>'}
@@ -994,10 +1036,14 @@
 
         function renderChoreItem(chore) {
             // Use bg-white for chore items regardless of member card color
+            // Use animate-bounce-in for checkmark
+             // Disable toggle button if unassigned
+            const disabledAttr = chore.assignedTo === 'unassigned' ? 'disabled' : '';
+            const disabledClass = chore.assignedTo === 'unassigned' ? 'opacity-50 cursor-not-allowed' : '';
             return `
                 <div id="chore-${chore.id}" class="flex items-center justify-between p-3 bg-white rounded-lg chore-item-draggable shadow-sm" draggable="true" data-chore-id="${chore.id}">
                     <div class="flex items-center">
-                        <button class="chore-toggle-btn text-2xl mr-3 ${chore.isComplete ? 'animate-pop-in' : ''}" data-chore-id="${chore.id}">
+                        <button class="chore-toggle-btn text-2xl mr-3 ${chore.isComplete ? 'animate-bounce-in' : ''} ${disabledClass}" data-chore-id="${chore.id}" ${disabledAttr}>
                             ${chore.isComplete ? '✅' : chore.emoji}
                         </button>
                         <span class="font-medium ${chore.isComplete ? 'chore-complete' : ''}">${chore.name}</span>
@@ -1107,7 +1153,7 @@
             const selectedMember = getMemberById(selectedMemberId);
             const memberPoints = selectedMember ? selectedMember.points : 0;
 
-            // 1. Render Member Point Totals
+            // 1. Render Member Point Totals (Add ID for animation)
             pointsContainer.innerHTML = localState.members.map(member => {
                 const colorInfo = COLOR_LIST.find(c => c.bg === member.color);
                 const bgColor = colorInfo ? colorInfo.hex + '20' : '#FFFFFF';
@@ -1116,7 +1162,7 @@
                     <span class="h-12 w-12 rounded-full ${member.color} flex items-center justify-center text-white text-2xl font-bold mr-4">${member.emoji || member.name[0]}</span>
                     <div>
                         <p class="text-lg font-semibold text-gray-800">${member.name}</p>
-                        <p class="text-3xl font-bold text-green-600">${member.points || 0}</p>
+                        <p id="member-points-display-${member.id}" class="text-3xl font-bold text-green-600">${member.points || 0}</p> 
                     </div>
                 </div>
             `}).join('');
@@ -1386,7 +1432,18 @@
             if (!chore) return;
             
             const newIsComplete = !chore.isComplete;
-            const memberId = newIsComplete ? (chore.assignedTo === 'unassigned' ? userId : chore.assignedTo) : chore.completedBy;
+
+            // Prevent completing an unassigned chore
+             if (newIsComplete && chore.assignedTo === 'unassigned') {
+                 console.log("Cannot complete an unassigned chore.");
+                 // Optionally, add some visual feedback like a shake animation
+                 btn.classList.add('animate-head-shake'); // Assuming head-shake is defined
+                 setTimeout(() => btn.classList.remove('animate-head-shake'), 500);
+                 playSound('uncomplete'); // Play an error/negative sound
+                 return; 
+             }
+            
+            const memberId = newIsComplete ? chore.assignedTo : chore.completedBy; // Assignee completes, last completer uncompletes
             const member = getMemberById(memberId);
             
             // Prevent un-completing if member doesn't exist (shouldn't happen)
@@ -1397,6 +1454,8 @@
             
             // Calculate point change
             const pointsChange = newIsComplete ? chore.points : -Math.abs(chore.points);
+            const startPoints = member ? (member.points || 0) : 0; // Get start points before update
+            const endPoints = startPoints + pointsChange;
             
             try {
                 // Update chore
@@ -1411,29 +1470,35 @@
                 if (member && member.id !== 'unassigned') { // Don't award points to "unassigned"
                     const F_MEMBERS_COL = `/artifacts/${appId}/public/data/members`;
                     const memberRef = doc(db, F_MEMBERS_COL, member.id);
-                    await updateDoc(memberRef, {
-                        points: (member.points || 0) + pointsChange
-                    });
+                    await updateDoc(memberRef, { points: endPoints });
+                    
+                     // Animate points display on daily list if visible
+                     const pointsDisplayDaily = document.getElementById(`member-points-${member.id}`);
+                     if (pointsDisplayDaily && currentView === 'daily') {
+                         animateNumber(pointsDisplayDaily, startPoints, endPoints, 500);
+                     }
+                      // Also animate on reward screen if visible
+                     const pointsDisplayReward = document.getElementById(`member-points-display-${member.id}`);
+                     if (pointsDisplayReward && currentView === 'rewards') {
+                         animateNumber(pointsDisplayReward, startPoints, endPoints, 500);
+                     }
                 }
                 
                 // 3. Play sound & Animate
                 playSound(newIsComplete ? 'complete' : 'uncomplete');
                 
                 if (newIsComplete) {
-                    // Trigger fireworks!
-                    triggerConfetti('fireworks');
+                    // Trigger particle burst from button location
+                    const rect = btn.getBoundingClientRect();
+                    triggerConfetti('burst', { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
                     
-                    const choreElement = document.getElementById(`chore-${choreId}`);
-                    if (choreElement) {
-                        const emojiButton = choreElement.querySelector('.chore-toggle-btn');
-                        emojiButton.classList.add('animate-pop-in');
-                        // Remove class after animation finishes
-                        setTimeout(() => {
-                            if (emojiButton) {
-                                emojiButton.classList.remove('animate-pop-in');
-                            }
-                        }, 300);
-                    }
+                    // Animate checkmark
+                    btn.classList.add('animate-bounce-in');
+                    // Remove class after animation finishes to allow re-triggering
+                    setTimeout(() => btn.classList.remove('animate-bounce-in'), 400); 
+                } else {
+                    // Remove bounce animation class immediately if uncompleting
+                    btn.classList.remove('animate-bounce-in');
                 }
                 
             } catch (error) {
@@ -1725,16 +1790,17 @@
             
             if (!reward || !member || member.points < reward.cost) return;
             
-            playSound('redeem'); // Play fanfare
+            const startPoints = member.points || 0;
+            const endPoints = startPoints - reward.cost;
+            
+            playSound('redeem'); // Play fanfare + sparkle
             triggerConfetti('fireworks'); // Trigger fireworks!
             
-            const newPoints = member.points - reward.cost;
-            
             try {
-                // 1. Deduct points
+                // 1. Deduct points (Firestore)
                 const F_MEMBERS_COL = `/artifacts/${appId}/public/data/members`;
                 const memberRef = doc(db, F_MEMBERS_COL, member.id);
-                await updateDoc(memberRef, { points: newPoints });
+                await updateDoc(memberRef, { points: endPoints });
                 
                 // 2. Create claimed reward item
                 const F_CLAIMED_REWARDS_COL = `/artifacts/${appId}/public/data/claimedRewards`;
@@ -1748,8 +1814,24 @@
                     delivered: false
                 });
                 
-                // Re-render
-                renderRewards();
+                // 3. Animate points countdown in UI (Added check for currentView)
+                const pointsDisplayReward = document.getElementById(`member-points-display-${member.id}`);
+                if (pointsDisplayReward && currentView === 'rewards') {
+                    animateNumber(pointsDisplayReward, startPoints, endPoints, 1000); 
+                }
+                 // Also update on daily list if visible
+                 const pointsDisplayDaily = document.getElementById(`member-points-${member.id}`);
+                 if (pointsDisplayDaily && currentView === 'daily') {
+                     animateNumber(pointsDisplayDaily, startPoints, endPoints, 1000);
+                 }
+
+                // Re-render rewards list (needed to update claimed items & button states)
+                // Wait slightly for animation to be noticeable
+                setTimeout(() => {
+                    if (currentView === 'rewards') {
+                         renderRewards();
+                    }
+                }, 100); 
                 
             } catch (error) {
                 console.error("Error redeeming reward:", error);
@@ -1966,15 +2048,27 @@
                 const member = getMemberById(memberId);
                 if (!member) return;
                 
-                const newPoints = amount; // SET points, don't add
+                 const startPoints = member.points || 0;
+                 const endPoints = amount; // SET points
                 
                 try {
                     const F_MEMBERS_COL = `/artifacts/${appId}/public/data/members`;
                     const memberRef = doc(db, F_MEMBERS_COL, memberId);
-                    await updateDoc(memberRef, { points: newPoints });
+                    await updateDoc(memberRef, { points: endPoints });
                     
                     playSound('complete');
                     document.getElementById('adjust-points-form').reset();
+                    
+                     // Animate points display (Added check for currentView)
+                     const pointsDisplayReward = document.getElementById(`member-points-display-${member.id}`);
+                     if (pointsDisplayReward && currentView === 'rewards') {
+                         animateNumber(pointsDisplayReward, startPoints, endPoints, 500);
+                     }
+                     const pointsDisplayDaily = document.getElementById(`member-points-${member.id}`);
+                     if (pointsDisplayDaily && currentView === 'daily') {
+                         animateNumber(pointsDisplayDaily, startPoints, endPoints, 500);
+                     }
+
                 } catch (error) {
                     console.error("Error adjusting points:", error);
                 }
@@ -2312,6 +2406,43 @@
             }
             return dates;
         }
+        
+        /**
+         * Animates a number changing in an HTML element.
+         * @param {HTMLElement} element - The element containing the number.
+         * @param {number} start - The starting number.
+         * @param {number} end - The ending number.
+         * @param {number} duration - Animation duration in milliseconds.
+         */
+         function animateNumber(element, start, end, duration) {
+             let startTime = null;
+
+             function step(currentTime) {
+                 if (!startTime) startTime = currentTime;
+                 const progress = Math.min((currentTime - startTime) / duration, 1);
+                 // Ease out function - starts fast, slows down
+                 const easedProgress = 1 - Math.pow(1 - progress, 3); 
+                 const currentNumber = Math.floor(easedProgress * (end - start) + start);
+                 
+                 // Ensure element still exists before updating
+                 if(document.body.contains(element)) {
+                     element.textContent = currentNumber;
+                 } else {
+                     // Stop animation if element is removed
+                     console.warn("Target element for animation removed from DOM.");
+                     return; 
+                 }
+
+                 if (progress < 1) {
+                     window.requestAnimationFrame(step);
+                 } else {
+                     if(document.body.contains(element)) {
+                        element.textContent = end; // Ensure final value is exact
+                     }
+                 }
+             }
+             window.requestAnimationFrame(step);
+         }
 
 
         // === App Initialization ===
