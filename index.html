@@ -1437,7 +1437,7 @@
                 if (newIsComplete) {
                     // Trigger particle burst from button location
                     const rect = btn.getBoundingClientRect();
-                    triggerConfetti('burst', { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                    triggerConfetti('burst', { x: window.innerWidth, y: window.innerHeight});
                     
                     // Animate checkmark
                     btn.classList.add('animate-bounce-in');
@@ -2496,5 +2496,6 @@
     </script>
 </body>
 </html>
+
 
 
