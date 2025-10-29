@@ -485,6 +485,7 @@
             '🛒', '🐶', '🐱', '🧑‍🍳', '🚽', '🛁', '🧽', '📚', '🎒', '👟', 
             '👔', '🚗', '🛠️', '📦', '📬', '💰', '🧾', '💻', '🪴', '🍁', 
             '🍃', '🍂', '💪', '🧑‍🌾', '🔧', '⚙️', '📁', '🗄️', '📌', '📎',
+            '🦷', '🪥', '😡', '🗣️',
             // Rewards
             '🎉', '🎈', '🎁', '🍦', '🍕', '🍔', '🎮', '📱', '💻', '💵', 
             '💰', '🪙', '💳', '🚲', '🛴', '🛹', '🍿', '🎬', '🎭', '🎨', 
@@ -1453,7 +1454,7 @@
                 
                 if (newIsComplete) {
                     // Trigger particle burst from button location
-                    triggerConfetti('burst', { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                    triggerConfetti('fireworks', { x: window.innerWidth / 2, y: window.innerHeight / 2 });
                     
                     // Animate checkmark
                     btn.classList.add('animate-bounce-in');
@@ -2470,7 +2471,7 @@
                 if (emojiEl) {
                     // Prevent re-triggering if already animating
                     if (!emojiEl.classList.contains('animate-hop-and-wiggle')) {
-                        playSound('click'); // Play a simple click
+                        playSound('complete'); // Play a simple click
                         emojiEl.classList.add('animate-hop-and-wiggle');
                         setTimeout(() => {
                             // Check if element still exists before removing class
@@ -2540,3 +2541,4 @@
     </script>
 </body>
 </html>
+
