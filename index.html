@@ -983,7 +983,7 @@
             const unassignedChores = localState.dailyChores.filter(chore => chore.assignedTo === 'unassigned');
             const unassignedSection = document.createElement('div');
             // Unassigned remains white, takes full width (col-span-2)
-            unassignedSection.className = 'bg-white p-4 rounded-lg shadow-sm chore-list-droppable col-span-2" data-member-id="unassigned'; // Added col-span-2
+            unassignedSection.className = 'bg-white p-4 rounded-lg shadow-sm chore-list-droppable col-span-2 data-member-id="unassigned'; // Added col-span-2
             unassignedSection.innerHTML = `
                 <h2 class="text-xl font-semibold mb-4 flex items-center text-gray-600">
                     <i data-lucide="list" class="h-8 w-8 text-gray-400 mr-3"></i>
@@ -2541,4 +2541,5 @@
     </script>
 </body>
 </html>
+
 
