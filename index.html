@@ -121,10 +121,10 @@
         /* --- ⭐️ CORRECTED ANIMATION DEFINITION --- */
         @keyframes hopAndWiggle {
             0%, 100% { transform: translateY(0) rotate(0); } /* No quotes here */
-            20% { transform: translateY(-10px) rotate(-8deg); }
-            40% { transform: translateY(0) rotate(8deg); }
-            60% { transform: translateY(-5px) rotate(-5deg); }
-            80% { transform: translateY(0) rotate(5deg); }
+            20% { transform: translateY(-10px) rotate(-12deg); }
+            40% { transform: translateY(0) rotate(12deg); }
+            60% { transform: translateY(-5px) rotate(-6deg); }
+            80% { transform: translateY(0) rotate(6deg); }
         }
         
         .animate-hop-and-wiggle {
@@ -185,27 +185,25 @@
 
     <main class="flex-1 overflow-y-auto bg-gray-100">
         
-        <div id="view-daily" class="view p-4 md:p-8">
-            <div class="bg-white p-6 rounded-lg shadow-sm mb-6">
+        <div id="view-daily" class="view p-3 md:p-6">
+            <div class="bg-white p-4 rounded-lg shadow-sm mb-3">
                 <p id="current-time" class="text-3xl md:text-5xl font-bold text-hub-dark"></p>
                 <p id="current-date" class="text-lg md:text-2xl text-gray-600"></p>
             </div>
 
-            <div class="mb-6">
+            <div class="mb-3">
                 <details class="bg-white rounded-lg shadow-sm overflow-hidden">
-                    <summary class="p-4 cursor-pointer font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-between">
+                    <summary class="p-3 cursor-pointer font-medium text-gray-700 hover:bg-gray-50 flex items-center justify-between">
                         <span>Add One-Time Chore</span>
                         <i data-lucide="plus-circle" class="h-5 w-5"></i>
                     </summary>
                     <form id="adhoc-chore-form" class="p-4 border-t border-gray-200">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                             <input type="text" id="adhoc-name" placeholder="Chore Name" class="col-span-1 md:col-span-2 p-2 border rounded" required>
                             <input type="number" id="adhoc-points" placeholder="Points" class="p-2 border rounded" required>
                             <select id="adhoc-emoji" class="p-2 border rounded">
                                 </select>
-                        </div>
-                        <div class="flex items-center justify-between mt-4">
-                            <select id="adhoc-assignee" class="p-2 border rounded">
+                                <select id="adhoc-assignee" class="p-2 border rounded">
                                 <option value="unassigned">Unassigned</option>
                                 </select>
                             <button type="submit" class="bg-hub-blue text-white px-4 py-2 rounded-lg font-medium hover:bg-hub-dark">Add Chore</button>
@@ -214,7 +212,7 @@
                 </details>
             </div>
 
-            <div id="daily-chores-container" class="grid grid-cols-2 gap-4 md:gap-6">
+            <div id="daily-chores-container" class="grid grid-cols-2 gap-3 md:gap-6">
                 </div>
         </div>
 
@@ -637,11 +635,11 @@
              } else if (type === 'burst') {
                  // Small burst for chore completion
                  confettiEffect({
-                     particleCount: 30, // Fewer particles
-                     spread: 60,      // Narrower spread
+                     particleCount: 90, // Fewer particles
+                     spread: 300,      // Narrower spread
                      origin: originCoords,
                      startVelocity: 20, // Less velocity
-                     scalar: 0.6,     // Smaller particles
+                     scalar: 0.8,     // Smaller particles
                      ticks: 40        // Shorter life
                  });
              } else { // Default (used to be reward redeem, now separate)
@@ -957,7 +955,7 @@
             sortedMembers.forEach(member => {
                 const memberChores = localState.dailyChores.filter(chore => chore.assignedTo === member.id);
                 const section = document.createElement('div');
-                section.className = `p-4 rounded-lg shadow-sm chore-list-droppable" data-member-id="${member.id}`; // Keep col-span-1 implicit
+                section.className = `p-3 rounded-lg shadow-sm chore-list-droppable" data-member-id="${member.id}`; // Keep col-span-1 implicit
                 
                 // Apply background tint using hex
                 const colorInfo = COLOR_LIST.find(c => c.bg === member.color);
@@ -965,14 +963,14 @@
                 section.style.backgroundColor = bgColor;
                 
                 section.innerHTML = `
-                    <h2 class="text-xl font-semibold mb-4 flex items-center justify-between">
+                    <h2 class="text-xl font-semibold mb-3 flex items-center justify-between">
                         <div class="flex items-center">
-                            <span id="member-emoji-${member.id}" class="h-8 w-8 rounded-full ${member.color} flex items-center justify-center text-white text-lg font-bold mr-3">${member.emoji || member.name[0]}</span>
+                            <span id="member-emoji-${member.id}" class="h-10 w-10 rounded-full ${member.color} flex items-center justify-center text-white text-lg font-bold mr-3">${member.emoji || member.name[0]}</span>
                             <span>${member.name}</span>
                         </div>
                         <span id="member-points-${member.id}" class="text-2xl font-bold text-green-600">${member.points || 0}</span>
                     </h2>
-                    <div class="space-y-3">
+                    <div class="space-y-1">
                         ${memberChores.length > 0 ? memberChores.map(chore => renderChoreItem(chore)).join('') : '<p class="text-sm text-gray-400">No chores assigned.</p>'}
                     </div>
                 `;
@@ -1009,12 +1007,12 @@
             const disabledAttr = chore.assignedTo === 'unassigned' ? 'disabled' : '';
             const disabledClass = chore.assignedTo === 'unassigned' ? 'opacity-50 cursor-not-allowed' : '';
             return `
-                <div id="chore-${chore.id}" class="flex items-center justify-between p-3 bg-white rounded-lg chore-item-draggable shadow-sm" draggable="true" data-chore-id="${chore.id}">
+                <div id="chore-${chore.id}" class="flex items-center justify-between p-2 bg-white rounded-lg chore-item-draggable shadow-sm" draggable="true" data-chore-id="${chore.id}">
                     <div class="flex items-center">
                         <button class="chore-toggle-btn text-2xl mr-3 ${chore.isComplete ? 'animate-bounce-in' : ''} ${disabledClass}" data-chore-id="${chore.id}" ${disabledAttr}>
                             ${chore.isComplete ? '✅' : chore.emoji}
                         </button>
-                        <span class="font-medium ${chore.isComplete ? 'chore-complete' : ''}">${chore.name}</span>
+                        <span class="font-medium leading-tight ${chore.isComplete ? 'chore-complete' : ''}">${chore.name}</span>
                     </div>
                     <div class="flex items-center gap-1"> <span class="text-sm font-bold text-green-600">+${chore.points}</span>
                         <button class="assign-chore-btn p-1 text-gray-400 hover:text-blue-600" data-chore-id="${chore.id}">
@@ -1440,12 +1438,12 @@
                      // Animate points display on daily list if visible
                      const pointsDisplayDaily = document.getElementById(`member-points-${member.id}`);
                      if (pointsDisplayDaily && currentView === 'daily') {
-                         animateNumber(pointsDisplayDaily, startPoints, endPoints, 500);
+                         animateNumber(pointsDisplayDaily, startPoints, endPoints, 1000);
                      }
                       // Also animate on reward screen if visible
                      const pointsDisplayReward = document.getElementById(`member-points-display-${member.id}`);
                      if (pointsDisplayReward && currentView === 'rewards') {
-                         animateNumber(pointsDisplayReward, startPoints, endPoints, 500);
+                         animateNumber(pointsDisplayReward, startPoints, endPoints, 1000);
                      }
                 }
                 
@@ -1454,7 +1452,7 @@
                 
                 if (newIsComplete) {
                     // Trigger particle burst from button location
-                    triggerConfetti('fireworks', { x: window.innerWidth / 2, y: window.innerHeight / 2 });
+                    triggerConfetti('burst', { x: window.innerWidth / 2, y: window.innerHeight / 2 });
                     
                     // Animate checkmark
                     btn.classList.add('animate-bounce-in');
@@ -2039,11 +2037,11 @@
                      // Animate points display (Added check for currentView)
                      const pointsDisplayReward = document.getElementById(`member-points-display-${member.id}`);
                      if (pointsDisplayReward && currentView === 'rewards') {
-                         animateNumber(pointsDisplayReward, startPoints, endPoints, 500);
+                         animateNumber(pointsDisplayReward, startPoints, endPoints, 1000);
                      }
                      const pointsDisplayDaily = document.getElementById(`member-points-${member.id}`);
                      if (pointsDisplayDaily && currentView === 'daily') {
-                         animateNumber(pointsDisplayDaily, startPoints, endPoints, 500);
+                         animateNumber(pointsDisplayDaily, startPoints, endPoints, 1000);
                      }
 
                 } catch (error) {
@@ -2541,5 +2539,6 @@
     </script>
 </body>
 </html>
+
 
 
