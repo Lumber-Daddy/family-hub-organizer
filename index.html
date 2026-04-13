@@ -217,7 +217,7 @@
                 <!-- Animated Frog Merchant Header -->
                 <div class="bg-[#f5ebd9] rounded-xl p-6 shadow-md mb-8 flex items-center gap-6 border-2 border-[#d4b88c] relative overflow-hidden">
                     <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, #000 0, #000 2px, transparent 2px, transparent 8px);"></div>
-                    <div class="relative w-24 h-24 md:w-32 md:h-32 flex-shrink-0 animate-frog-breathe hover:animate-hop-and-wiggle cursor-pointer z-10" onclick="playSound('ribbit')">
+                    <div id="frog-merchant-avatar" class="relative w-24 h-24 md:w-32 md:h-32 flex-shrink-0 animate-frog-breathe cursor-pointer z-10">
                         <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
                             <!-- Back Legs -->
                             <ellipse cx="20" cy="85" rx="18" ry="10" fill="#22c55e" />
@@ -1006,38 +1006,33 @@
 
         function renderChoreItem(chore) {
             const disabledAttr = chore.assignedTo === 'unassigned' ? 'disabled' : '';
-            const disabledClass = chore.assignedTo === 'unassigned' ? 'opacity-50 cursor-not-allowed bg-gray-50' : 'bg-[#fdfbf7] hover:bg-white border-amber-100 hover:border-amber-300';
             
-            let badgeHtml = '';
-            if (chore.importance === 'main') {
-                 badgeHtml += '<span class="px-2 py-0.5 rounded text-[10px] font-black tracking-wider bg-red-900 text-red-50 border border-red-950 shadow-sm shadow-red-900/20 uppercase flex items-center"><i data-lucide="star" class="w-3 h-3 mr-0.5 fill-red-100"></i> Main</span>';
+            let boxClasses = '';
+            if (chore.assignedTo === 'unassigned') {
+                boxClasses = 'opacity-50 cursor-not-allowed bg-gray-50 border-gray-200';
+            } else if (chore.importance === 'main') {
+                boxClasses = 'bg-red-50 hover:bg-red-100 ' + (chore.isToDo ? 'border-[3px] border-indigo-500 shadow-md' : 'border border-red-200 hover:border-red-300');
             } else {
-                 badgeHtml += '<span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-emerald-800 text-emerald-50 border border-emerald-900 shadow-sm opacity-80 uppercase">Side</span>';
-            }
-            if (chore.isToDo) {
-                 badgeHtml += '<span class="px-2 py-0.5 rounded text-[10px] font-bold tracking-wider bg-indigo-900 text-indigo-50 border border-indigo-950 shadow-sm opacity-90 ml-1 uppercase"><i data-lucide="pin" class="w-3 h-3 inline mr-0.5"></i> Keep</span>';
+                boxClasses = 'bg-emerald-50 hover:bg-emerald-100 ' + (chore.isToDo ? 'border-[3px] border-indigo-500 shadow-md' : 'border border-emerald-200 hover:border-emerald-300');
             }
 
             return `
-                <div id="chore-${chore.id}" class="flex items-center justify-between p-2.5 rounded-lg chore-item-draggable shadow-sm border transition-all ${disabledClass}" draggable="true" data-chore-id="${chore.id}">
-                    <div class="flex items-center w-full overflow-hidden mr-2">
-                        <button class="chore-toggle-btn text-3xl mr-3 flex-shrink-0 ${chore.isComplete ? 'animate-bounce-in drop-shadow-md' : ''} hover:scale-110 transition-transform" data-chore-id="${chore.id}" ${disabledAttr}>
+                <div id="chore-${chore.id}" class="flex items-center justify-between p-1.5 md:p-2 rounded-lg chore-item-draggable shadow-sm transition-all ${boxClasses}" draggable="true" data-chore-id="${chore.id}">
+                    <div class="flex items-center w-full overflow-hidden mr-1">
+                        <button class="chore-toggle-btn text-2xl md:text-3xl mr-2 flex-shrink-0 ${chore.isComplete ? 'animate-bounce-in drop-shadow-md' : ''} hover:scale-110 transition-transform" data-chore-id="${chore.id}" ${disabledAttr}>
                             ${chore.isComplete ? '✅' : chore.emoji}
                         </button>
                         <div class="flex flex-col truncate w-full">
                             <span class="font-semibold text-sm md:text-base truncate text-guild-leather-dark ${chore.isComplete ? 'chore-complete' : ''}" title="${chore.name}">${chore.name}</span>
-                            <div class="flex flex-wrap gap-1 mt-1">
-                                ${badgeHtml}
-                            </div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 flex-shrink-0 border-l border-amber-200 pl-3"> 
-                        <span class="text-xs md:text-sm font-bold font-fantasy text-guild-gold min-w-[3rem] text-right">+${chore.points} <i data-lucide="gem" class="w-3 h-3 inline text-guild-gold opacity-70"></i></span>
-                        <div class="flex flex-col gap-1">
-                            <button class="assign-chore-btn p-1.5 rounded text-guild-leather/40 hover:text-guild-leather hover:bg-amber-100 transition-colors" data-chore-id="${chore.id}" title="Assign">
+                    <div class="flex items-center gap-1.5 flex-shrink-0 border-l border-amber-200 pl-2"> 
+                        <span class="text-xs md:text-sm font-bold font-fantasy text-guild-gold min-w-[2.5rem] text-right">+${chore.points} <i data-lucide="gem" class="w-3 h-3 inline text-guild-gold opacity-70"></i></span>
+                        <div class="flex flex-col gap-0.5">
+                            <button class="assign-chore-btn p-1 rounded text-guild-leather/40 hover:text-guild-leather hover:bg-amber-100 transition-colors" data-chore-id="${chore.id}" title="Assign">
                                 <i data-lucide="user-plus" class="h-4 w-4"></i>
                             </button>
-                            <button class="duplicate-chore-btn p-1.5 rounded text-guild-leather/40 hover:text-guild-action hover:bg-emerald-100 transition-colors" data-chore-id="${chore.id}" title="Duplicate">
+                            <button class="duplicate-chore-btn p-1 rounded text-guild-leather/40 hover:text-guild-action hover:bg-emerald-100 transition-colors" data-chore-id="${chore.id}" title="Duplicate">
                                  <i data-lucide="copy" class="h-4 w-4"></i>
                             </button>
                         </div>
@@ -1173,12 +1168,11 @@
                 const schedule = DAYS_OF_WEEK.filter(day => chore.schedule.includes(day)).map(day => day[0].toUpperCase() + day.slice(1)).join(', ');
                 const assignee = getMemberById(chore.defaultAssignee);
                 const assigneeColorClass = assignee ? assignee.color.replace('bg-','text-') : 'text-guild-leather/50';
-                const typeText = chore.importance === 'main' 
-                    ? '<span class="bg-red-100 text-red-800 border border-red-300 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase inline-flex items-center"><i data-lucide="star" class="w-3 h-3 mr-0.5 fill-red-200"></i> Main</span>' 
-                    : '<span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.5 rounded text-[10px] font-bold tracking-wider uppercase inline-flex items-center">Side</span>';
+                
+                let boxClasses = chore.importance === 'main' ? 'bg-red-50 border-red-200 hover:border-red-300' : 'bg-emerald-50 border-emerald-200 hover:border-emerald-300';
                 
                 return `
-                <div class="flex items-center justify-between p-3 bg-white rounded-lg border border-amber-100 shadow-sm hover:border-amber-300 transition-colors">
+                <div class="flex items-center justify-between p-3 rounded-lg border shadow-sm transition-colors ${boxClasses}">
                     <div class="flex-1 min-w-0 pr-4">
                         <p class="font-bold text-guild-leather-dark text-lg truncate flex items-center gap-2">
                             <span class="text-2xl drop-shadow-sm">${chore.emoji}</span> 
@@ -1186,7 +1180,6 @@
                             <span class="text-sm font-fantasy text-guild-gold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex-shrink-0">+${chore.points} <i data-lucide="gem" class="w-3 h-3 inline"></i></span>
                         </p>
                         <p class="text-xs text-guild-leather/70 font-medium mt-1.5 flex items-center gap-2 flex-wrap">
-                            ${typeText}
                             <span><i data-lucide="calendar" class="w-3 h-3 inline mr-0.5"></i> ${schedule || 'None'}</span>
                             <span class="text-amber-300">|</span>
                             <span><i data-lucide="user" class="w-3 h-3 inline mr-0.5"></i> Default: <span class="font-bold ${assigneeColorClass}">${assignee ? assignee.name : 'Open'}</span></span>
@@ -2121,6 +2114,15 @@
                      if (e.target.closest('.redeem-reward-btn')) { handleRedeemReward(e); return; }
                      if (e.target.closest('.deliver-reward-btn')) { handleDeliverReward(e); return; }
                      
+                     // Handle Frog Merchant Tap
+                     const frogEl = e.target.closest('#frog-merchant-avatar');
+                     if (frogEl && !frogEl.classList.contains('animate-hop-and-wiggle')) {
+                         playSound('ribbit'); 
+                         frogEl.classList.add('animate-hop-and-wiggle');
+                         setTimeout(() => { if (frogEl) frogEl.classList.remove('animate-hop-and-wiggle'); }, 700); 
+                         return;
+                     }
+
                      // Handle Rewards Emoji Tap Animation
                      const emojiEl = e.target.closest('[id^="member-rewards-emoji-"]');
                      if (emojiEl && !emojiEl.classList.contains('animate-hop-and-wiggle')) {
