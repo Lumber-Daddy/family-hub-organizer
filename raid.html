@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-[#fcf9f2]">
+<html lang="en" class="h-full bg-black">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,46 +11,53 @@
             theme: {
                 extend: {
                     colors: {
-                        'guild-bg': '#fcf9f2',
-                        'guild-panel': '#f5ebd9',
-                        'guild-leather': '#451a03',
-                        'guild-leather-dark': '#290f02',
-                        'guild-gold': '#b45309',
-                        'guild-action': '#065f46',
-                        'guild-action-hover': '#064e3b',
+                        'rpg-blue-light': '#1e3a8a', // Blue 900
+                        'rpg-blue-dark': '#0f172a', // Slate 900
+                        'rpg-border': '#cbd5e1', // Slate 300
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
                         fantasy: ['Cinzel', 'serif'],
+                        retro: ['"Courier New"', 'Courier', 'monospace'],
                     },
                     keyframes: {
-                        popIn: {
-                            '0%': { transform: 'scale(0.5)', opacity: '0' },
-                            '80%': { transform: 'scale(1.1)', opacity: '1' },
-                            '100%': { transform: 'scale(1)', opacity: '1' },
-                        },
                         hopAndWiggle: {
                             '0%, 100%': { transform: 'translateY(0) rotate(0)' },
-                            '20%': { transform: 'translateY(-10px) rotate(-12deg)' },
-                            '40%': { transform: 'translateY(0) rotate(12deg)' },
-                            '60%': { transform: 'translateY(-5px) rotate(-6deg)' },
-                            '80%': { transform: 'translateY(0) rotate(6deg)' },
+                            '20%': { transform: 'translateY(-10px) rotate(-8deg)' },
+                            '40%': { transform: 'translateY(0) rotate(8deg)' },
+                            '60%': { transform: 'translateY(-5px) rotate(-4deg)' },
+                            '80%': { transform: 'translateY(0) rotate(4deg)' },
                         },
                         damageShake: {
-                            '0%, 100%': { transform: 'translateX(0) scale(1)' },
-                            '20%, 60%': { transform: 'translateX(-10px) scale(0.95)' },
-                            '40%, 80%': { transform: 'translateX(10px) scale(0.95)' },
+                            '0%, 100%': { transform: 'translateX(0) scale(1)', filter: 'brightness(1) contrast(1)' },
+                            '10%': { filter: 'brightness(2) contrast(2) drop-shadow(0 0 20px red)' },
+                            '20%, 60%': { transform: 'translateX(-15px) scale(0.95)' },
+                            '40%, 80%': { transform: 'translateX(15px) scale(0.95)' },
                         },
                         magicFlash: {
-                            '0%, 100%': { filter: 'brightness(1) invert(0)' },
-                            '50%': { filter: 'brightness(1.5) invert(0.2)' },
+                            '0%, 100%': { filter: 'brightness(1) invert(0) hue-rotate(0deg)' },
+                            '25%': { filter: 'brightness(2) invert(0.8) hue-rotate(90deg)' },
+                            '50%': { filter: 'brightness(2) invert(0) hue-rotate(180deg)' },
+                            '75%': { filter: 'brightness(2) invert(0.8) hue-rotate(270deg)' },
+                        },
+                        lungeLeft: {
+                            '0%, 100%': { transform: 'translateX(0)' },
+                            '40%': { transform: 'translateX(-40px) scale(1.1)' },
+                            '60%': { transform: 'translateX(-40px) scale(1.1)' },
+                        },
+                        floatUp: {
+                            '0%': { transform: 'translateY(0) scale(0.5)', opacity: '0' },
+                            '20%': { transform: 'translateY(-20px) scale(1.2)', opacity: '1' },
+                            '80%': { transform: 'translateY(-60px) scale(1)', opacity: '1' },
+                            '100%': { transform: 'translateY(-80px) scale(1)', opacity: '0' },
                         }
                     },
                     animation: {
-                        'pop-in': 'popIn 0.3s ease-out',
-                        'hop-and-wiggle': 'hopAndWiggle 0.7s ease-in-out',
-                        'damage-shake': 'damageShake 0.4s ease-in-out',
-                        'magic-flash': 'magicFlash 0.5s ease-in-out',
+                        'hop-and-wiggle': 'hopAndWiggle 2s ease-in-out infinite',
+                        'damage-shake': 'damageShake 0.5s ease-in-out',
+                        'magic-flash': 'magicFlash 0.6s ease-in-out',
+                        'lunge-left': 'lungeLeft 0.5s ease-in-out',
+                        'float-up': 'floatUp 1.2s ease-out forwards',
                     }
                 }
             }
@@ -63,49 +70,143 @@
 
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #fcf9f2;
+        .rpg-box {
+            background: linear-gradient(to bottom right, #1e3a8a, #0f172a);
+            border: 4px solid #cbd5e1;
+            border-radius: 8px;
+            box-shadow: inset 0 0 0 3px #000, 0 0 0 4px #000, 0 10px 15px rgba(0,0,0,0.5);
+            color: #f8fafc;
+            text-shadow: 2px 2px 0 #000;
         }
-        ::-webkit-scrollbar { width: 8px; }
-        ::-webkit-scrollbar-track { background: #f5ebd9; }
-        ::-webkit-scrollbar-thumb { background: #b45309; border-radius: 4px; }
-        ::-webkit-scrollbar-thumb:hover { background: #78350f; }
         
-        .animate-hop-and-wiggle { animation: hopAndWiggle 0.7s ease-in-out; }
-        .animate-damage-shake { animation: damageShake 0.4s ease-in-out; }
-        .animate-magic-flash { animation: magicFlash 0.5s ease-in-out; }
+        .rpg-btn {
+            cursor: pointer;
+            transition: all 0.1s;
+            position: relative;
+            padding-left: 1.5rem;
+        }
+        
+        .rpg-btn:hover {
+            color: #fde047; /* yellow-300 */
+        }
+        
+        .rpg-btn:hover::before {
+            content: '▶';
+            position: absolute;
+            left: 0;
+            color: #fde047;
+            animation: blink 0.5s infinite;
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0; }
+        }
+
+        /* Custom scrollbar for RPG menus */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: rgba(0,0,0,0.5); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; border: 1px solid #000; }
+        
+        .battle-bg {
+            background-color: #2c1a16;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(255, 100, 100, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 80% 70%, rgba(100, 100, 255, 0.1) 0%, transparent 40%),
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.2) 2px, rgba(0,0,0,0.2) 4px);
+        }
     </style>
 </head>
-<body class="h-full flex flex-col overflow-hidden text-gray-800">
+<body class="h-full flex flex-col overflow-hidden text-gray-100 bg-black font-retro select-none">
 
-    <div id="loading-overlay" class="fixed inset-0 bg-guild-bg z-50 flex flex-col items-center justify-center transition-opacity duration-300">
-        <svg class="animate-spin h-14 w-14 text-guild-leather" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-        </svg>
-        <p id="loading-text" class="mt-4 text-xl font-fantasy font-bold text-guild-leather-dark">Connecting to The Arena...</p>
+    <!-- Loading Screen -->
+    <div id="loading-overlay" class="fixed inset-0 bg-black z-50 flex flex-col items-center justify-center transition-opacity duration-500">
+        <i data-lucide="swords" class="w-16 h-16 text-white animate-pulse mb-4"></i>
+        <p class="text-xl font-bold tracking-widest">LOADING ARENA...</p>
     </div>
 
-    <!-- Simplified Top Navigation -->
-    <nav class="bg-guild-leather text-amber-50 flex items-center justify-between px-6 h-16 shadow-xl z-20 border-b-2 border-guild-leather-dark flex-shrink-0">
+    <!-- Top Navigation -->
+    <nav class="bg-gray-900 border-b-4 border-gray-700 flex items-center justify-between px-6 h-14 flex-shrink-0 z-20 shadow-lg">
         <div class="flex items-center gap-3">
-            <i data-lucide="swords" class="h-6 w-6 text-amber-400"></i>
-            <span class="text-xl font-bold font-fantasy text-amber-400 tracking-wider drop-shadow-md">The Arena</span>
+            <span class="text-xl font-bold font-fantasy text-amber-400 tracking-wider">THE ARENA</span>
         </div>
-        <a href="index.html" class="text-amber-200/70 hover:text-amber-50 font-fantasy font-bold flex items-center gap-2 transition-colors">
-            <i data-lucide="arrow-left" class="w-4 h-4"></i> Return to Hub
+        <a href="index.html" class="text-gray-400 hover:text-white font-bold flex items-center gap-2 transition-colors border border-gray-600 px-3 py-1 rounded bg-gray-800 hover:bg-gray-700">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i> RETURN TO HUB
         </a>
     </nav>
 
-    <main class="flex-1 overflow-y-auto bg-guild-bg relative flex flex-col p-4 md:p-8">
-        <div class="absolute inset-0 opacity-40 pointer-events-none" style="background-image: url('data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23d4b88c\' fill-opacity=\'0.2\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'3\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'3\'/%3E%3C/g%3E%3C/svg%3E');"></div>
+    <!-- Main Battle Layout -->
+    <main class="flex-1 flex flex-col p-2 md:p-4 gap-2 max-w-6xl mx-auto w-full relative">
         
-        <div id="view-arena" class="relative z-10 max-w-5xl mx-auto w-full flex-grow flex flex-col">
-            <!-- Arena content populated by JS -->
+        <!-- BATTLE SCENE (Top Half) -->
+        <div class="flex-1 battle-bg border-4 border-gray-600 rounded-lg shadow-inner relative flex overflow-hidden">
+            <!-- Ground Line -->
+            <div class="absolute bottom-0 left-0 right-0 h-1/4 bg-gradient-to-t from-black/60 to-transparent pointer-events-none"></div>
+
+            <!-- Boss Area (Left) -->
+            <div class="w-1/2 flex flex-col items-center justify-center relative z-10 p-4">
+                <div id="boss-sprite-container" class="relative transition-all">
+                    <!-- Boss Emoji injected here -->
+                </div>
+            </div>
+
+            <!-- Party Area (Right) -->
+            <div id="party-sprites-container" class="w-1/2 flex flex-col justify-center items-end pr-8 md:pr-16 gap-6 relative z-10">
+                <!-- Party Sprites injected here -->
+            </div>
+            
+            <!-- Victory Overlay -->
+            <div id="victory-overlay" class="absolute inset-0 bg-black/60 hidden items-center justify-center z-30 backdrop-blur-sm">
+                <div class="text-center animate-pop-in">
+                    <h2 class="text-6xl font-black font-fantasy text-amber-400 drop-shadow-[0_5px_5px_rgba(0,0,0,1)] tracking-widest mb-4">VICTORY!</h2>
+                    <p class="text-xl font-bold text-white drop-shadow-md">The monster has been vanquished!</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- COMMAND MENUS (Bottom Half) -->
+        <div class="h-64 flex gap-2 flex-shrink-0">
+            
+            <!-- Left: Stats & Log Box -->
+            <div class="w-1/3 rpg-box flex flex-col p-3 overflow-hidden">
+                <div class="border-b-2 border-slate-400/50 pb-2 mb-2">
+                    <h3 id="ui-boss-name" class="font-bold text-amber-300 truncate tracking-wide">RAID BOSS</h3>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span class="text-xs">HP</span>
+                        <div class="flex-grow bg-black h-3 border border-gray-500 rounded-sm">
+                            <div id="ui-boss-hp-bar" class="bg-red-600 h-full w-full transition-all duration-300"></div>
+                        </div>
+                    </div>
+                </div>
+                <div id="battle-log" class="flex-grow overflow-y-auto text-sm md:text-base leading-relaxed space-y-1 flex flex-col justify-end">
+                    <p class="text-gray-400 italic text-xs">Waiting for battle...</p>
+                </div>
+            </div>
+
+            <!-- Right: Commands/Tasks Box -->
+            <div class="w-2/3 rpg-box flex flex-col p-4 overflow-hidden relative">
+                <div id="menu-header" class="text-amber-300 font-bold mb-3 tracking-widest border-b-2 border-slate-400/50 pb-2 flex justify-between items-center">
+                    <span>COMMANDS</span>
+                    <span id="menu-subtitle" class="text-xs text-gray-300">Select Objective</span>
+                </div>
+                
+                <!-- State 1: Task List -->
+                <div id="menu-tasks" class="flex-grow overflow-y-auto space-y-2 pr-2">
+                    <!-- Tasks injected here -->
+                </div>
+
+                <!-- State 2: Hero Selection (Hidden by default) -->
+                <div id="menu-heroes" class="hidden flex-grow overflow-y-auto grid grid-cols-2 gap-2 pr-2 items-start content-start">
+                    <!-- Heroes injected here -->
+                </div>
+                
+                <button id="menu-back-btn" class="hidden absolute bottom-4 right-4 text-gray-400 hover:text-white transition-colors flex items-center gap-1 text-sm bg-black/50 px-2 py-1 rounded border border-gray-600">
+                    <i data-lucide="corner-down-left" class="w-4 h-4"></i> BACK
+                </button>
+            </div>
         </div>
     </main>
 
@@ -113,80 +214,58 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { 
-            getFirestore, doc, onSnapshot, collection, query, writeBatch, serverTimestamp, setLogLevel 
+            getFirestore, doc, onSnapshot, collection, writeBatch, serverTimestamp, setLogLevel 
         } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        let db, auth, userId, appId;
+        // === State ===
+        let db, auth, userId;
+        const appId = 'family-hub-organizer';
+        
         let sounds = {};
         let confettiEffect;
+        let isAnimating = false; // Locks UI during attacks
+        let battleLogMsgs = [];
+        
         let localState = {
             members: [],
             raid: null
         };
-        let hasLoaded = {
-            members: false,
-            raid: false
-        };
+        let hasLoaded = { members: false, raid: false };
+        
+        // Menu navigation state
+        let selectedTaskIdx = null;
 
-        // === Sound Initialization ===
-        function initSounds(event) {
+        // === Audio & Effects Setup ===
+        function initSounds() {
             if (typeof Tone === 'undefined') return;
             Tone.start();
 
-            const polySynthConfig = {
-                 polyphony: 4, volume: -12, detune: 0,
-                 oscillator: { type: "triangle" },
-                 envelope: { attack: 0.02, decay: 0.3, sustain: 0.2, release: 0.5 } 
-             };
-            sounds.polySynth = new Tone.PolySynth(polySynthConfig).toDestination();
-            sounds.arpUp = { notes: ["C4", "E4", "G4", "C5"], duration: "16n" };
-            sounds.sparkle = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.1 }, volume: -15 }).toDestination(); 
-            sounds.uncomplete = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }, volume: -15 }).toDestination();
-            sounds.click = new Tone.MembraneSynth({ pitchDecay: 0.005, octaves: 1, envelope: { attack: 0.001, decay: 0.1, sustain: 0.005, release: 0.01 }, volume: -20 }).toDestination();
-            sounds.hit = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 4, envelope: { attack: 0.001, decay: 0.2, sustain: 0.01, release: 0.01 }, volume: -10 }).toDestination();
-            sounds.bossHit = new Tone.MembraneSynth({ pitchDecay: 0.1, octaves: 1, envelope: { attack: 0.01, decay: 0.4, sustain: 0.01, release: 0.01 }, volume: -5 }).toDestination();
+            sounds.hit = new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 4, envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.1 }, volume: -8 }).toDestination();
+            sounds.bossHit = new Tone.MembraneSynth({ pitchDecay: 0.2, octaves: 1, envelope: { attack: 0.01, decay: 0.4, sustain: 0, release: 0.2 }, volume: -2 }).toDestination();
+            sounds.magic = new Tone.FMSynth({ harmonicity: 3, modulationIndex: 10, oscillator: { type: "sine" }, envelope: { attack: 0.05, decay: 0.2, sustain: 0.1, release: 0.5 }, volume: -15 }).toDestination();
+            sounds.heal = new Tone.PolySynth(Tone.Synth, { oscillator: { type: "triangle" }, envelope: { attack: 0.1, decay: 0.2, sustain: 0.2, release: 0.5 }, volume: -15 }).toDestination();
+            sounds.click = new Tone.MembraneSynth({ pitchDecay: 0.005, octaves: 1, envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.01 }, volume: -20 }).toDestination();
+            sounds.error = new Tone.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }, volume: -15 }).toDestination();
 
             document.body.removeEventListener('click', initSounds);
         }
 
-        function playSound(soundToPlay) {
+        function playSound(type) {
+            if (Tone.context.state !== 'running') return;
             const now = Tone.now();
-            const polySynth = sounds.polySynth; 
-
-            if (Tone.context.state === 'running') {
-                try {
-                    if (soundToPlay === 'uncomplete') {
-                        sounds.uncomplete.triggerAttackRelease('A3', '8n', now); 
-                    } else if (soundToPlay === 'redeem') {
-                         if (sounds.arpUp.notes && polySynth) { 
-                             let time = now;
-                             sounds.arpUp.notes.forEach(note => {
-                                 polySynth.triggerAttackRelease(note, "16n", time);
-                                 time += Tone.Time("16n").toSeconds();
-                             });
-                         }
-                        sounds.sparkle.triggerAttackRelease('C7', '32n', now + 0.05);
-                        sounds.sparkle.triggerAttackRelease('E7', '32n', now + 0.15);
-                        sounds.sparkle.triggerAttackRelease('G7', '32n', now + 0.25);
-                    } else if (soundToPlay === 'click') {
-                        sounds.click.triggerAttackRelease("C1", "16n", now); 
-                    } else if (soundToPlay === 'hit') {
-                        sounds.hit.triggerAttackRelease("C2", "8n", now);
-                    } else if (soundToPlay === 'bossHit') {
-                        sounds.bossHit.triggerAttackRelease("C1", "4n", now);
-                    } else if (soundToPlay === 'spell') {
-                        sounds.sparkle.triggerAttackRelease('E6', '8n', now);
-                        sounds.sparkle.triggerAttackRelease('A6', '8n', now + 0.1);
-                        sounds.hit.triggerAttackRelease("C2", "16n", now + 0.2); 
-                    } else if (soundToPlay === 'heal') {
-                        sounds.sparkle.triggerAttackRelease('C5', '16n', now);
-                        sounds.sparkle.triggerAttackRelease('E5', '16n', now + 0.1);
-                        sounds.sparkle.triggerAttackRelease('G5', '8n', now + 0.2);
-                    }
-                } catch (e) { console.error(`Error playing sound ${soundToPlay}:`, e); }
-            }
+            try {
+                if (type === 'click') sounds.click.triggerAttackRelease("C2", "16n", now);
+                if (type === 'error') sounds.error.triggerAttackRelease("A2", "16n", now);
+                if (type === 'strike') sounds.hit.triggerAttackRelease("C1", "8n", now);
+                if (type === 'bossHit') {
+                    sounds.bossHit.triggerAttackRelease("C0", "4n", now);
+                    sounds.hit.triggerAttackRelease("E1", "8n", now + 0.1);
+                }
+                if (type === 'spell') sounds.magic.triggerAttackRelease("C5", "8n", now);
+                if (type === 'heal') sounds.heal.triggerAttackRelease(["C4", "E4", "G4"], "4n", now);
+            } catch(e) { console.error("Audio error:", e); }
         }
-        
+
         function initConfetti() {
             const canvas = document.createElement('canvas');
             canvas.style.position = 'fixed';
@@ -200,25 +279,49 @@
             confettiEffect = confetti.create(canvas, { resize: true });
         }
 
-        function triggerConfetti() {
+        function triggerVictoryConfetti() {
              if (!confettiEffect) return;
-             const duration = 3000;
+             const duration = 5000;
              const animationEnd = Date.now() + duration;
-             const defaults = { startVelocity: 45, spread: 360, ticks: 100, zIndex: 100, particleCount: 80, colors: ['#b45309', '#065f46', '#991b1b', '#fef3c7'] };
-             function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+             const defaults = { startVelocity: 45, spread: 360, ticks: 100, zIndex: 100, particleCount: 100, colors: ['#fbbf24', '#f59e0b', '#b45309', '#ffffff'] };
+             
              const interval = setInterval(function() {
                  const timeLeft = animationEnd - Date.now();
                  if (timeLeft <= 0) { return clearInterval(interval); }
                  const particleCount = defaults.particleCount * (timeLeft / duration);
-                 confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-                 confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+                 confettiEffect({ ...defaults, particleCount, origin: { x: Math.random(), y: Math.random() - 0.2 } });
              }, 250);
-         }
+        }
 
-        // === Firebase Initialization ===
+        function spawnFloatingText(text, x, y, type) {
+            const el = document.createElement('div');
+            let colorClass = 'text-white';
+            if (type === 'damage') colorClass = 'text-red-400 drop-shadow-[0_2px_2px_#000]';
+            if (type === 'heal') colorClass = 'text-emerald-400 drop-shadow-[0_2px_2px_#000]';
+            
+            el.className = `absolute font-black font-retro text-3xl md:text-5xl ${colorClass} z-50 pointer-events-none animate-float-up text-center w-64 -ml-32`;
+            el.style.left = `${x}px`;
+            el.style.top = `${y}px`;
+            el.innerText = text;
+            
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 1500);
+        }
+
+        function addLog(msg, color = 'text-gray-100') {
+            battleLogMsgs.push({ text: msg, color: color });
+            if (battleLogMsgs.length > 20) battleLogMsgs.shift();
+            
+            const logEl = document.getElementById('battle-log');
+            if (logEl) {
+                logEl.innerHTML = battleLogMsgs.map(m => `<p class="${m.color}">${m.text}</p>`).join('');
+                logEl.scrollTop = logEl.scrollHeight;
+            }
+        }
+
+        // === Firebase Init & Loading ===
         async function initFirebase() {
             try {
-                appId = 'family-hub-organizer';
                 const firebaseConfig = {
                     apiKey: "AIzaSyD_piA_kA7WZFN7GgxCDPpNNxyjrVRTj3M",
                     authDomain: "family-hub-organizer.firebaseapp.com",
@@ -231,21 +334,20 @@
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
-                
-                setLogLevel('Debug');
+                setLogLevel('error');
 
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
                         userId = user.uid;
                         await loadData();
-                        document.getElementById('loading-overlay').classList.add('opacity-0');
-                        setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 300);
                     } else {
                         await signInAnonymously(auth);
                     }
                 });
             } catch (error) {
-                console.error("Firebase init error:", error);
+                document.getElementById('loading-text').textContent = 'Connection Error';
+                document.getElementById('loading-overlay').classList.remove('bg-black');
+                document.getElementById('loading-overlay').classList.add('bg-red-900');
             }
         }
 
@@ -258,7 +360,7 @@
             onSnapshot(collection(db, F_MEMBERS_COL), (snapshot) => {
                 localState.members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 hasLoaded.members = true;
-                if (hasLoaded.members && hasLoaded.raid) renderArena();
+                checkInitComplete();
             });
             
             onSnapshot(doc(db, F_RAID_DOC), (docSnap) => {
@@ -268,217 +370,247 @@
                     localState.raid = null;
                 }
                 hasLoaded.raid = true;
-                if (hasLoaded.members && hasLoaded.raid) renderArena();
+                checkInitComplete();
             });
         }
 
-        function getMemberById(id) { 
-            return localState.members.find(m => m.id === id); 
+        function checkInitComplete() {
+            if (hasLoaded.members && hasLoaded.raid) {
+                document.getElementById('loading-overlay').classList.add('opacity-0', 'pointer-events-none');
+                
+                // Only full render if not mid-animation to prevent UI glitches
+                if (!isAnimating) {
+                    renderArena();
+                }
+            }
         }
 
-        // === ARENA BATTLE LOGIC ===
+        // === RENDERING LOGIC ===
         function renderArena() {
-            const container = document.getElementById('view-arena');
             const raid = localState.raid;
+            const bossContainer = document.getElementById('boss-sprite-container');
+            const partyContainer = document.getElementById('party-sprites-container');
+            const tasksMenu = document.getElementById('menu-tasks');
+            const heroesMenu = document.getElementById('menu-heroes');
+            const uiBossName = document.getElementById('ui-boss-name');
+            const uiBossHpBar = document.getElementById('ui-boss-hp-bar');
+            const headerText = document.getElementById('menu-header').firstElementChild;
+            const subtitleText = document.getElementById('menu-subtitle');
+            const backBtn = document.getElementById('menu-back-btn');
+            const overlay = document.getElementById('victory-overlay');
 
             if (!raid || !raid.isActive) {
-                 container.innerHTML = `
-                    <div class="flex justify-between items-center mb-4 border-b-2 border-amber-300 pb-2">
-                        <h1 class="text-4xl font-bold font-fantasy text-guild-leather-dark">Active Raid</h1>
-                    </div>
-                    <div class="flex flex-col items-center justify-center flex-grow bg-[#fefce8] border border-amber-200 rounded-lg shadow-md p-8 text-center">
-                        <i data-lucide="shield-check" class="h-20 w-20 text-emerald-600 opacity-50 mb-4"></i>
-                        <p class="text-2xl font-fantasy text-guild-leather-dark mb-2">The realm is secure.</p>
-                        <p class="text-guild-leather/70">No raid bosses are currently attacking the guild. (Set one up in Guild Setup)</p>
-                    </div>
-                 `;
-                 lucide.createIcons();
-                 return;
-            }
-
-            const isDefeated = raid.hp <= 0;
-            const bossPct = Math.max(0, (raid.hp / raid.maxHp) * 100);
-
-            const sortedMembers = [...localState.members].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-            const memberOptions = `<option value="">-- Choose Adventurer --</option>` + sortedMembers.map(m => `<option value="${m.id}">${m.name}</option>`).join('');
-
-            let tasksHtml = '';
-            if (raid.tasks && raid.tasks.length > 0) {
-                const sortedTasks = [...raid.tasks].sort((a,b) => (a.isComplete === b.isComplete) ? 0 : a.isComplete ? 1 : -1);
-                
-                tasksHtml = sortedTasks.map((task, idx) => {
-                    let actionBtnHtml = '';
-                    let actionIcon = '';
-                    let actionColor = '';
-                    let typeLabel = '';
-                    
-                    if (task.type === 'strike') { actionIcon = 'sword'; actionColor = 'bg-red-700 hover:bg-red-800 border-red-950'; typeLabel = 'STRIKE'; }
-                    else if (task.type === 'spell') { actionIcon = 'wand-2'; actionColor = 'bg-blue-700 hover:bg-blue-800 border-blue-950'; typeLabel = 'SPELL'; }
-                    else if (task.type === 'heal') { actionIcon = 'heart'; actionColor = 'bg-emerald-600 hover:bg-emerald-700 border-emerald-900'; typeLabel = 'HEAL'; }
-                    
-                    if (task.isComplete) {
-                        const hero = getMemberById(task.completedBy);
-                        actionBtnHtml = `<div class="flex items-center gap-2 text-sm font-bold text-gray-500 bg-gray-100 px-4 py-2 rounded border border-gray-200">
-                            <span class="w-6 h-6 rounded-full ${hero?hero.color:'bg-gray-400'} text-white flex items-center justify-center text-xs">${hero?hero.emoji||hero.name[0]:'?'}</span>
-                            DONE
-                        </div>`;
-                    } else if (isDefeated) {
-                         actionBtnHtml = `<div class="text-sm font-bold text-gray-400">BOSS DEFEATED</div>`;
-                    } else {
-                        actionBtnHtml = `<button class="raid-action-btn flex items-center gap-2 px-6 py-2.5 rounded shadow-sm transition-transform hover:scale-105 active:scale-95 text-white font-bold font-fantasy tracking-widest border-b-4 active:border-b-0 active:mt-1 ${actionColor}" data-task-idx="${idx}">
-                            <i data-lucide="${actionIcon}" class="w-5 h-5"></i> ${typeLabel}
-                        </button>`;
-                    }
-
-                    return `
-                    <div class="flex items-center justify-between p-4 bg-white rounded-xl shadow-sm border border-amber-200 ${task.isComplete ? 'opacity-60 grayscale-[50%]' : ''}">
-                        <div>
-                            <p class="font-bold text-guild-leather-dark text-lg ${task.isComplete ? 'line-through' : ''}">${task.name}</p>
-                            <p class="text-sm font-fantasy text-guild-gold font-bold mt-1">
-                                ${task.type === 'heal' ? 'Rewards:' : 'Deals:'} ${task.damage} ${task.type === 'heal' ? '💎' : 'DMG'}
-                            </p>
-                        </div>
-                        <div>${actionBtnHtml}</div>
-                    </div>`;
-                }).join('');
-            } else {
-                tasksHtml = `<p class="text-center text-guild-leather/50 italic py-8">No objectives assigned to this raid yet.</p>`;
-            }
-
-            container.innerHTML = `
-                 <div class="flex justify-between items-end mb-4 border-b-2 border-amber-300 pb-2">
-                     <h1 class="text-4xl font-bold font-fantasy text-guild-leather-dark">Active Raid</h1>
-                     <div class="flex items-center gap-3">
-                         <label class="font-bold text-guild-leather-dark text-sm uppercase tracking-wider">Acting Hero:</label>
-                         <select id="raid-hero-select" class="p-2 border-2 border-amber-400 rounded-lg bg-white font-bold text-guild-leather-dark shadow-sm focus:ring-2 focus:ring-guild-gold outline-none w-48">
-                             ${memberOptions}
-                         </select>
-                     </div>
-                 </div>
-                 
-                 <div class="flex-grow flex flex-col bg-[#fefce8] border border-amber-200 rounded-lg shadow-lg overflow-hidden relative">
-                    
-                    <div class="relative flex-shrink-0 flex flex-col justify-center items-center p-8 min-h-[300px] border-b-4 border-guild-leather-dark overflow-hidden">
-                        <div class="absolute inset-0 bg-gradient-to-b from-slate-900 to-slate-700 transition-opacity duration-1000 ${isDefeated ? 'opacity-0' : 'opacity-100'}"></div>
-                        <div class="absolute inset-0 bg-gradient-to-b from-blue-200 to-emerald-100 transition-opacity duration-1000 ${isDefeated ? 'opacity-100' : 'opacity-0'}"></div>
-                        
-                        <div class="text-center z-10 w-full max-w-md relative">
-                            ${isDefeated ? `
-                                <div class="absolute inset-0 flex items-center justify-center animate-pop-in z-20">
-                                    <h2 class="text-6xl font-black font-fantasy text-amber-400 drop-shadow-[0_5px_5px_rgba(0,0,0,0.8)] transform -rotate-12">VICTORY!</h2>
-                                </div>
-                            ` : ''}
-                            <div id="raid-boss-sprite" class="text-8xl md:text-9xl mb-6 transition-all duration-500 ease-in-out ${isDefeated ? 'opacity-50 grayscale scale-90 translate-y-10 blur-sm' : 'animate-hop-and-wiggle hover:scale-110 drop-shadow-[0_15px_15px_rgba(0,0,0,0.6)] cursor-pointer'}" onclick="!${isDefeated} && playSound('bossHit')">
-                                ${raid.emoji}
-                            </div>
-                            
-                            <div class="w-full bg-gray-950 h-8 rounded-full overflow-hidden border-[3px] border-slate-800 shadow-[inset_0_4px_6px_rgba(0,0,0,0.6)] relative z-10">
-                                <div id="boss-hp-bar" class="bg-gradient-to-b from-red-500 to-red-700 h-full transition-all duration-500 ease-out flex justify-end items-center pr-2" style="width: ${bossPct}%">
-                                    <div class="w-1 h-full bg-white/30 blur-[1px]"></div>
-                                </div>
-                                <div class="absolute inset-0 flex items-center justify-center font-mono font-bold text-white text-sm drop-shadow-md mix-blend-difference">
-                                    ${raid.hp} / ${raid.maxHp} HP
-                                </div>
-                            </div>
-                            <p id="boss-name" class="font-fantasy text-amber-100 mt-4 font-black text-3xl tracking-widest uppercase drop-shadow-md z-10 relative ${isDefeated ? 'text-guild-leather-dark' : ''}">${raid.name}</p>
-                        </div>
-                    </div>
-
-                    <div class="flex-grow bg-[#f5ebd9] p-6 overflow-y-auto">
-                        <h3 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-4 border-b border-amber-300/50 pb-2">Raid Objectives</h3>
-                        <div class="space-y-4 max-w-4xl mx-auto">
-                            ${tasksHtml}
-                        </div>
-                    </div>
-                 </div>
-            `;
-
-            lucide.createIcons();
-            
-            document.querySelectorAll('.raid-action-btn').forEach(btn => {
-                btn.addEventListener('click', handleExecuteRaidTask);
-            });
-        }
-
-        async function handleExecuteRaidTask(e) {
-            const btn = e.currentTarget;
-            const taskIdx = btn.dataset.taskIdx;
-            const heroSelect = document.getElementById('raid-hero-select');
-            const heroId = heroSelect.value;
-
-            if (!heroId) {
-                heroSelect.classList.remove('animate-damage-shake');
-                void heroSelect.offsetWidth;
-                heroSelect.classList.add('animate-damage-shake');
-                heroSelect.style.borderColor = 'red';
-                setTimeout(() => heroSelect.style.borderColor = '', 500);
-                playSound('uncomplete');
+                uiBossName.textContent = "NO TARGET";
+                uiBossHpBar.style.width = "0%";
+                bossContainer.innerHTML = '';
+                tasksMenu.innerHTML = `<p class="text-gray-400 italic text-center mt-8">No raid boss detected in the realm. Return to the Hub to summon one.</p>`;
+                partyContainer.innerHTML = '';
+                overlay.classList.replace('flex', 'hidden');
+                lucide.createIcons();
                 return;
             }
 
-            const hero = getMemberById(heroId);
+            // Update Boss UI
+            const isDefeated = raid.hp <= 0;
+            const bossPct = Math.max(0, (raid.hp / raid.maxHp) * 100);
+            uiBossName.textContent = raid.name.toUpperCase();
+            uiBossHpBar.style.width = `${bossPct}%`;
+
+            bossContainer.innerHTML = `
+                <div id="boss-sprite" class="text-[150px] md:text-[200px] leading-none filter drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] transition-all duration-700 ${isDefeated ? 'opacity-30 grayscale scale-y-50 translate-y-20 blur-sm' : 'animate-hop-and-wiggle'}">
+                    ${raid.emoji}
+                </div>
+            `;
+
+            if (isDefeated) {
+                overlay.classList.replace('hidden', 'flex');
+                if (!confettiEffect) initConfetti(); // Ensure ready
+            } else {
+                overlay.classList.replace('flex', 'hidden');
+            }
+
+            // Render Party Sprites
+            const sortedMembers = [...localState.members].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+            partyContainer.innerHTML = sortedMembers.map(m => `
+                <div id="hero-sprite-${m.id}" class="flex items-center gap-3 transition-transform duration-300">
+                    <div class="bg-black/50 px-2 py-1 rounded border border-gray-600 shadow-md">
+                        <span class="font-bold text-sm tracking-wide text-white drop-shadow">${m.name}</span>
+                    </div>
+                    <div class="w-14 h-14 md:w-16 md:h-16 rounded-full ${m.color} flex items-center justify-center text-3xl font-bold shadow-[0_5px_15px_rgba(0,0,0,0.6)] border-2 border-white/30 z-10 relative">
+                        ${m.emoji || m.name[0]}
+                    </div>
+                </div>
+            `).join('');
+
+            // Render Menus
+            if (selectedTaskIdx !== null && raid.tasks[selectedTaskIdx]) {
+                // Show Hero Selection
+                tasksMenu.classList.add('hidden');
+                heroesMenu.classList.remove('hidden');
+                backBtn.classList.remove('hidden');
+                
+                headerText.textContent = "SELECT HERO";
+                subtitleText.textContent = `For: ${raid.tasks[selectedTaskIdx].name}`;
+
+                heroesMenu.innerHTML = sortedMembers.map(m => `
+                    <div class="rpg-btn bg-black/40 border border-gray-600 rounded p-2 flex items-center gap-2 hover:bg-gray-800" onclick="executeTask('${m.id}')">
+                        <div class="w-6 h-6 rounded-full ${m.color} flex items-center justify-center text-xs shadow-sm">${m.emoji || m.name[0]}</div>
+                        <span class="truncate text-sm font-bold">${m.name}</span>
+                    </div>
+                `).join('');
+            } else {
+                // Show Task List
+                tasksMenu.classList.remove('hidden');
+                heroesMenu.classList.add('hidden');
+                backBtn.classList.add('hidden');
+
+                headerText.textContent = "COMMANDS";
+                subtitleText.textContent = "Select Objective";
+
+                if (raid.tasks && raid.tasks.length > 0) {
+                    const incompleteTasks = raid.tasks.map((t, idx) => ({...t, idx})).filter(t => !t.isComplete);
+                    
+                    if (isDefeated) {
+                        tasksMenu.innerHTML = `<p class="text-amber-400 text-center mt-8 blink">BATTLE CONCLUDED</p>`;
+                    } else if (incompleteTasks.length === 0) {
+                        tasksMenu.innerHTML = `<p class="text-gray-400 text-center mt-8">All objectives complete. Wait for Boss to fall or add more in Hub.</p>`;
+                    } else {
+                        tasksMenu.innerHTML = incompleteTasks.map(t => {
+                            let typeText = t.type === 'strike' ? 'ATK' : (t.type === 'spell' ? 'MAG' : 'HEAL');
+                            let color = t.type === 'strike' ? 'text-red-400' : (t.type === 'spell' ? 'text-blue-400' : 'text-emerald-400');
+                            
+                            return `
+                            <div class="rpg-btn flex justify-between items-center py-1.5 border-b border-gray-700/50" onclick="selectTask(${t.idx})">
+                                <span class="truncate pr-2">${t.name}</span>
+                                <span class="text-xs ${color} flex-shrink-0 w-16 text-right">${typeText} ${t.damage}</span>
+                            </div>
+                        `}).join('');
+                    }
+                } else {
+                    tasksMenu.innerHTML = `<p class="text-gray-500 italic mt-4 text-sm">No objectives found.</p>`;
+                }
+            }
+            
+            lucide.createIcons();
+            
+            // First load initialization
+            if (battleLogMsgs.length === 0 && raid && !isDefeated) {
+                addLog(`Enemy ${raid.name} appeared!`, 'text-red-400 font-bold');
+            }
+        }
+
+        // Make functions globally available for inline onclick attributes
+        window.selectTask = function(idx) {
+            if(isAnimating) return;
+            playSound('click');
+            selectedTaskIdx = idx;
+            renderArena();
+        };
+
+        window.executeTask = async function(heroId) {
+            if (isAnimating || selectedTaskIdx === null) return;
+            
             const raid = localState.raid;
-            const task = raid.tasks[taskIdx];
+            const task = raid.tasks[selectedTaskIdx];
+            const hero = localState.members.find(m => m.id === heroId);
+            
+            if (!raid || !task || !hero || raid.hp <= 0) return;
 
-            if(!hero || !raid || !task || task.isComplete || raid.hp <= 0) return;
+            // Lock UI & State
+            isAnimating = true;
+            const taskIdxToRun = selectedTaskIdx;
+            selectedTaskIdx = null; // Clear selection for after animation
+            renderArena(); // Re-renders to show base command menu (temporarily unclickable due to isAnimating)
+            
+            // Log preparation
+            addLog(`${hero.name} readies ${task.name}!`, 'text-amber-200');
 
+            // 1. Hero Lunge Animation
+            const heroSprite = document.getElementById(`hero-sprite-${hero.id}`);
+            if (heroSprite) {
+                heroSprite.classList.add('animate-lunge-left');
+                setTimeout(() => heroSprite.classList.remove('animate-lunge-left'), 600);
+            }
+
+            await new Promise(r => setTimeout(r, 200)); // Wait for lunge apex
+
+            // 2. Action Effects
+            const bossSprite = document.getElementById('boss-sprite');
+            const bossRect = bossSprite ? bossSprite.getBoundingClientRect() : {left: 200, top: 200, width: 100, height: 100};
+            const cx = bossRect.left + bossRect.width/2;
+            const cy = bossRect.top + bossRect.height/2;
+
+            if (task.type === 'strike') {
+                playSound('strike');
+                spawnFloatingText(`${task.damage}`, cx, cy, 'damage');
+                if (bossSprite) {
+                    bossSprite.classList.remove('animate-hop-and-wiggle');
+                    bossSprite.classList.add('animate-damage-shake');
+                    setTimeout(() => {
+                        bossSprite.classList.remove('animate-damage-shake');
+                        bossSprite.classList.add('animate-hop-and-wiggle');
+                    }, 500);
+                }
+                playSound('bossHit');
+            } 
+            else if (task.type === 'spell') {
+                playSound('spell');
+                if (bossSprite) {
+                    bossSprite.classList.remove('animate-hop-and-wiggle');
+                    bossSprite.classList.add('animate-magic-flash');
+                    setTimeout(() => {
+                        bossSprite.classList.remove('animate-magic-flash');
+                        bossSprite.classList.add('animate-damage-shake');
+                        spawnFloatingText(`${task.damage}`, cx, cy, 'damage');
+                        playSound('bossHit');
+                        setTimeout(() => {
+                            bossSprite.classList.remove('animate-damage-shake');
+                            bossSprite.classList.add('animate-hop-and-wiggle');
+                        }, 500);
+                    }, 500); // Delay damage until flash finishes
+                } else {
+                     spawnFloatingText(`${task.damage}`, cx, cy, 'damage');
+                }
+            } 
+            else if (task.type === 'heal') {
+                playSound('heal');
+                // Spawn text on the hero side
+                const heroRect = heroSprite.getBoundingClientRect();
+                spawnFloatingText(`+${task.damage} LOOT`, heroRect.left, heroRect.top, 'heal');
+            }
+
+            // 3. Wait for visual impacts to conclude
+            const waitTime = task.type === 'spell' ? 1200 : 800;
+            await new Promise(r => setTimeout(r, waitTime));
+
+            // 4. Calculate Logic & Firebase Commit
             const damage = task.type === 'heal' ? 0 : task.damage;
             const newHp = Math.max(0, raid.hp - damage);
             const lootEarned = task.damage; 
             
             const updatedTasks = [...raid.tasks];
-            updatedTasks[taskIdx] = {
+            updatedTasks[taskIdxToRun] = {
                 ...task,
                 isComplete: true,
                 completedBy: hero.id
             };
 
-            const bossEl = document.getElementById('raid-boss-sprite');
-            if (task.type === 'strike') {
-                playSound('hit');
-                if(bossEl) {
-                    bossEl.classList.remove('animate-damage-shake');
-                    void bossEl.offsetWidth; 
-                    bossEl.classList.add('animate-damage-shake');
-                }
-            } else if (task.type === 'spell') {
-                playSound('spell');
-                if(bossEl) {
-                    bossEl.classList.remove('animate-magic-flash');
-                    void bossEl.offsetWidth; 
-                    bossEl.classList.add('animate-magic-flash');
-                    setTimeout(() => {
-                        bossEl.classList.remove('animate-damage-shake');
-                        void bossEl.offsetWidth; 
-                        bossEl.classList.add('animate-damage-shake');
-                    }, 200);
-                }
-            } else if (task.type === 'heal') {
-                playSound('heal');
-            }
-
-            btn.disabled = true;
-            btn.innerHTML = `<i data-lucide="loader" class="w-5 h-5 animate-spin"></i> CASTING...`;
-            lucide.createIcons({root: btn});
-
             try {
                 const batch = writeBatch(db);
                 
-                const raidRef = doc(db, `/artifacts/${appId}/public/data/raids/current`);
-                batch.update(raidRef, {
-                    hp: newHp,
-                    tasks: updatedTasks
+                // Update Boss
+                batch.update(doc(db, `/artifacts/${appId}/public/data/raids/current`), {
+                    hp: newHp, tasks: updatedTasks
                 });
 
-                const memberRef = doc(db, `/artifacts/${appId}/public/data/members/${hero.id}`);
-                batch.update(memberRef, {
+                // Update Hero
+                batch.update(doc(db, `/artifacts/${appId}/public/data/members/${hero.id}`), {
                     points: (hero.points || 0) + lootEarned
                 });
 
-                const historyRef = doc(collection(db, `/artifacts/${appId}/public/data/choreHistory`));
-                let actionText = task.type === 'strike' ? 'struck' : (task.type === 'spell' ? 'cast a spell on' : 'supported the raid via');
-                
-                batch.set(historyRef, {
+                // Write History
+                let actionText = task.type === 'strike' ? 'struck' : (task.type === 'spell' ? 'cast a spell on' : 'supported the raid against');
+                batch.set(doc(collection(db, `/artifacts/${appId}/public/data/choreHistory`)), {
                     type: 'chore_complete',
                     choreName: `[RAID] ${task.name} - ${actionText} boss`,
                     choreEmoji: raid.emoji, 
@@ -490,32 +622,44 @@
 
                 await batch.commit();
                 
+                addLog(`${task.name} complete! Earned ${lootEarned} Loot.`, 'text-emerald-300');
+
+                // Check Victory locally to trigger fanfare immediately
                 if (newHp === 0 && raid.hp > 0) {
+                    addLog(`${raid.name} was defeated!`, 'text-yellow-400 font-bold');
                     setTimeout(() => {
-                        playSound('redeem'); 
-                        triggerConfetti();
+                        playSound('heal'); // Stand in for victory fanfare
+                        triggerVictoryConfetti();
                     }, 500);
                 }
 
             } catch (error) {
-                console.error("Failed to execute raid task:", error);
-                playSound('uncomplete');
-                btn.disabled = false;
-                btn.innerHTML = "FAILED";
+                console.error("Task execution failed:", error);
+                playSound('error');
+                addLog(`Error connecting to network. Action failed.`, 'text-red-500');
+            } finally {
+                isAnimating = false;
+                // UI will automatically fix itself on the next snapshot snapshot, 
+                // but we explicitly call render to clear any stuck states.
+                renderArena();
             }
-        }
+        };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            try { 
-                initFirebase(); 
-                initConfetti(); 
-                lucide.createIcons(); 
-                document.body.addEventListener('click', initSounds, { once: true });
-             } catch (error) { 
-                 console.error("Critical Error during app initialization:", error);
-                 document.getElementById('loading-text').textContent = 'Initialization Error.';
-             }
+        document.getElementById('menu-back-btn').addEventListener('click', () => {
+            if(isAnimating) return;
+            playSound('click');
+            selectedTaskIdx = null;
+            renderArena();
         });
+
+        // Bootstrap
+        document.addEventListener('DOMContentLoaded', () => {
+            document.body.addEventListener('click', initSounds, { once: true });
+            initConfetti();
+            lucide.createIcons();
+            initFirebase();
+        });
+
     </script>
 </body>
 </html>
