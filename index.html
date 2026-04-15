@@ -11,13 +11,13 @@
             theme: {
                 extend: {
                     colors: {
-                        'guild-bg': '#fcf9f2', // Light parchment
-                        'guild-panel': '#f5ebd9', // Darker parchment/wood
-                        'guild-leather': '#451a03', // Deep rich brown
-                        'guild-leather-dark': '#290f02', // Very dark brown
-                        'guild-gold': '#b45309', // Amber 700 for loot/coins
-                        'guild-action': '#065f46', // Emerald 800 for buttons
-                        'guild-action-hover': '#064e3b', // Emerald 900
+                        'guild-bg': '#fcf9f2', 
+                        'guild-panel': '#f5ebd9', 
+                        'guild-leather': '#451a03', 
+                        'guild-leather-dark': '#290f02', 
+                        'guild-gold': '#b45309', 
+                        'guild-action': '#065f46', 
+                        'guild-action-hover': '#064e3b', 
                     },
                     fontFamily: {
                         sans: ['Inter', 'sans-serif'],
@@ -29,7 +29,7 @@
                             '80%': { transform: 'scale(1.1)', opacity: '1' },
                             '100%': { transform: 'scale(1)', opacity: '1' },
                         },
-                        bounceIn: { // New animation for checkmark
+                        bounceIn: { 
                             '0%': { transform: 'scale(0.3)', opacity: '0' },
                             '50%': { transform: 'scale(1.1)', opacity: '1' },
                             '70%': { transform: 'scale(0.9)' },
@@ -71,44 +71,26 @@
     
     <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
 
     <link rel="icon" href="data:,">
-    
-    <!-- Added Fantasy Font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
     <style>
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #fcf9f2;
-        }
-        
-        /* Custom scrollbar for webkit */
+        body { font-family: 'Inter', sans-serif; background-color: #fcf9f2; }
         ::-webkit-scrollbar { width: 8px; }
         ::-webkit-scrollbar-track { background: #f5ebd9; }
         ::-webkit-scrollbar-thumb { background: #b45309; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #78350f; }
-        
-        /* Strikethrough for completed chores */
         .chore-complete { text-decoration: line-through; opacity: 0.6; color: #78350f; }
-        
-        /* Modals */
         #password-modal, #delete-modal, #history-modal { display: none; }
-        
-        /* Drag and Drop visual styles */
         .dragging { opacity: 0.5; background: #fff; border: 2px dashed #b45309; }
         .drag-over-target { outline: 2px dashed #b45309; background-color: #fef3c7; }
-        
-        /* Animation classes */
         .animate-bounce-in { animation: bounceIn 0.4s ease-out; }
         .animate-pop-in { animation: popIn 0.3s ease-out; }
         .animate-hop-and-wiggle { animation: hopAndWiggle 0.7s ease-in-out; }
-
-        /* Cursor for tappable rewards emoji */
         [id^="member-rewards-emoji-"] { cursor: pointer; }
     </style>
 </head>
@@ -138,6 +120,12 @@
                     <span class="hidden md:block ml-4">Quest Log</span>
                 </a>
             </li>
+            <li>
+                <a href="raid.html" class="flex items-center justify-center md:justify-start py-4 px-6 text-amber-200/70 hover:bg-guild-leather-dark hover:text-amber-50 transition-colors">
+                    <i data-lucide="swords" class="h-6 w-6"></i>
+                    <span class="hidden md:block ml-4">The Arena</span>
+                </a>
+            </li>
             <li class="nav-item" data-view="rewards">
                 <a href="#" class="flex items-center justify-center md:justify-start py-4 px-6 text-amber-200/70 hover:bg-guild-leather-dark hover:text-amber-50 transition-colors">
                     <i data-lucide="coins" class="h-6 w-6"></i>
@@ -157,11 +145,9 @@
     </nav>
 
     <main class="flex-1 overflow-y-auto bg-guild-bg relative">
-        <!-- Subtle background texture wrapper -->
         <div class="absolute inset-0 opacity-40 pointer-events-none" style="background-image: url('data:image/svg+xml,%3Csvg width=\'20\' height=\'20\' viewBox=\'0 0 20 20\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cg fill=\'%23d4b88c\' fill-opacity=\'0.2\' fill-rule=\'evenodd\'%3E%3Ccircle cx=\'3\' cy=\'3\' r=\'3\'/%3E%3Ccircle cx=\'13\' cy=\'13\' r=\'3\'/%3E%3C/g%3E%3C/svg%3E');"></div>
         
         <div class="relative z-10">
-            <!-- QUEST LOG VIEW -->
             <div id="view-daily" class="view p-3 md:p-6 max-w-7xl mx-auto">
                 <div class="bg-[#fefce8] border border-amber-200 p-6 rounded-lg shadow-md mb-6">
                     <p id="current-time" class="text-4xl md:text-6xl font-bold font-fantasy text-guild-leather-dark drop-shadow-sm"></p>
@@ -179,8 +165,7 @@
                                 <input type="text" id="adhoc-name" placeholder="Quest Name" class="col-span-1 md:col-span-2 p-3 border border-amber-300 rounded focus:ring-2 focus:ring-guild-gold focus:border-transparent bg-white" required>
                                 <input type="number" id="adhoc-points" placeholder="Loot Reward" class="p-3 border border-amber-300 rounded focus:ring-2 focus:ring-guild-gold focus:border-transparent bg-white" required>
                                 <select id="adhoc-emoji" class="p-3 border border-amber-300 rounded focus:ring-2 focus:ring-guild-gold focus:border-transparent bg-white text-xl">
-                                    <!-- Emojis loaded by JS -->
-                                </select>
+                                    </select>
                             </div>
                             <div class="flex items-center gap-4 mt-5 mb-3 flex-wrap">
                                 <select id="adhoc-importance" class="p-2 border border-amber-300 rounded font-bold text-sm bg-white text-guild-leather-dark shadow-sm">
@@ -195,8 +180,7 @@
                             <div class="flex items-center justify-between mt-5">
                                 <select id="adhoc-assignee" class="p-2.5 border border-amber-300 rounded font-medium bg-white shadow-sm">
                                     <option value="unassigned">Unassigned</option>
-                                    <!-- Members loaded by JS -->
-                                </select>
+                                    </select>
                                 <button type="submit" class="bg-guild-action text-white px-6 py-2.5 rounded-lg font-bold font-fantasy tracking-wider shadow-md hover:bg-guild-action-hover hover:shadow-lg transition-all border border-emerald-900 flex items-center gap-2">
                                     <i data-lucide="swords" class="h-4 w-4"></i> Post Quest
                                 </button>
@@ -206,36 +190,27 @@
                 </div>
 
                 <div id="daily-chores-container" class="grid grid-cols-2 gap-4 md:gap-6">
-                    <!-- Member sections populated by JS -->
-                </div>
+                    </div>
             </div>
 
-            <!-- LOOT & MERCHANT VIEW -->
             <div id="view-rewards" class="view hidden p-4 md:p-8 max-w-7xl mx-auto">
                 <h1 class="text-4xl font-bold font-fantasy text-guild-leather-dark mb-8 border-b-2 border-amber-300 pb-2">Loot & Merchant</h1>
                 
-                <!-- Animated Frog Merchant Header -->
                 <div class="bg-[#f5ebd9] rounded-xl p-6 shadow-md mb-8 flex items-center gap-6 border-2 border-[#d4b88c] relative overflow-hidden">
                     <div class="absolute inset-0 opacity-10" style="background-image: repeating-linear-gradient(45deg, #000 0, #000 2px, transparent 2px, transparent 8px);"></div>
-                    <div id="frog-merchant-avatar" class="relative w-24 h-24 md:w-32 md:h-32 flex-shrink-0 animate-frog-breathe cursor-pointer z-10">
+                    <div id="frog-merchant-avatar" class="relative w-24 h-24 md:w-32 md:h-32 flex-shrink-0 animate-frog-breathe cursor-pointer z-10" onclick="playSound('ribbit')">
                         <svg viewBox="0 0 100 100" class="w-full h-full drop-shadow-lg">
-                            <!-- Back Legs -->
                             <ellipse cx="20" cy="85" rx="18" ry="10" fill="#22c55e" />
                             <ellipse cx="80" cy="85" rx="18" ry="10" fill="#22c55e" />
-                            <!-- Body -->
                             <circle cx="50" cy="65" r="40" fill="#4ade80" />
-                            <circle cx="50" cy="70" r="25" fill="#bbf7d0" /> <!-- Belly -->
-                            <!-- Eyes -->
+                            <circle cx="50" cy="70" r="25" fill="#bbf7d0" />
                             <circle cx="30" cy="30" r="16" fill="#4ade80" />
                             <circle cx="70" cy="30" r="16" fill="#4ade80" />
                             <circle cx="30" cy="30" r="10" fill="white" />
                             <circle cx="70" cy="30" r="10" fill="white" />
-                            <!-- Pupils (Derpy look) -->
                             <circle cx="33" cy="30" r="5" fill="#1f2937" />
                             <circle cx="67" cy="30" r="5" fill="#1f2937" />
-                            <!-- Smile -->
                             <path d="M 35 60 Q 50 75 65 60" stroke="#166534" stroke-width="3" stroke-linecap="round" fill="transparent" />
-                            <!-- Merchant Monocle -->
                             <circle cx="70" cy="30" r="12" stroke="#eab308" stroke-width="2" fill="transparent" />
                             <line x1="82" y1="30" x2="95" y2="20" stroke="#eab308" stroke-width="2" />
                         </svg>
@@ -248,46 +223,40 @@
 
                 <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-4 flex items-center gap-2">💎 Adventurer Stashes</h2>
                 <div id="member-points-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
-                    <!-- Member point cards populated by JS -->
-                </div>
+                    </div>
 
                 <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-4 flex items-center gap-2"><i data-lucide="store" class="h-6 w-6 text-guild-leather"></i> Merchant Inventory</h2>
                 <div class="bg-[#fefce8] p-6 rounded-lg shadow-md mb-10 border border-amber-200">
                     <div class="flex items-center gap-4 mb-6 pb-4 border-b border-amber-200">
                         <label for="redeem-member-select" class="font-bold text-guild-leather-dark">Who is buying?</label>
                         <select id="redeem-member-select" class="p-2 border border-amber-300 rounded-lg bg-white shadow-sm font-medium focus:ring-2 focus:ring-guild-gold focus:outline-none">
-                            <!-- Members loaded by JS -->
-                        </select>
+                            </select>
                     </div>
                     <div id="rewards-list-container" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
-                        <!-- Reward items populated by JS -->
-                    </div>
+                        </div>
                 </div>
 
                 <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-4 flex items-center gap-2"><i data-lucide="package" class="h-6 w-6 text-guild-leather"></i> Pending Deliveries</h2>
                 <div id="claimed-rewards-container" class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200">
-                    <!-- Claimed reward items populated by JS -->
                     <p id="no-claimed-rewards" class="text-gray-500 font-medium italic">No items have been purchased yet.</p>
                 </div>
             </div>
             
-            <!-- SETUP VIEW -->
-            <div id="view-setup" class="view hidden p-4 md:p-8 max-w-7xl mx-auto">
+            <div id="view-setup" class="view hidden p-4 md:p-8 max-w-7xl mx-auto w-full">
                 <h1 class="text-4xl font-bold font-fantasy text-guild-leather-dark mb-8 border-b-2 border-amber-300 pb-2">Guild Master Setup</h1>
                 
                 <div class="mb-8">
                     <div class="border-b-2 border-amber-200">
-                        <nav class="-mb-[2px] flex space-x-6 md:space-x-10" aria-label="Tabs">
+                        <nav class="-mb-[2px] flex space-x-6 md:space-x-8" aria-label="Tabs">
                             <button class="setup-nav-item" data-view="members">Adventurers</button>
                             <button class="setup-nav-item" data-view="chores">Quests</button>
+                            <button class="setup-nav-item" data-view="raid">Raid Boss</button>
                             <button class="setup-nav-item" data-view="rewards">Merchant Items</button>
                         </nav>
                     </div>
                 </div>
 
-                <!-- Setup: Members -->
                 <div id="setup-view-members" class="setup-view grid grid-cols-1 lg:grid-cols-2 gap-8">
-                    <!-- Add/Edit Member Column -->
                     <div>
                         <div class="bg-[#fefce8] p-6 rounded-lg shadow-md mb-8 border border-amber-200">
                             <h2 id="member-form-title" class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-5">Register Adventurer</h2>
@@ -300,8 +269,7 @@
                                 <div class="mb-4">
                                     <label for="member-color" class="block font-bold text-guild-leather-dark mb-1">Guild Color</label>
                                     <select id="member-color" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold">
-                                        <!-- Colors loaded by JS -->
-                                    </select>
+                                        </select>
                                 </div>
                                 <div class="mb-6">
                                     <label for="member-emoji" class="block font-bold text-guild-leather-dark mb-1">Crest (Emoji)</label>
@@ -313,13 +281,11 @@
                                 </div>
                             </form>
                         </div>
-                        <!-- Set Points -->
                         <div class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200">
                             <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-5">Adjust Stash (Loot)</h2>
                             <form id="adjust-points-form" class="space-y-4">
                                 <select id="adjust-member-select" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white font-medium focus:ring-2 focus:ring-guild-gold">
-                                    <!-- Members loaded by JS -->
-                                </select>
+                                    </select>
                                 <div class="relative">
                                     <input type="number" id="adjust-points-amount" placeholder="New Loot Total" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white pl-8 focus:ring-2 focus:ring-guild-gold" required min="0">
                                     <span class="absolute left-3 top-2.5 text-lg">💎</span>
@@ -328,18 +294,15 @@
                             </form>
                         </div>
                     </div>
-                    <!-- Member List Column -->
                     <div>
                         <div id="member-list-container" class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200 sticky top-4 max-h-[85vh] flex flex-col">
                             <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-5">Current Roster</h2>
                             <div id="member-list" class="space-y-3 overflow-y-auto pr-2 flex-grow">
-                                <!-- Member list populated by JS -->
-                            </div>
+                                </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Setup: Quests -->
                 <div id="setup-view-chores" class="setup-view hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200">
                         <h2 id="chore-form-title" class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-5">Add Recurring Quest</h2>
@@ -364,8 +327,7 @@
                                 <div>
                                     <label for="chore-emoji" class="block font-bold text-guild-leather-dark mb-1">Quest Icon</label>
                                     <select id="chore-emoji" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white text-xl focus:ring-2 focus:ring-guild-gold">
-                                        <!-- Emojis loaded by JS -->
-                                    </select>
+                                        </select>
                                 </div>
                             </div>
                             <div class="mb-4">
@@ -405,8 +367,7 @@
                                 <label for="chore-assignee" class="block font-bold text-guild-leather-dark mb-1">Default Hero</label>
                                 <select id="chore-assignee" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white font-medium focus:ring-2 focus:ring-guild-gold">
                                     <option value="unassigned">Open to any Hero</option>
-                                    <!-- Members loaded by JS -->
-                                </select>
+                                    </select>
                             </div>
                             <div class="flex gap-4">
                                 <button type="submit" id="chore-submit-btn" class="flex-1 bg-guild-action text-white px-4 py-3 rounded-lg font-bold font-fantasy tracking-wider shadow-md hover:bg-guild-action-hover border border-emerald-900 transition-colors">Save Quest</button>
@@ -417,12 +378,99 @@
                     <div class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200 sticky top-4 max-h-[85vh] flex flex-col">
                         <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-5">Quest Registry</h2>
                         <div id="chore-list" class="space-y-3 overflow-y-auto pr-2 flex-grow">
-                            <!-- Chore list populated by JS -->
-                        </div>
+                            </div>
                     </div>
                 </div>
 
-                <!-- Setup: Rewards -->
+                <div id="setup-view-raid" class="setup-view hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="flex flex-col gap-8">
+                        <div class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200">
+                            <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-5">Summon Raid Boss</h2>
+                            <form id="raid-boss-form">
+                                <div class="mb-4">
+                                    <label for="raid-boss-name" class="block font-bold text-guild-leather-dark mb-1">Boss Name</label>
+                                    <input type="text" id="raid-boss-name" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold" placeholder="e.g. The Laundry Leviathan" required>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 mb-4">
+                                    <div>
+                                        <label for="raid-boss-hp" class="block font-bold text-guild-leather-dark mb-1">Total HP</label>
+                                        <input type="number" id="raid-boss-hp" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold" placeholder="1000" required>
+                                    </div>
+                                    <div>
+                                        <label for="raid-boss-emoji" class="block font-bold text-guild-leather-dark mb-1">Emoji</label>
+                                        <select id="raid-boss-emoji" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white text-xl focus:ring-2 focus:ring-guild-gold">
+                                            </select>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label for="raid-boss-prize-type" class="block font-bold text-guild-leather-dark mb-1">Prize Type</label>
+                                    <select id="raid-boss-prize-type" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold font-medium">
+                                        <option value="loot">Loot (💎) Distributed to All</option>
+                                        <option value="custom">Custom Reward (Text)</option>
+                                    </select>
+                                </div>
+                                <div id="raid-boss-prize-loot-container" class="mb-6">
+                                    <label for="raid-boss-prize-loot-val" class="block font-bold text-guild-leather-dark mb-1">Loot Amount (Per Hero)</label>
+                                    <input type="number" id="raid-boss-prize-loot-val" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold" placeholder="500">
+                                </div>
+                                <div id="raid-boss-prize-custom-container" class="mb-6 hidden">
+                                    <label for="raid-boss-prize-custom-val" class="block font-bold text-guild-leather-dark mb-1">Reward Description</label>
+                                    <input type="text" id="raid-boss-prize-custom-val" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold" placeholder="e.g. Pizza Night!">
+                                </div>
+                                <button type="submit" id="raid-boss-submit-btn" class="w-full bg-red-700 text-white px-4 py-3 rounded-lg font-bold font-fantasy tracking-wider shadow-md hover:bg-red-800 border border-red-950 transition-colors">Summon Boss!</button>
+                            </form>
+                        </div>
+                        
+                        <div id="raid-task-setup-container" class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200 opacity-50 pointer-events-none transition-opacity">
+                            <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-5">Add Raid Objective</h2>
+                            <p class="text-sm text-guild-leather mb-4 italic">Objectives define how adventurers deal damage to the boss.</p>
+                            <form id="raid-task-form">
+                                <input type="hidden" id="raid-task-id">
+                                <div class="mb-4">
+                                    <label for="raid-task-name" class="block font-bold text-guild-leather-dark mb-1">Objective Name</label>
+                                    <input type="text" id="raid-task-name" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold" placeholder="e.g. Fold Whites" required>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4 mb-6">
+                                    <div>
+                                        <label for="raid-task-dmg" class="block font-bold text-guild-leather-dark mb-1">Damage / Loot</label>
+                                        <input type="number" id="raid-task-dmg" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold" placeholder="100" required>
+                                    </div>
+                                    <div>
+                                        <label for="raid-task-type" class="block font-bold text-guild-leather-dark mb-1">Action Type</label>
+                                        <select id="raid-task-type" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold font-medium">
+                                            <option value="strike">Strike ⚔️</option>
+                                            <option value="spell">Spell 🪄</option>
+                                            <option value="heal">Heal 🧪 (No DMG)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <button type="submit" class="w-full bg-guild-action text-white px-4 py-3 rounded-lg font-bold font-fantasy tracking-wider shadow-md hover:bg-guild-action-hover border border-emerald-900 transition-colors">Add Objective</button>
+                            </form>
+                        </div>
+                    </div>
+                    
+                    <div class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200 sticky top-4 max-h-[85vh] flex flex-col">
+                        <div class="flex justify-between items-center mb-5">
+                            <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark">Active Raid Status</h2>
+                            <button id="end-raid-btn" class="hidden bg-red-100 text-red-800 border border-red-300 px-3 py-1.5 rounded font-bold text-sm hover:bg-red-200 transition-colors" onclick="handleEndRaid(event)">End Raid</button>
+                        </div>
+                        
+                        <div id="setup-active-raid-display" class="mb-6 p-4 bg-white border border-amber-200 rounded-lg text-center hidden">
+                            <span id="setup-raid-emoji" class="text-5xl block mb-2 drop-shadow-md"></span>
+                            <h3 id="setup-raid-name" class="font-bold font-fantasy text-xl text-guild-leather-dark"></h3>
+                            <p id="setup-raid-hp" class="text-sm font-bold text-red-600 mt-1"></p>
+                            <p id="setup-raid-prize" class="text-sm font-bold font-fantasy text-guild-gold mt-1"></p>
+                        </div>
+                        <div id="setup-no-raid-msg" class="mb-6 p-4 border border-dashed border-amber-300 rounded-lg text-center text-guild-leather/50 italic font-medium">
+                            No raid currently active.
+                        </div>
+
+                        <h3 class="text-lg font-bold font-fantasy text-guild-leather-dark mb-3">Raid Objectives</h3>
+                        <div id="raid-task-list" class="space-y-3 overflow-y-auto pr-2 flex-grow">
+                            </div>
+                    </div>
+                </div>
+
                 <div id="setup-view-rewards" class="setup-view hidden grid grid-cols-1 lg:grid-cols-2 gap-8">
                     <div class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200">
                         <h2 id="reward-form-title" class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-5">Add Merchant Item</h2>
@@ -440,8 +488,7 @@
                                 <div>
                                     <label for="reward-emoji" class="block font-bold text-guild-leather-dark mb-1">Icon</label>
                                     <select id="reward-emoji" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white text-xl focus:ring-2 focus:ring-guild-gold">
-                                        <!-- Emojis loaded by JS -->
-                                    </select>
+                                        </select>
                                 </div>
                             </div>
                             <div class="flex gap-4">
@@ -453,15 +500,13 @@
                     <div class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200 sticky top-4 max-h-[85vh] flex flex-col">
                         <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark mb-5">Merchant Manifest</h2>
                         <div id="reward-list" class="space-y-3 overflow-y-auto pr-2 flex-grow">
-                            <!-- Reward list populated by JS -->
-                        </div>
+                            </div>
                     </div>
                 </div>
 
             </div>
     </main>
 
-    <!-- Modals -->
     <div id="assign-modal" class="hidden fixed inset-0 bg-guild-leather-dark/60 backdrop-blur-sm z-20 flex items-center justify-center p-4">
         <div class="bg-[#fefce8] border-2 border-amber-300 p-6 rounded-xl shadow-2xl w-full max-w-md">
             <h2 class="text-3xl font-bold font-fantasy text-guild-leather-dark mb-4 border-b border-amber-200 pb-2">Assign Quest</h2>
@@ -471,7 +516,7 @@
             </select>
             <div class="flex justify-end gap-3">
                 <button id="assign-cancel-btn" class="bg-[#e5d9c5] text-guild-leather-dark px-5 py-2 rounded-lg font-bold border border-amber-300 hover:bg-[#d4b88c] transition-colors">Cancel</button>
-                <button id="assign-save-btn" class="bg-guild-action text-white px-5 py-2 rounded-lg font-bold font-fantasy tracking-wide shadow-md hover:bg-guild-action-hover border border-emerald-900 transition-colors">Assign</button>
+                <button id="assign-save-btn" class="bg-guild-action text-white px-5 py-2 rounded-lg font-bold font-fantasy tracking-wide shadow-md hover:bg-guild-action-hover border border-emerald-900 transition-colors">Save</button>
             </div>
         </div>
     </div>
@@ -514,7 +559,6 @@
         </div>
     </div>
 
-    <!-- History Log Modal -->
     <div id="history-modal" class="hidden fixed inset-0 bg-guild-leather-dark/60 backdrop-blur-sm z-40 flex items-center justify-center p-4">
         <div class="bg-[#fefce8] border-2 border-amber-300 p-6 rounded-xl shadow-2xl w-full max-w-2xl max-h-[85vh] flex flex-col">
             <div class="flex justify-between items-center mb-4 border-b border-amber-200 pb-4">
@@ -547,13 +591,15 @@
         let db, auth, userId, appId;
         let sounds = {};
         let confettiEffect;
+        
         let localState = {
             members: [],
             chores: [],
             rewards: [],
             dailyChores: [],
             todos: [], 
-            claimedRewards: []
+            claimedRewards: [],
+            raid: null
         };
         let currentView = 'daily';
         let currentSetupView = 'members';
@@ -568,10 +614,10 @@
             rewards: false,
             dailyChores: false,
             todos: false,
-            claimedRewards: false
+            claimedRewards: false,
+            raid: false
         };
 
-        // Secret menu tap count
         let setupClickCount = 0;
         let setupClickTimeout = null;
         
@@ -585,7 +631,7 @@
             '🎉', '🎈', '🎁', '🍦', '🍕', '🍔', '🎮', '📱', '💻', '💵', 
             '💰', '🪙', '💳', '🚲', '🛴', '🛹', '🍿', '🎬', '🎭', '🎨', 
             '🎯', '🚀', '🌟', '🏆', '🏅', '🥇', '🍓', '🍩', '🍪', '🍰', 
-            '🧁', '🍭', '🍫', '🍬', '🗡️', '🛡️', '🧪', '📜', '🏹', '🔥'
+            '🧁', '🍭', '🍫', '🍬', '🗡️', '🛡️', '🧪', '📜', '🏹', '🔥', '🦑', '🐉', '🐲', '🕷️', '🧟'
         ];
         const COLOR_LIST = [
             { name: 'Crimson', bg: 'bg-red-800', border: 'border-red-800', hex: '#991b1b' },
@@ -598,18 +644,15 @@
             { name: 'Teal', bg: 'bg-teal-700', border: 'border-teal-700', hex: '#0f766e' }
         ];
 
-        // === Schedule Midnight Refresh ===
         function scheduleAutoRefresh() {
             const now = new Date();
             const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1, 0, 1, 0); 
             const timeToMidnight = tomorrow.getTime() - now.getTime();
-            console.log(`Auto-refresh scheduled in ${Math.round(timeToMidnight / 1000 / 60)} minutes.`);
             setTimeout(() => { window.location.reload(); }, timeToMidnight);
         }
 
-        // === Sound Initialization ===
         function initSounds(event) {
-            if (typeof Tone === 'undefined') { console.warn("Tone.js not loaded."); return; }
+            if (typeof Tone === 'undefined') { return; }
             Tone.start();
 
             const polySynthConfig = {
@@ -620,16 +663,9 @@
                  envelope: { attack: 0.02, decay: 0.3, sustain: 0.2, release: 0.5 } 
              };
             sounds.polySynth = new Tone.PolySynth(polySynthConfig).toDestination();
-
-            sounds.chordMaj = { notes: ["C4", "E4", "G4"], duration: "8n" }; 
-            sounds.chordMin = { notes: ["A3", "C4", "E4"], duration: "8n" }; 
-            sounds.chordSus = { notes: ["G3", "C4", "D4"], duration: "8n" };
-
-             sounds.arpUp = { notes: ["C4", "E4", "G4", "C5"], duration: "16n" };
-             sounds.sparkle = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.1 }, volume: -15 }).toDestination(); 
-
+            sounds.arpUp = { notes: ["C4", "E4", "G4", "C5"], duration: "16n" };
+            sounds.sparkle = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.1 }, volume: -15 }).toDestination(); 
             sounds.uncomplete = new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.1 }, volume: -15 }).toDestination();
-            
             sounds.ribbit = new Tone.FMSynth({
                 harmonicity: 5,
                 modulationIndex: 10,
@@ -641,8 +677,8 @@
             }).toDestination();
 
             sounds.click = new Tone.MembraneSynth({ pitchDecay: 0.005, octaves: 1, envelope: { attack: 0.001, decay: 0.1, sustain: 0.005, release: 0.01 }, volume: -20 }).toDestination();
-            
-            console.log("Sounds initialized");
+            sounds.bossHit = new Tone.MembraneSynth({ pitchDecay: 0.1, octaves: 1, envelope: { attack: 0.01, decay: 0.4, sustain: 0.01, release: 0.01 }, volume: -5 }).toDestination();
+
             document.body.removeEventListener('click', initSounds);
         }
 
@@ -651,22 +687,13 @@
             const now = Tone.now();
             const polySynth = sounds.polySynth; 
 
-            if (soundName === 'complete') {
-                 const variations = ['chordMaj', 'chordMin', 'chordSus']; 
-                 soundToPlay = variations[Math.floor(Math.random() * variations.length)];
-            } else if (sounds[soundName]) {
+            if (sounds[soundName]) {
                  soundToPlay = soundName;
-            } else {
-                  console.warn(`Sound name "${soundName}" not found.`);
-                  return;
-            }
+            } else { return; }
 
             if (soundToPlay && Tone.context.state === 'running') {
                 try {
-                    if (typeof sounds[soundToPlay] === 'object' && sounds[soundToPlay].notes && polySynth) {
-                        polySynth.triggerAttackRelease(sounds[soundToPlay].notes, sounds[soundToPlay].duration, now);
-                    } 
-                    else if (soundToPlay === 'uncomplete') {
+                    if (soundToPlay === 'uncomplete') {
                         sounds.uncomplete.triggerAttackRelease('A3', '8n', now); 
                     } else if (soundToPlay === 'redeem') {
                          if (sounds.arpUp.notes && polySynth) { 
@@ -681,17 +708,16 @@
                         sounds.sparkle.triggerAttackRelease('G7', '32n', now + 0.25);
                     } else if (soundToPlay === 'click') {
                         sounds.click.triggerAttackRelease("C1", "16n", now); 
+                    } else if (soundToPlay === 'bossHit') {
+                        sounds.bossHit.triggerAttackRelease("C1", "4n", now);
                     } else if (soundToPlay === 'ribbit') {
                         sounds.ribbit.triggerAttackRelease("G2", "32n", now);
                         sounds.ribbit.triggerAttackRelease("E2", "32n", now + 0.15);
                     }
-                } catch (e) {
-                    console.error(`Error playing sound ${soundToPlay}:`, e);
-                }
+                } catch (e) { console.error(`Error playing sound ${soundToPlay}:`, e); }
             }
         }
         
-        // === Confetti Initialization ===
         function initConfetti() {
             const canvas = document.createElement('canvas');
             canvas.style.position = 'fixed';
@@ -705,34 +731,21 @@
             confettiEffect = confetti.create(canvas, { resize: true });
         }
 
-        function triggerConfetti(type = 'default', origin = { y: 0.6 }) {
+        function triggerConfetti() {
              if (!confettiEffect) return;
-             const originCoords = origin.x !== undefined && origin.y !== undefined
-                 ? { x: origin.x / window.innerWidth, y: origin.y / window.innerHeight }
-                 : { y: 0.6 }; 
-
-             if (type === 'fireworks') {
-                 const duration = 2.5 * 1000;
-                 const animationEnd = Date.now() + duration;
-                 const defaults = { startVelocity: 35, spread: 360, ticks: 70, zIndex: 100, particleCount: 60, colors: ['#b45309', '#065f46', '#991b1b', '#fef3c7'] };
-                 function randomInRange(min, max) { return Math.random() * (max - min) + min; }
-                 const interval = setInterval(function() {
-                     const timeLeft = animationEnd - Date.now();
-                     if (timeLeft <= 0) { return clearInterval(interval); }
-                     const particleCount = defaults.particleCount * (timeLeft / duration);
-                     confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
-                     confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
-                 }, 250);
-             } else if (type === 'burst') {
-                 confettiEffect({
-                     particleCount: 60, spread: 80, origin: originCoords, startVelocity: 25, scalar: 0.8, ticks: 50, colors: ['#b45309', '#065f46', '#fef3c7']
-                 });
-             } else { 
-                 confettiEffect({ particleCount: 150, spread: 90, origin: originCoords, colors: ['#b45309', '#065f46', '#fef3c7'] });
-             }
+             const duration = 2.5 * 1000;
+             const animationEnd = Date.now() + duration;
+             const defaults = { startVelocity: 35, spread: 360, ticks: 70, zIndex: 100, particleCount: 60, colors: ['#b45309', '#065f46', '#991b1b', '#fef3c7'] };
+             function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+             const interval = setInterval(function() {
+                 const timeLeft = animationEnd - Date.now();
+                 if (timeLeft <= 0) { return clearInterval(interval); }
+                 const particleCount = defaults.particleCount * (timeLeft / duration);
+                 confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 } });
+                 confettiEffect({ ...defaults, particleCount, origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 } });
+             }, 250);
          }
 
-        // === Firebase Initialization ===
         async function initFirebase() {
             try {
                 appId = 'family-hub-organizer';
@@ -749,30 +762,27 @@
                 db = getFirestore(app);
                 auth = getAuth(app);
                 
-                setLogLevel('Debug');
+                setLogLevel('error');
 
                 onAuthStateChanged(auth, async (user) => {
                     if (user) {
-                        console.log("User is signed in:", user.uid);
                         userId = user.uid;
                         document.getElementById('user-id-display').textContent = userId.substring(0, 6) + '...';
                         await loadData();
                         document.getElementById('loading-overlay').classList.add('opacity-0');
                         setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 300);
                     } else {
-                        console.log("User is signed out, signing in anonymously...");
                         await signInAnonymously(auth);
                     }
                 });
             } catch (error) {
-                console.error("Firebase initialization error:", error);
+                console.error("Firebase init error:", error);
                 document.getElementById('loading-text').textContent = 'Connection Failed.';
                 document.getElementById('error-message').textContent = `Firebase Error: ${error.message}`;
                 document.getElementById('error-bar').classList.remove('hidden');
             }
         }
 
-        // === Data Loading ===
         async function loadData() {
             if (!db || !userId) return;
 
@@ -781,6 +791,7 @@
             const F_REWARDS_COL = `/artifacts/${appId}/public/data/rewards`;
             const F_DAILY_CHORES_COL = `/artifacts/${appId}/public/data/dailyChores`;
             const F_CLAIMED_REWARDS_COL = `/artifacts/${appId}/public/data/claimedRewards`;
+            const F_RAID_DOC = `/artifacts/${appId}/public/data/raids/current`;
 
             onSnapshot(collection(db, F_MEMBERS_COL), (snapshot) => {
                 localState.members = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -797,7 +808,6 @@
                 hasLoaded.rewards = true; checkInitialLoad(); renderAll();
             });
 
-            // Listen for daily quests
             const todayISO = getLocalISODate(); 
             const qDaily = query(collection(db, F_DAILY_CHORES_COL), where("date", "==", todayISO));
             onSnapshot(qDaily, (snapshot) => {
@@ -805,7 +815,6 @@
                 hasLoaded.dailyChores = true; checkInitialLoad(); renderAll();
             });
 
-            // Listen for persistent To-Do quests
             const qTodos = query(collection(db, F_DAILY_CHORES_COL), where("date", "==", "todo"));
             onSnapshot(qTodos, (snapshot) => {
                 localState.todos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -817,14 +826,23 @@
                 localState.claimedRewards = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 hasLoaded.claimedRewards = true; checkInitialLoad(); renderAll();
             });
+            
+            onSnapshot(doc(db, F_RAID_DOC), (docSnap) => {
+                if(docSnap.exists()) {
+                    localState.raid = { id: docSnap.id, ...docSnap.data() };
+                } else {
+                    localState.raid = null;
+                }
+                hasLoaded.raid = true; checkInitialLoad(); renderAll();
+            });
         }
 
-        // === Core Logic: Check Initial Load & Generate Quests ===
         function checkInitialLoad() {
             if (Object.values(hasLoaded).every(Boolean) && !hasCheckedDailyChores) {
                 checkAndGenerateDailyChores();
             }
         }
+        
         async function checkAndGenerateDailyChores() {
             if (localState.chores.length === 0) {
                 hasCheckedDailyChores = true; return;
@@ -861,12 +879,10 @@
                 const docRef = doc(collection(db, F_DAILY_CHORES_COL)); 
                 batch.set(docRef, newChore);
             }
-
             try { await batch.commit(); } catch (e) { console.error("Error generating daily quests:", e); }
             hasCheckedDailyChores = true;
         }
 
-        // Keep template syncing if edits are made in Setup
         async function generateDailyChoresForTemplate(choreTemplate) {
             const F_DAILY_CHORES_COL = `/artifacts/${appId}/public/data/dailyChores`;
             const weekDates = getWeekDates(); 
@@ -876,7 +892,6 @@
             
             const q = query(collection(db, F_DAILY_CHORES_COL), where("templateId", "==", choreTemplate.id));
             const querySnapshot = await getDocs(q);
-            // Only care about existing chores matching this week's dates
             const existingChores = querySnapshot.docs
                 .map(doc => ({ id: doc.id, ...doc.data() }))
                 .filter(chore => weekISODates.includes(chore.date));
@@ -910,10 +925,9 @@
                     batch.delete(doc(db, F_DAILY_CHORES_COL, existing.id));
                 }
             });
-            try { await batch.commit(); } catch (e) { console.error("Error syncing daily quests:", e); }
+            try { await batch.commit(); } catch (e) {}
         }
 
-        // === Master Render Function ===
         function renderAll() {
             if (!hasLoaded.members) return; 
             populateEmojiSelects(); populateColorSelects(); populateMemberSelects();
@@ -927,12 +941,12 @@
                 switch (currentSetupView) {
                     case 'members': renderSetupMembers(); break;
                     case 'chores': renderSetupChores(); break;
+                    case 'raid': renderSetupRaid(); break;
                     case 'rewards': renderSetupRewards(); break;
                 }
             }
         }
 
-        // Custom sort to group Main quests to the top, incomplete items first
         function sortQuests(a, b) {
             if (a.isComplete !== b.isComplete) return a.isComplete ? 1 : -1;
             const aImp = a.importance || 'side';
@@ -947,8 +961,6 @@
             const container = document.getElementById('daily-chores-container');
             container.innerHTML = ''; 
             const sortedMembers = [...localState.members].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-            
-            // Combine both normal daily quests AND persistent todos into one active array
             const allActiveQuests = [...localState.dailyChores, ...(localState.todos || [])];
 
             sortedMembers.forEach(member => {
@@ -981,7 +993,6 @@
                 container.appendChild(section);
             });
             
-            // Unassigned Section spanning full width (col-span-2)
             let unassignedChores = allActiveQuests.filter(chore => chore.assignedTo === 'unassigned');
             unassignedChores.sort(sortQuests);
 
@@ -1177,7 +1188,7 @@
                         <p class="font-bold text-guild-leather-dark text-lg truncate flex items-center gap-2">
                             <span class="text-2xl drop-shadow-sm">${chore.emoji}</span> 
                             <span class="truncate">${chore.name}</span>
-                            <span class="text-sm font-fantasy text-guild-gold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex-shrink-0">+${chore.points} <i data-lucide="gem" class="w-3 h-3 inline"></i></span>
+                            <span class="text-sm font-fantasy text-guild-gold bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200 flex-shrink-0">+${chore.points} 💎</span>
                         </p>
                         <p class="text-xs text-guild-leather/70 font-medium mt-1.5 flex items-center gap-2 flex-wrap">
                             <span><i data-lucide="calendar" class="w-3 h-3 inline mr-0.5"></i> ${schedule || 'None'}</span>
@@ -1198,6 +1209,171 @@
             lucide.createIcons();
         }
 
+        // === Render: Setup Raid Boss ===
+        function renderSetupRaid() {
+            const raid = localState.raid;
+            const formContainer = document.getElementById('raid-boss-form').parentElement;
+            const taskContainer = document.getElementById('raid-task-setup-container');
+            const displayContainer = document.getElementById('setup-active-raid-display');
+            const noRaidMsg = document.getElementById('setup-no-raid-msg');
+            const endBtn = document.getElementById('end-raid-btn');
+            const taskList = document.getElementById('raid-task-list');
+
+            if (raid && raid.isActive) {
+                formContainer.classList.add('opacity-50', 'pointer-events-none');
+                document.getElementById('raid-boss-submit-btn').textContent = "Boss Already Active";
+                
+                taskContainer.classList.remove('opacity-50', 'pointer-events-none');
+                
+                displayContainer.classList.remove('hidden');
+                noRaidMsg.classList.add('hidden');
+                endBtn.classList.remove('hidden');
+                
+                document.getElementById('setup-raid-emoji').textContent = raid.emoji;
+                document.getElementById('setup-raid-name').textContent = raid.name;
+                document.getElementById('setup-raid-hp').textContent = `${raid.hp} / ${raid.maxHp} HP remaining`;
+                
+                const setupPrizeEl = document.getElementById('setup-raid-prize');
+                if(setupPrizeEl) {
+                    if (raid.prize?.type === 'custom') {
+                        setupPrizeEl.innerHTML = `Bounty: ${raid.prize.value} 🏆`;
+                    } else {
+                        setupPrizeEl.innerHTML = `Bounty: ${raid.prize?.value || raid.prize || 0} 💎`;
+                    }
+                }
+
+                if(raid.tasks && raid.tasks.length > 0) {
+                    taskList.innerHTML = raid.tasks.map((t, idx) => {
+                        const typeLabel = t.type === 'strike' ? '⚔️ Strike' : (t.type === 'spell' ? '🪄 Spell' : '🧪 Heal');
+                        return `
+                        <div class="flex justify-between items-center bg-white p-3 rounded border border-amber-200 shadow-sm ${t.isComplete ? 'opacity-50' : ''}">
+                            <div>
+                                <p class="font-bold text-guild-leather-dark ${t.isComplete ? 'line-through' : ''}">${t.name}</p>
+                                <p class="text-xs text-guild-leather/70 font-medium">${typeLabel} | ${t.damage} Val</p>
+                            </div>
+                            <button class="text-red-500 hover:text-red-700 p-2 rounded hover:bg-red-50 transition-colors" onclick="deleteRaidTask(${idx})">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    `}).join('');
+                } else {
+                    taskList.innerHTML = '<p class="text-sm text-guild-leather/50 italic">No objectives added yet.</p>';
+                }
+
+            } else {
+                formContainer.classList.remove('opacity-50', 'pointer-events-none');
+                document.getElementById('raid-boss-submit-btn').textContent = "Summon Boss!";
+                
+                taskContainer.classList.add('opacity-50', 'pointer-events-none');
+                
+                displayContainer.classList.add('hidden');
+                noRaidMsg.classList.remove('hidden');
+                endBtn.classList.add('hidden');
+                taskList.innerHTML = '';
+            }
+            lucide.createIcons();
+        }
+
+        window.deleteRaidTask = async function(idx) {
+            const raid = localState.raid;
+            if(!raid || !raid.tasks) return;
+            playSound('click');
+            const newTasks = [...raid.tasks];
+            newTasks.splice(idx, 1);
+            try {
+                await updateDoc(doc(db, `/artifacts/${appId}/public/data/raids/current`), { tasks: newTasks });
+            } catch (e) { console.error(e); }
+        }
+
+        async function handleCreateRaid(e) {
+            e.preventDefault();
+            const name = document.getElementById('raid-boss-name').value;
+            const hpStr = document.getElementById('raid-boss-hp').value;
+            const emoji = document.getElementById('raid-boss-emoji').value;
+            const prizeType = document.getElementById('raid-boss-prize-type').value;
+            
+            const hp = parseInt(hpStr, 10);
+            if(!name || isNaN(hp) || hp <= 0) return;
+
+            let prize = { type: prizeType, value: null };
+            if (prizeType === 'loot') {
+                prize.value = parseInt(document.getElementById('raid-boss-prize-loot-val').value, 10);
+                if (isNaN(prize.value) || prize.value < 0) return;
+            } else {
+                prize.value = document.getElementById('raid-boss-prize-custom-val').value;
+                if (!prize.value) return;
+            }
+
+            const raidData = {
+                isActive: true,
+                name: name,
+                emoji: emoji,
+                hp: hp,
+                maxHp: hp,
+                prize: prize,
+                tasks: [],
+                createdAt: serverTimestamp()
+            };
+
+            try {
+                const raidRef = doc(db, `/artifacts/${appId}/public/data/raids/current`);
+                await setDoc(raidRef, raidData); 
+                playSound('bossHit'); 
+                document.getElementById('raid-boss-form').reset();
+                
+                document.getElementById('raid-boss-prize-loot-container').classList.remove('hidden');
+                document.getElementById('raid-boss-prize-custom-container').classList.add('hidden');
+
+            } catch(e) { console.error("Error creating raid:", e); }
+        }
+
+        async function handleAddRaidTask(e) {
+            e.preventDefault();
+            const raid = localState.raid;
+            if(!raid || !raid.isActive) return;
+
+            const name = document.getElementById('raid-task-name').value;
+            const dmg = parseInt(document.getElementById('raid-task-dmg').value, 10);
+            const type = document.getElementById('raid-task-type').value;
+
+            if(!name || isNaN(dmg) || dmg < 0) return;
+
+            const newTask = {
+                name: name,
+                damage: dmg,
+                type: type,
+                isComplete: false,
+                completedBy: null
+            };
+
+            const updatedTasks = [...(raid.tasks || []), newTask];
+
+            try {
+                const raidRef = doc(db, `/artifacts/${appId}/public/data/raids/current`);
+                await updateDoc(raidRef, { tasks: updatedTasks });
+                playSound('complete');
+                document.getElementById('raid-task-form').reset();
+            } catch (e) { console.error("Error adding task:", e); }
+        }
+
+        // Make handleEndRaid globally accessible for the inline onclick handler
+        window.handleEndRaid = async function(e) {
+             if(e) e.preventDefault();
+             showDeleteModal({
+                title: 'End Raid',
+                prompt: `Are you sure you want to end the current raid? All boss progress and uncompleted objectives will be cleared.`,
+                needsPassword: true,
+                onConfirm: async () => {
+                    try {
+                        const raidRef = doc(db, `/artifacts/${appId}/public/data/raids/current`);
+                        await deleteDoc(raidRef); // Hard delete ensures fresh reset
+                        playSound('uncomplete');
+                    } catch (err) { console.error("Error ending raid:", err); }
+                }
+            });
+        };
+
+
         // === Render: Setup Merchant ===
         function renderSetupRewards() {
             const listContainer = document.getElementById('reward-list');
@@ -1207,7 +1383,7 @@
                         <span class="text-4xl mr-4 drop-shadow-md w-12 text-center">${reward.emoji}</span>
                         <div class="truncate">
                             <span class="font-bold text-guild-leather-dark text-lg block truncate">${reward.name}</span>
-                            <span class="font-bold font-fantasy text-guild-gold flex items-center text-sm">${reward.cost} <i data-lucide="gem" class="w-3 h-3 ml-1"></i></span>
+                            <span class="font-bold font-fantasy text-guild-gold flex items-center text-sm">${reward.cost} 💎</span>
                         </div>
                     </div>
                     <div class="flex gap-1 bg-amber-50 rounded-lg p-1 border border-amber-200 flex-shrink-0">
@@ -1224,45 +1400,49 @@
         }
         
         function populateEmojiSelects() {
-            const selects = document.querySelectorAll('#adhoc-emoji, #chore-emoji, #reward-emoji');
-            const currentValues = {};
-            selects.forEach(sel => { currentValues[sel.id] = sel.value; });
-            const options = EMOJI_LIST.map(emoji => `<option value="${emoji}">${emoji}</option>`).join('');
-            selects.forEach(sel => { sel.innerHTML = options; sel.value = currentValues[sel.id] || EMOJI_LIST[0]; });
+             const selects = document.querySelectorAll('#adhoc-emoji, #chore-emoji, #reward-emoji, #raid-boss-emoji');
+             selects.forEach(select => {
+                 if (select && select.options && select.options.length <= 1) { 
+                     select.innerHTML = EMOJI_LIST.map(emoji => `<option value="${emoji}">${emoji}</option>`).join('');
+                 }
+             });
         }
         
         function populateColorSelects() {
-            const select = document.getElementById('member-color');
-            if (select && select.options.length <= 1) {
-                const currentValue = select.value;
-                select.innerHTML = COLOR_LIST.map(color => `<option value="${color.bg}">${color.name}</option>`).join('');
-                select.value = currentValue || COLOR_LIST[0].bg;
-            }
+             const select = document.getElementById('member-color');
+             if (select && select.options && select.options.length <= 1) {
+                 const currentValue = select.value;
+                 select.innerHTML = COLOR_LIST.map(color => `<option value="${color.bg}">${color.name}</option>`).join('');
+                 if (currentValue) select.value = currentValue;
+                 else select.value = COLOR_LIST[0].bg;
+             }
         }
 
         function populateMemberSelects() {
-            const selects = document.querySelectorAll('#adhoc-assignee, #chore-assignee, #assign-member-select, #adjust-member-select, #redeem-member-select');
-            const currentValues = {};
-            selects.forEach(sel => { currentValues[sel.id] = sel.value; });
-            const sortedMembers = [...localState.members].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
-            const options = sortedMembers.map(member => `<option value="${member.id}">${member.name}</option>`).join('');
-            
-            selects.forEach(sel => {
-                if (sel.id === 'adhoc-assignee' || sel.id === 'chore-assignee' || sel.id === 'assign-member-select') {
-                    sel.innerHTML = `<option value="unassigned">Open to all</option>` + options;
-                } else {
-                    sel.innerHTML = options;
-                }
-                if (currentValues[sel.id] && (currentValues[sel.id] === 'unassigned' || getMemberById(currentValues[sel.id]))) {
-                    sel.value = currentValues[sel.id];
-                } else if (localState.members.length > 0) {
-                    if (sel.id === 'adhoc-assignee' || sel.id === 'chore-assignee' || sel.id === 'assign-member-select') {
-                         sel.value = 'unassigned';
-                    } else {
-                         sel.value = sortedMembers[0].id;
-                    }
-                }
-            });
+             const selects = document.querySelectorAll('#adhoc-assignee, #chore-assignee, #assign-member-select, #adjust-member-select, #redeem-member-select');
+             const currentValues = {};
+             selects.forEach(sel => { if (sel) currentValues[sel.id] = sel.value; });
+             const sortedMembers = [...localState.members].sort((a, b) => (a.displayOrder || 0) - (b.displayOrder || 0));
+             const options = sortedMembers.map(member => `<option value="${member.id}">${member.name}</option>`).join('');
+             
+             selects.forEach(sel => {
+                 if (!sel) return;
+                 const currentValue = currentValues[sel.id]; 
+                 if (sel.id === 'adhoc-assignee' || sel.id === 'chore-assignee' || sel.id === 'assign-member-select') {
+                     sel.innerHTML = `<option value="unassigned">Open to all</option>` + options;
+                 } else {
+                     sel.innerHTML = options;
+                 }
+                 if (currentValue && (currentValue === 'unassigned' || getMemberById(currentValue))) {
+                     sel.value = currentValue;
+                 } else if (localState.members.length > 0) {
+                     if (sel.id === 'adhoc-assignee' || sel.id === 'chore-assignee' || sel.id === 'assign-member-select') {
+                          sel.value = 'unassigned';
+                     } else {
+                          sel.value = sortedMembers[0].id;
+                     }
+                 }
+             });
         }
 
         // === Event Handlers ===
@@ -1270,7 +1450,6 @@
             const navItem = e.target.closest('.nav-item');
             if (!navItem) return;
 
-            // Secret History Log Logic
             if (navItem.id === 'setup-nav-item') {
                  setupClickCount++;
                  if (setupClickTimeout) clearTimeout(setupClickTimeout);
@@ -1989,7 +2168,7 @@
              let timeString = 'Pending';
              let dateString = 'Today';
              
-             if (log.timestamp) {
+             if (log.timestamp && log.timestamp.toDate) {
                   try {
                       let timestampDate;
                       if (typeof log.timestamp.toDate === 'function') {
@@ -2017,7 +2196,7 @@
                                  <p class="text-sm text-guild-leather-dark"><span class="font-bold">${log.memberName || 'Someone'}</span> conquered <span class="font-bold">${log.choreEmoji || ''} ${log.choreName || 'a quest'}</span></p>
                                  <div class="flex justify-between items-center mt-1">
                                     <p class="text-xs text-guild-leather/60 font-medium">${dateString}, ${timeString}</p>
-                                    <span class="text-sm font-bold font-fantasy text-guild-gold">+${log.pointsEarned || 0} <i data-lucide="gem" class="w-3 h-3 inline"></i></span>
+                                    <span class="text-sm font-bold font-fantasy text-guild-gold">+${log.pointsEarned || 0} 💎</span>
                                  </div>
                              </div>`;
              } else if (log.type === 'reward_redeem') {
@@ -2026,7 +2205,7 @@
                                  <p class="text-sm text-guild-leather-dark"><span class="font-bold">${log.memberName || 'Someone'}</span> bought <span class="font-bold">${log.rewardEmoji || ''} ${log.rewardName || 'an item'}</span></p>
                                  <div class="flex justify-between items-center mt-1">
                                     <p class="text-xs text-guild-leather/60 font-medium">${dateString}, ${timeString}</p>
-                                    <span class="text-sm font-bold font-fantasy text-red-600">-${log.pointsCost || 0} <i data-lucide="gem" class="w-3 h-3 inline"></i></span>
+                                    <span class="text-sm font-bold font-fantasy text-red-600">-${log.pointsCost || 0} 💎</span>
                                  </div>
                              </div>`;
              } else {
@@ -2075,14 +2254,12 @@
                  const easedProgress = 1 - Math.pow(1 - progress, 3); 
                  const currentNumber = Math.floor(easedProgress * (end - start) + start);
                  if(document.body.contains(element)) {
-                     element.innerHTML = `${currentNumber} <i data-lucide="gem" class="h-5 w-5 md:h-6 md:w-6 ml-1 text-guild-gold opacity-80 inline"></i>`;
-                     lucide.createIcons({root: element});
+                     element.innerHTML = `${currentNumber} <span class="text-sm md:text-lg ml-1 drop-shadow-none">💎</span>`;
                  } else { return; }
                  if (progress < 1) { window.requestAnimationFrame(step); } 
                  else { 
                      if(document.body.contains(element)) { 
-                         element.innerHTML = `${end} <i data-lucide="gem" class="h-5 w-5 md:h-6 md:w-6 ml-1 text-guild-gold opacity-80 inline"></i>`; 
-                         lucide.createIcons({root: element});
+                         element.innerHTML = `${end} <span class="text-sm md:text-lg ml-1 drop-shadow-none">💎</span>`; 
                      } 
                  }
              }
@@ -2114,25 +2291,28 @@
                      if (e.target.closest('.redeem-reward-btn')) { handleRedeemReward(e); return; }
                      if (e.target.closest('.deliver-reward-btn')) { handleDeliverReward(e); return; }
                      
-                     // Handle Frog Merchant Tap
-                     const frogEl = e.target.closest('#frog-merchant-avatar');
-                     if (frogEl && !frogEl.classList.contains('animate-hop-and-wiggle')) {
-                         playSound('ribbit'); 
-                         frogEl.classList.add('animate-hop-and-wiggle');
-                         setTimeout(() => { if (frogEl) frogEl.classList.remove('animate-hop-and-wiggle'); }, 700); 
-                         return;
-                     }
-
-                     // Handle Rewards Emoji Tap Animation
-                     const emojiEl = e.target.closest('[id^="member-rewards-emoji-"]');
+                     // Handle Rewards Emoji Tap Animation (removed click sound here since SVG onclick handles it)
+                     const emojiEl = e.target.closest('#frog-merchant-avatar');
                      if (emojiEl && !emojiEl.classList.contains('animate-hop-and-wiggle')) {
-                         playSound('click'); 
                          emojiEl.classList.add('animate-hop-and-wiggle');
                          setTimeout(() => { if (emojiEl) emojiEl.classList.remove('animate-hop-and-wiggle'); }, 700); 
                      }
                 });
                 const setupNav = document.querySelector('#view-setup nav');
                 if(setupNav) setupNav.addEventListener('click', handleSetupNavClick);
+
+                // Setup specific forms
+                const raidPrizeTypeSelect = document.getElementById('raid-boss-prize-type');
+                if(raidPrizeTypeSelect) {
+                    raidPrizeTypeSelect.addEventListener('change', (e) => {
+                        document.getElementById('raid-boss-prize-loot-container').classList.toggle('hidden', e.target.value !== 'loot');
+                        document.getElementById('raid-boss-prize-custom-container').classList.toggle('hidden', e.target.value !== 'custom');
+                    });
+                }
+                const raidBossForm = document.getElementById('raid-boss-form');
+                if(raidBossForm) raidBossForm.addEventListener('submit', handleCreateRaid);
+                const raidTaskForm = document.getElementById('raid-task-form');
+                if(raidTaskForm) raidTaskForm.addEventListener('submit', handleAddRaidTask);
 
                 document.getElementById('member-form').addEventListener('submit', handleMemberFormSubmit);
                 document.getElementById('member-cancel-btn').addEventListener('click', resetMemberForm);
