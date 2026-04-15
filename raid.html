@@ -412,9 +412,25 @@
                 prizeDisplay = `Defeat Prize: ${raid.prize?.value || raid.prize || 0} 💎`;
             }
 
+            const overlays = raid.overlays || [];
+            const overlayPositions = [
+                'top-0 left-0 -translate-x-4 -translate-y-4 text-5xl md:text-7xl drop-shadow-md z-20',
+                'top-0 right-0 translate-x-4 -translate-y-4 text-5xl md:text-7xl drop-shadow-md z-20',
+                'bottom-10 left-0 -translate-x-6 translate-y-4 text-5xl md:text-7xl drop-shadow-md z-20',
+                'bottom-10 right-0 translate-x-6 translate-y-4 text-5xl md:text-7xl drop-shadow-md z-20'
+            ];
+
+            let overlaysHtml = '';
+            overlays.forEach((emoji, i) => {
+                if(i < overlayPositions.length && emoji) {
+                    overlaysHtml += `<span class="absolute ${overlayPositions[i]} animate-hop-and-wiggle" style="animation-delay: ${i * 0.2}s">${emoji}</span>`;
+                }
+            });
+
             bossContainer.innerHTML = `
-                <div id="boss-sprite" class="text-[150px] md:text-[200px] leading-none filter drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] transition-all duration-700 ${isDefeated ? 'opacity-30 grayscale scale-y-50 translate-y-20 blur-sm' : 'animate-hop-and-wiggle'}">
+                <div id="boss-sprite" class="relative text-[150px] md:text-[200px] leading-none filter drop-shadow-[0_20px_20px_rgba(0,0,0,0.8)] transition-all duration-700 ${isDefeated ? 'opacity-30 grayscale scale-y-50 translate-y-20 blur-sm' : 'animate-hop-and-wiggle'}">
                     ${raid.emoji}
+                    ${overlaysHtml}
                 </div>
                 <p class="text-amber-300 font-bold text-sm mt-1 z-10 relative drop-shadow-md text-center">${prizeDisplay}</p>
             `;
