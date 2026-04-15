@@ -397,9 +397,19 @@
                                         <input type="number" id="raid-boss-hp" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white focus:ring-2 focus:ring-guild-gold" placeholder="1000" required>
                                     </div>
                                     <div>
-                                        <label for="raid-boss-emoji" class="block font-bold text-guild-leather-dark mb-1">Emoji</label>
+                                        <label for="raid-boss-emoji" class="block font-bold text-guild-leather-dark mb-1">Base Monster</label>
                                         <select id="raid-boss-emoji" class="w-full p-2.5 border border-amber-300 rounded-lg bg-white text-xl focus:ring-2 focus:ring-guild-gold">
-                                            </select>
+                                            <!-- Emojis loaded by JS -->
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="mb-4">
+                                    <label class="block font-bold text-guild-leather-dark mb-1">Overlay Slots (Optional)</label>
+                                    <div class="grid grid-cols-4 gap-2">
+                                        <select id="raid-boss-overlay-1" class="w-full p-2 border border-amber-300 rounded-lg bg-white text-xl focus:ring-2 focus:ring-guild-gold"><option value="">None</option></select>
+                                        <select id="raid-boss-overlay-2" class="w-full p-2 border border-amber-300 rounded-lg bg-white text-xl focus:ring-2 focus:ring-guild-gold"><option value="">None</option></select>
+                                        <select id="raid-boss-overlay-3" class="w-full p-2 border border-amber-300 rounded-lg bg-white text-xl focus:ring-2 focus:ring-guild-gold"><option value="">None</option></select>
+                                        <select id="raid-boss-overlay-4" class="w-full p-2 border border-amber-300 rounded-lg bg-white text-xl focus:ring-2 focus:ring-guild-gold"><option value="">None</option></select>
                                     </div>
                                 </div>
                                 <div class="mb-4">
@@ -452,11 +462,14 @@
                     <div class="bg-[#fefce8] p-6 rounded-lg shadow-md border border-amber-200 sticky top-4 max-h-[85vh] flex flex-col">
                         <div class="flex justify-between items-center mb-5">
                             <h2 class="text-2xl font-bold font-fantasy text-guild-leather-dark">Active Raid Status</h2>
-                            <button id="end-raid-btn" class="hidden bg-red-100 text-red-800 border border-red-300 px-3 py-1.5 rounded font-bold text-sm hover:bg-red-200 transition-colors" onclick="handleEndRaid(event)">End Raid</button>
+                            <button id="end-raid-btn" class="hidden bg-red-100 text-red-800 border border-red-300 px-3 py-1.5 rounded font-bold text-sm hover:bg-red-200 transition-colors">End Raid</button>
                         </div>
                         
                         <div id="setup-active-raid-display" class="mb-6 p-4 bg-white border border-amber-200 rounded-lg text-center hidden">
-                            <span id="setup-raid-emoji" class="text-5xl block mb-2 drop-shadow-md"></span>
+                            <div id="setup-raid-sprite" class="relative inline-block text-5xl mb-2 drop-shadow-md">
+                                <span id="setup-raid-emoji"></span>
+                                <!-- Overlays injected here by JS -->
+                            </div>
                             <h3 id="setup-raid-name" class="font-bold font-fantasy text-xl text-guild-leather-dark"></h3>
                             <p id="setup-raid-hp" class="text-sm font-bold text-red-600 mt-1"></p>
                             <p id="setup-raid-prize" class="text-sm font-bold font-fantasy text-guild-gold mt-1"></p>
@@ -1233,6 +1246,25 @@
                 document.getElementById('setup-raid-name').textContent = raid.name;
                 document.getElementById('setup-raid-hp').textContent = `${raid.hp} / ${raid.maxHp} HP remaining`;
                 
+                const spriteContainer = document.getElementById('setup-raid-sprite');
+                spriteContainer.querySelectorAll('.raid-overlay-preview').forEach(el => el.remove());
+                if (raid.overlays) {
+                    const pos = [
+                        'top-0 left-0 -translate-x-2 -translate-y-2 text-xl',
+                        'top-0 right-0 translate-x-2 -translate-y-2 text-xl',
+                        'bottom-0 left-0 -translate-x-3 translate-y-2 text-xl',
+                        'bottom-0 right-0 translate-x-3 translate-y-2 text-xl'
+                    ];
+                    raid.overlays.forEach((emoji, i) => {
+                        if (emoji && i < pos.length) {
+                            const span = document.createElement('span');
+                            span.className = `absolute ${pos[i]} raid-overlay-preview drop-shadow-sm z-10`;
+                            span.textContent = emoji;
+                            spriteContainer.appendChild(span);
+                        }
+                    });
+                }
+
                 const setupPrizeEl = document.getElementById('setup-raid-prize');
                 if(setupPrizeEl) {
                     if (raid.prize?.type === 'custom') {
@@ -1292,6 +1324,12 @@
             const emoji = document.getElementById('raid-boss-emoji').value;
             const prizeType = document.getElementById('raid-boss-prize-type').value;
             
+            const overlay1 = document.getElementById('raid-boss-overlay-1').value;
+            const overlay2 = document.getElementById('raid-boss-overlay-2').value;
+            const overlay3 = document.getElementById('raid-boss-overlay-3').value;
+            const overlay4 = document.getElementById('raid-boss-overlay-4').value;
+            const overlays = [overlay1, overlay2, overlay3, overlay4].filter(Boolean);
+            
             const hp = parseInt(hpStr, 10);
             if(!name || isNaN(hp) || hp <= 0) return;
 
@@ -1308,6 +1346,7 @@
                 isActive: true,
                 name: name,
                 emoji: emoji,
+                overlays: overlays,
                 hp: hp,
                 maxHp: hp,
                 prize: prize,
@@ -1400,10 +1439,12 @@
         }
         
         function populateEmojiSelects() {
-             const selects = document.querySelectorAll('#adhoc-emoji, #chore-emoji, #reward-emoji, #raid-boss-emoji');
+             const selects = document.querySelectorAll('#adhoc-emoji, #chore-emoji, #reward-emoji, #raid-boss-emoji, #raid-boss-overlay-1, #raid-boss-overlay-2, #raid-boss-overlay-3, #raid-boss-overlay-4');
              selects.forEach(select => {
                  if (select && select.options && select.options.length <= 1) { 
-                     select.innerHTML = EMOJI_LIST.map(emoji => `<option value="${emoji}">${emoji}</option>`).join('');
+                     const isOverlay = select.id && select.id.includes('overlay');
+                     const optionsHtml = EMOJI_LIST.map(emoji => `<option value="${emoji}">${emoji}</option>`).join('');
+                     select.innerHTML = (isOverlay ? `<option value="">None</option>` : '') + optionsHtml;
                  }
              });
         }
